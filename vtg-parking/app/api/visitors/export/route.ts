@@ -1,0 +1,76 @@
+import { NextRequest, NextResponse } from 'next/server';
+import { supabaseAdmin } from '@/lib/supabase';
+import { getSession } from '@/lib/auth';
+import * as XLSX from 'xlsx';
+
+export async function GET(req: NextRequest) {
+  const session = await getSession();
+  if (!session) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+  if (session.role !== 'admin') return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
+
+  const { searchParams } = new URL(req.url);
+  const format = searchParams.get('format') || 'csv';
+
+  const { data, error } = await supabaseAdmin
+    .from('visitor_registrations')
+    .select('*, units(unit_number, address)')
+    .order('created_at', { ascending: false });
+
+  if (error) {
+    return NextResponse.json({ error: error.message }, { status: 500 });
+  }
+
+  const rows = (data || []).map((v: any) => ({
+    'Access Code': v.access_code ?? '',
+    'Unit': v.units?.unit_number ?? '',
+    'Guest': v.visitor_name ?? '',
+    'Plate': v.license_plate ?? '',
+    'State': v.plate_state ?? '',
+    'Make': v.make ?? '',
+    'Model': v.model ?? '',
+    'Color': v.color ?? '',
+    'Start': v.start_datetime ? new Date(v.start_datetime).toLocaleString() : '',
+    'End': v.end_datetime ? new Date(v.end_datetime).toLocaleString() : '',
+    'Created': v.created_at ? new Date(v.created_at).toLocaleString() : '',
+  }));
+
+  if (format === 'excel') {
+    const ws = XLSX.utils.json_to_sheet(rows);
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, 'Visitors');
+    const buffer = XLSX.write(wb, { type: 'buffer', bookType: 'xlsx' });
+
+    return new NextResponse(buffer, {
+      headers: {
+        'Content-Type': 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+        'Content-Disposition': 'attachment; filename="visitors.xlsx"',
+      },
+    });
+  }
+
+  // CSV format
+  if (rows.length === 0) {
+    return new NextResponse('', {
+      headers: {
+        'Content-Type': 'text/csv',
+        'Content-Disposition': 'attachment; filename="visitors.csv"',
+      },
+    });
+  }
+
+  const headers = Object.keys(rows[0]);
+  const csvLines = [
+    headers.join(','),
+    ...rows.map((row: any) =>
+      headers.map((h) => `"${String(row[h]).replace(/"/g, '""')}"`).join(',')
+    ),
+  ];
+  const csv = csvLines.join('\n');
+
+  return new NextResponse(csv, {
+    headers: {
+      'Content-Type': 'text/csv',
+      'Content-Disposition': 'attachment; filename="visitors.csv"',
+    },
+  });
+}

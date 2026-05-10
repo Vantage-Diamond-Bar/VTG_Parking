@@ -1,0 +1,20 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(npx create-next-app@latest . --typescript --tailwind --eslint --app --no-src-dir --import-alias \"@/*\" --no-git)",
+      "Bash(npx create-next-app@latest vtg-parking --typescript --tailwind --eslint --app --no-src-dir --import-alias \"@/*\" --no-git)",
+      "Bash(npm install *)",
+      "Bash(Get-ChildItem -Recurse \"C:\\\\Users\\\\wuxjj\\\\OneDrive\\\\吴潇俊的文档\\\\Claude\\\\Temp Project\\\\VTG_Parking\\\\vtg-parking\\\\app\\\\admin\" -Filter \"*.tsx\")",
+      "Bash(Select-Object FullName, Length)",
+      "Bash(Get-ChildItem -Recurse \"C:\\\\Users\\\\wuxjj\\\\OneDrive\\\\吴潇俊的文档\\\\Claude\\\\Temp Project\\\\VTG_Parking\\\\vtg-parking\\\\app\\\\patrol\" -Filter \"*.tsx\")",
+      "Bash(mkdir -p \"C:\\\\Users\\\\wuxjj\\\\OneDrive\\\\吴潇俊的文档\\\\Claude\\\\Temp Project\\\\VTG_Parking\\\\vtg-parking\\\\app\\\\api\\\\residents\\\\[id]\")",
+      "Bash(mkdir -p \"C:\\\\Users\\\\wuxjj\\\\OneDrive\\\\吴潇俊的文档\\\\Claude\\\\Temp Project\\\\VTG_Parking\\\\vtg-parking\\\\app\\\\api\\\\visitors\\\\[id]\")",
+      "Bash(mkdir -p \"C:\\\\Users\\\\wuxjj\\\\OneDrive\\\\吴潇俊的文档\\\\Claude\\\\Temp Project\\\\VTG_Parking\\\\vtg-parking\\\\app\\\\api\\\\admin\\\\alerts\\\\[id]\")",
+      "Bash(mkdir -p \"C:\\\\Users\\\\wuxjj\\\\OneDrive\\\\吴潇俊的文档\\\\Claude\\\\Temp Project\\\\VTG_Parking\\\\vtg-parking\\\\app\\\\api\\\\admin\\\\units\\\\[id]\")",
+      "Bash(mkdir -p \"C:\\\\Users\\\\wuxjj\\\\OneDrive\\\\吴潇俊的文档\\\\Claude\\\\Temp Project\\\\VTG_Parking\\\\vtg-parking\\\\app\\\\api\\\\admin\\\\emails\\\\[id]\")",
+      "Bash(npx tsc *)",
+      "Bash(npm run *)",
+      "PowerShell(Get-ChildItem -Recurse -Filter \"route.ts\" \"C:\\\\Users\\\\wuxjj\\\\OneDrive\\\\吴潇俊的文档\\\\Claude\\\\Temp Project\\\\VTG_Parking\\\\vtg-parking\\\\app\\\\api\" | Where-Object { $_.DirectoryName -match '\\\\[' } | Select-Object -ExpandProperty FullName)"
+    ]
+  }
+}
