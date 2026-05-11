@@ -242,6 +242,7 @@
     "activate": "활성화",
     "deactivate": "비활성화",
     "mark_resolved": "처리 완료로 표시",
+    "unresolved": "미처리",
     "unresolved_alerts": "미처리 경고",
     "recent_violations": "최근 위반 신고",
     "no_alerts": "미처리 경고가 없습니다.",

@@ -242,6 +242,7 @@
     "activate": "启用",
     "deactivate": "停用",
     "mark_resolved": "标记为已处理",
+    "unresolved": "未处理",
     "unresolved_alerts": "未处理警示",
     "recent_violations": "最近违章举报",
     "no_alerts": "暂无未处理警示。",

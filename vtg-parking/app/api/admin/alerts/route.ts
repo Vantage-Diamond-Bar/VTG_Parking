@@ -26,5 +26,15 @@ export async function GET(req: NextRequest) {
     return NextResponse.json({ error: error.message }, { status: 500 });
   }
 
-  return NextResponse.json(data);
+  const mapped = (data ?? []).map((row: any) => ({
+    id: row.id,
+    license_plate: row.license_plate,
+    month: row.year_month,
+    units_involved: row.unit_ids ?? [],
+    count: (row.unit_ids ?? []).length,
+    resolved: row.is_resolved,
+    created_at: row.created_at,
+  }));
+
+  return NextResponse.json(mapped);
 }

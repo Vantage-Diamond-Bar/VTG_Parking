@@ -37,42 +37,49 @@ interface OverdueVehicle {
 }
 
 async function getStats(): Promise<Stats | null> {
-  try {
-    const res = await fetch(
-      `${process.env.NEXT_PUBLIC_APP_URL}/api/admin/stats`,
-      { cache: 'no-store' }
-    );
-    if (!res.ok) return null;
-    return res.json();
-  } catch {
-    return null;
-  }
+  const year_month = new Date().toISOString().slice(0, 7);
+  const monthStart = `${year_month}-01`;
+  const [residentsResult, visitorsResult, violationsResult] = await Promise.all([
+    supabaseAdmin.from('resident_vehicles').select('id', { count: 'exact', head: true }),
+    supabaseAdmin.from('visitor_registrations').select('id', { count: 'exact', head: true }).gte('created_at', monthStart),
+    supabaseAdmin.from('violation_reports').select('id', { count: 'exact', head: true }).gte('created_at', monthStart),
+  ]);
+  return {
+    total_residents: residentsResult.count ?? 0,
+    visitor_registrations_this_month: visitorsResult.count ?? 0,
+    violations_this_month: violationsResult.count ?? 0,
+  };
 }
 
 async function getAlerts(): Promise<Alert[]> {
-  try {
-    const res = await fetch(
-      `${process.env.NEXT_PUBLIC_APP_URL}/api/admin/alerts?resolved=false`,
-      { cache: 'no-store' }
-    );
-    if (!res.ok) return [];
-    return res.json();
-  } catch {
-    return [];
-  }
+  const { data } = await supabaseAdmin
+    .from('abuse_alerts')
+    .select('*')
+    .eq('is_resolved', false)
+    .order('created_at', { ascending: false });
+  return (data ?? []).map((row: any) => ({
+    id: row.id,
+    license_plate: row.license_plate,
+    month: row.year_month,
+    units_involved: row.unit_ids ?? [],
+    count: (row.unit_ids ?? []).length,
+  }));
 }
 
 async function getRecentViolations(): Promise<Violation[]> {
-  try {
-    const res = await fetch(
-      `${process.env.NEXT_PUBLIC_APP_URL}/api/admin/violations?limit=5`,
-      { cache: 'no-store' }
-    );
-    if (!res.ok) return [];
-    return res.json();
-  } catch {
-    return [];
-  }
+  const { data } = await supabaseAdmin
+    .from('violation_reports')
+    .select('id, created_at, location, violation_type, license_plate, description')
+    .order('created_at', { ascending: false })
+    .limit(5);
+  return (data ?? []).map((v: any) => ({
+    id: v.id,
+    submitted_at: v.created_at,
+    location: v.location,
+    type: v.violation_type,
+    plate: v.license_plate ?? '',
+    description: v.description ?? '',
+  }));
 }
 
 async function getOverdueVehicles(): Promise<OverdueVehicle[]> {

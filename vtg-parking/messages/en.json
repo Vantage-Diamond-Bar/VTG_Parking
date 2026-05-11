@@ -242,6 +242,7 @@
     "activate": "Activate",
     "deactivate": "Deactivate",
     "mark_resolved": "Mark as Resolved",
+    "unresolved": "Unresolved",
     "unresolved_alerts": "Unresolved Alerts",
     "recent_violations": "Recent Violations",
     "no_alerts": "No unresolved alerts.",
