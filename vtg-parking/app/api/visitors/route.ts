@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { supabaseAdmin } from '@/lib/supabase';
 import { generateAccessCode, getYearMonth, normalizedPlate, VISITOR_QUOTA_LIMIT } from '@/lib/utils';
-import { getSession } from '@/lib/auth';
+import { getSessionFromRequest } from '@/lib/auth';
 
 export async function POST(req: NextRequest) {
   const body = await req.json();
@@ -114,7 +114,7 @@ export async function POST(req: NextRequest) {
 }
 
 export async function GET(req: NextRequest) {
-  const session = await getSession();
+  const session = getSessionFromRequest(req);
   if (!session) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
 
   const { searchParams } = new URL(req.url);
@@ -127,7 +127,7 @@ export async function GET(req: NextRequest) {
 
   let query = supabaseAdmin
     .from('visitor_registrations')
-    .select('*, units(unit_number, address)', { count: 'exact' })
+    .select('*, units(address)', { count: 'exact' })
     .order('created_at', { ascending: false })
     .range(offset, offset + limit - 1);
 

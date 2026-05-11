@@ -4,9 +4,9 @@ import { supabaseAdmin } from '@/lib/supabase';
 export async function GET() {
   const { data, error } = await supabaseAdmin
     .from('units')
-    .select('id, unit_number, address')
+    .select('id, address')
     .eq('active', true)
-    .order('unit_number');
+    .order('address');
 
   if (error) {
     return NextResponse.json({ error: error.message }, { status: 500 });

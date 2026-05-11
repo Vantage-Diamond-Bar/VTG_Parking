@@ -2,6 +2,7 @@ import { Resend } from 'resend'
 import { supabaseAdmin } from './supabase'
 
 const resend = new Resend(process.env.RESEND_API_KEY)
+const EMAIL_FROM = process.env.EMAIL_FROM ?? 'parking@vtgcommunity.com'
 
 export async function sendViolationReport(report: {
   location: string
@@ -40,9 +41,76 @@ export async function sendViolationReport(report: {
   `
 
   await resend.emails.send({
-    from: process.env.EMAIL_FROM ?? 'parking@vtgcommunity.com',
+    from: EMAIL_FROM,
     to: recipients,
     subject: `[Parking Violation] ${report.violation_type} — ${report.location}`,
     html,
   })
+}
+
+export async function sendRegistrationReminder({
+  ownerName,
+  ownerEmail,
+  address,
+  vehicles,
+  registeredAt,
+}: {
+  ownerName: string
+  ownerEmail: string
+  address: string
+  vehicles: { make: string; model: string; color: string; license_plate: string }[]
+  registeredAt: Date
+}): Promise<boolean> {
+  const appUrl = process.env.NEXT_PUBLIC_APP_URL ?? ''
+  const vehicleList = vehicles
+    .map(
+      (v, i) =>
+        `<li style="padding:4px 0;">${i + 1}. ${v.color} ${v.make} ${v.model} — <strong style="font-family:monospace;">${v.license_plate}</strong></li>`
+    )
+    .join('')
+
+  const html = `
+    <div style="font-family:sans-serif;max-width:600px;margin:0 auto;">
+      <div style="background:#1e40af;color:white;padding:28px 24px;border-radius:8px 8px 0 0;">
+        <h1 style="margin:0;font-size:20px;">VTG Community Parking</h1>
+        <p style="margin:6px 0 0;opacity:0.85;font-size:14px;">Annual Vehicle Registration Renewal Reminder</p>
+      </div>
+      <div style="background:white;padding:28px 24px;border:1px solid #e5e7eb;border-top:none;border-radius:0 0 8px 8px;">
+        <p>Dear <strong>${ownerName}</strong>,</p>
+        <p>Your vehicle registration at <strong>${address}</strong> was submitted on
+        <strong>${registeredAt.toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' })}</strong>.
+        It has now been over one year since your last registration update.</p>
+        <p>As required by VTG community parking policy, all residents must renew their vehicle registration information annually to keep records current.</p>
+        <p><strong>Vehicles currently on file for your unit:</strong></p>
+        <ul style="padding-left:20px;line-height:1.8;">${vehicleList}</ul>
+        <p>Please visit the VTG Parking portal to submit your updated registration:</p>
+        <div style="text-align:center;margin:28px 0;">
+          <a href="${appUrl}/register"
+             style="background:#2563eb;color:white;padding:13px 28px;border-radius:6px;text-decoration:none;font-weight:bold;font-size:15px;">
+            Update My Registration
+          </a>
+        </div>
+        <p style="font-size:13px;color:#6b7280;">
+          If your vehicle information has not changed, please re-submit the form to reset your annual renewal date.
+          If you have questions, contact the VTG management office.
+        </p>
+        <hr style="border:none;border-top:1px solid #e5e7eb;margin:20px 0;">
+        <p style="font-size:11px;color:#9ca3af;margin:0;">
+          This is an automated annual reminder from the VTG Community Parking Management System.
+        </p>
+      </div>
+    </div>
+  `
+
+  try {
+    await resend.emails.send({
+      from: EMAIL_FROM,
+      to: ownerEmail,
+      subject: 'VTG Community Parking — Annual Registration Renewal Reminder',
+      html,
+    })
+    return true
+  } catch {
+    return false
+  }
 }

@@ -39,12 +39,12 @@ export default function RegisterPage() {
 
   const [units, setUnits] = useState<Unit[]>([])
   const [unitId, setUnitId] = useState('')
+  const [registrantType, setRegistrantType] = useState<'owner' | 'tenant'>('owner')
   const [ownerFirstName, setOwnerFirstName] = useState('')
   const [ownerLastName, setOwnerLastName] = useState('')
   const [ownerPhone, setOwnerPhone] = useState('')
   const [ownerEmail, setOwnerEmail] = useState('')
   const [optInSms, setOptInSms] = useState(false)
-  const [optInEmail, setOptInEmail] = useState(false)
   const [vehicles, setVehicles] = useState<Vehicle[]>([emptyVehicle()])
   const [submitting, setSubmitting] = useState(false)
   const [success, setSuccess] = useState(false)
@@ -101,16 +101,32 @@ export default function RegisterPage() {
   function validate(): boolean {
     const errors: Record<string, string> = {}
     if (!unitId) errors.unit_id = t('required')
+    if (!registrantType) errors.registrant_type = t('required')
     if (!ownerFirstName.trim()) errors.owner_first_name = t('required')
     if (!ownerLastName.trim()) errors.owner_last_name = t('required')
+    if (!ownerEmail.trim()) errors.owner_email = t('required')
+    else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(ownerEmail.trim())) {
+      errors.owner_email = 'Please enter a valid email address.'
+    }
+
     vehicles.forEach((v, i) => {
       if (!v.year) errors[`year_${i}`] = t('required')
-      if (!v.make.trim()) errors[`make_${i}`] = t('required')
+      if (!v.make) errors[`make_${i}`] = t('required')
       if (!v.model.trim()) errors[`model_${i}`] = t('required')
       if (!v.color) errors[`color_${i}`] = t('required')
       if (!v.license_plate.trim()) errors[`plate_${i}`] = t('required')
       if (!v.plate_state) errors[`state_${i}`] = t('required')
     })
+
+    // When registering 3+ vehicles, all must have documents
+    if (vehicles.length >= 3) {
+      vehicles.forEach((v, i) => {
+        if (!v.registration_doc_base64) {
+          errors[`doc_${i}`] = t('doc_required')
+        }
+      })
+    }
+
     setFieldErrors(errors)
     return Object.keys(errors).length === 0
   }
@@ -123,17 +139,18 @@ export default function RegisterPage() {
     try {
       const body = {
         unit_id: unitId,
+        registrant_type: registrantType,
         owner_name: `${ownerFirstName.trim()} ${ownerLastName.trim()}`,
         owner_phone: ownerPhone,
         owner_email: ownerEmail,
         opt_in_sms: optInSms,
-        opt_in_email: optInEmail,
+        opt_in_email: true,
         vehicles: vehicles.map((v) => ({
           year: Number(v.year),
           make: v.make,
           model: v.model,
           color: v.color,
-          license_plate: v.license_plate.toUpperCase(),
+          license_plate: v.license_plate.replace(/\s/g, '').toUpperCase(),
           plate_state: v.plate_state,
           registration_doc_base64: v.registration_doc_base64,
           registration_doc_filename: v.registration_doc_filename,
@@ -163,12 +180,12 @@ export default function RegisterPage() {
 
   function resetForm() {
     setUnitId('')
+    setRegistrantType('owner')
     setOwnerFirstName('')
     setOwnerLastName('')
     setOwnerPhone('')
     setOwnerEmail('')
     setOptInSms(false)
-    setOptInEmail(false)
     setVehicles([emptyVehicle()])
     setSuccess(false)
     setError('')
@@ -217,23 +234,39 @@ export default function RegisterPage() {
             {/* Unit Section */}
             <div>
               <h2 className={sectionCls}>{t('section_unit')}</h2>
-              <div>
-                <label className={labelCls}>{t('unit_number')}</label>
-                <select
-                  value={unitId}
-                  onChange={(e) => setUnitId(e.target.value)}
-                  className={inputCls}
-                >
-                  <option value="">{t('unit_placeholder')}</option>
-                  {units.map((u) => (
-                    <option key={u.id} value={u.id}>
-                      {u.address}
-                    </option>
-                  ))}
-                </select>
-                {fieldErrors.unit_id && (
-                  <p className="text-red-500 text-xs mt-1">{fieldErrors.unit_id}</p>
-                )}
+              <div className="space-y-4">
+                <div>
+                  <label className={labelCls}>{t('unit_number')} *</label>
+                  <select
+                    value={unitId}
+                    onChange={(e) => setUnitId(e.target.value)}
+                    className={inputCls}
+                  >
+                    <option value="">{t('unit_placeholder')}</option>
+                    {units.map((u) => (
+                      <option key={u.id} value={u.id}>
+                        {u.address}
+                      </option>
+                    ))}
+                  </select>
+                  {fieldErrors.unit_id && (
+                    <p className="text-red-500 text-xs mt-1">{fieldErrors.unit_id}</p>
+                  )}
+                </div>
+                <div>
+                  <label className={labelCls}>{t('registrant_type')} *</label>
+                  <select
+                    value={registrantType}
+                    onChange={(e) => setRegistrantType(e.target.value as 'owner' | 'tenant')}
+                    className={inputCls}
+                  >
+                    <option value="owner">{t('registrant_type_owner')}</option>
+                    <option value="tenant">{t('registrant_type_tenant')}</option>
+                  </select>
+                  {fieldErrors.registrant_type && (
+                    <p className="text-red-500 text-xs mt-1">{fieldErrors.registrant_type}</p>
+                  )}
+                </div>
               </div>
             </div>
 
@@ -277,40 +310,44 @@ export default function RegisterPage() {
                   />
                 </div>
                 <div>
-                  <label className={labelCls}>{t('email')}</label>
+                  <label className={labelCls}>{t('email')} *</label>
                   <input
                     type="email"
                     value={ownerEmail}
                     onChange={(e) => setOwnerEmail(e.target.value)}
                     className={inputCls}
                   />
+                  {fieldErrors.owner_email && (
+                    <p className="text-red-500 text-xs mt-1">{fieldErrors.owner_email}</p>
+                  )}
                 </div>
-                <div className="flex flex-col gap-2">
-                  <label className="flex items-center gap-2 text-sm text-gray-700 cursor-pointer">
-                    <input
-                      type="checkbox"
-                      checked={optInSms}
-                      onChange={(e) => setOptInSms(e.target.checked)}
-                      className="rounded"
-                    />
-                    {t('opt_in_sms')}
-                  </label>
-                  <label className="flex items-center gap-2 text-sm text-gray-700 cursor-pointer">
-                    <input
-                      type="checkbox"
-                      checked={optInEmail}
-                      onChange={(e) => setOptInEmail(e.target.checked)}
-                      className="rounded"
-                    />
-                    {t('opt_in_email')}
-                  </label>
-                </div>
+                <label className="flex items-center gap-2 text-sm text-gray-700 cursor-pointer">
+                  <input
+                    type="checkbox"
+                    checked={optInSms}
+                    onChange={(e) => setOptInSms(e.target.checked)}
+                    className="rounded"
+                  />
+                  {t('opt_in_sms')}
+                </label>
+                {/* Email consent notice (opt-in is always true) */}
+                <p className="text-xs text-gray-500 bg-blue-50 border border-blue-100 rounded-lg px-3 py-2">
+                  {t('email_consent')}
+                </p>
               </div>
             </div>
 
             {/* Vehicle Section */}
             <div>
               <h2 className={sectionCls}>{t('section_vehicle')}</h2>
+
+              {/* Warning banner for 3+ vehicles */}
+              {vehicles.length >= 3 && (
+                <div className="mb-4 bg-amber-50 border border-amber-200 text-amber-800 rounded-lg px-4 py-3 text-sm">
+                  {t('doc_required_3plus')}
+                </div>
+              )}
+
               <div className="space-y-6">
                 {vehicles.map((vehicle, index) => (
                   <div key={index} className="border border-gray-200 rounded-xl p-4 space-y-4">
@@ -331,7 +368,7 @@ export default function RegisterPage() {
 
                     <div className="grid grid-cols-2 gap-4">
                       <div>
-                        <label className={labelCls}>{t('year')}</label>
+                        <label className={labelCls}>{t('year')} *</label>
                         <input
                           type="number"
                           min={1990}
@@ -345,7 +382,7 @@ export default function RegisterPage() {
                         )}
                       </div>
                       <div>
-                        <label className={labelCls}>{t('color')}</label>
+                        <label className={labelCls}>{t('color')} *</label>
                         <select
                           value={vehicle.color}
                           onChange={(e) => updateVehicle(index, 'color', e.target.value)}
@@ -353,9 +390,7 @@ export default function RegisterPage() {
                         >
                           <option value=""></option>
                           {CAR_COLORS.map((c) => (
-                            <option key={c} value={c}>
-                              {c}
-                            </option>
+                            <option key={c} value={c}>{c}</option>
                           ))}
                         </select>
                         {fieldErrors[`color_${index}`] && (
@@ -382,7 +417,7 @@ export default function RegisterPage() {
                         )}
                       </div>
                       <div>
-                        <label className={labelCls}>{t('model')}</label>
+                        <label className={labelCls}>{t('model')} *</label>
                         <input
                           type="text"
                           value={vehicle.model}
@@ -397,21 +432,24 @@ export default function RegisterPage() {
 
                     <div className="grid grid-cols-2 gap-4">
                       <div>
-                        <label className={labelCls}>{t('license_plate')}</label>
+                        <label className={labelCls}>{t('license_plate')} *</label>
                         <input
                           type="text"
                           value={vehicle.license_plate}
+                          title={t('plate_hint')}
                           onChange={(e) =>
-                            updateVehicle(index, 'license_plate', e.target.value.toUpperCase())
+                            updateVehicle(index, 'license_plate', e.target.value.replace(/\s/g, '').toUpperCase())
                           }
                           className={inputCls}
+                          placeholder="ABC1234"
                         />
+                        <p className="text-xs text-gray-400 mt-1">{t('plate_hint')}</p>
                         {fieldErrors[`plate_${index}`] && (
                           <p className="text-red-500 text-xs mt-1">{fieldErrors[`plate_${index}`]}</p>
                         )}
                       </div>
                       <div>
-                        <label className={labelCls}>{t('plate_state')}</label>
+                        <label className={labelCls}>{t('plate_state')} *</label>
                         <select
                           value={vehicle.plate_state}
                           onChange={(e) => updateVehicle(index, 'plate_state', e.target.value)}
@@ -419,9 +457,7 @@ export default function RegisterPage() {
                         >
                           <option value=""></option>
                           {US_STATES.map((s) => (
-                            <option key={s} value={s}>
-                              {s}
-                            </option>
+                            <option key={s} value={s}>{s}</option>
                           ))}
                         </select>
                         {fieldErrors[`state_${index}`] && (
@@ -433,7 +469,10 @@ export default function RegisterPage() {
                     {/* Document Upload */}
                     <div>
                       <h3 className="text-sm font-semibold text-gray-700 mb-2">{t('section_docs')}</h3>
-                      <label className={labelCls}>{t('upload_doc')}</label>
+                      <label className={labelCls}>
+                        {t('upload_doc')}
+                        {vehicles.length >= 3 && <span className="text-red-500 ml-1">*</span>}
+                      </label>
                       <input
                         type="file"
                         accept=".jpg,.jpeg,.png,.pdf"

@@ -14,8 +14,8 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: 'units array is required' }, { status: 400 });
   }
 
-  const rows = units.map(({ unit_number, address }: { unit_number: string; address: string }) => ({
-    unit_number,
+  const rows = units.map(({ address }: { address: string }) => ({
+    unit_number: address,
     address,
   }));
 

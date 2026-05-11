@@ -1,10 +1,10 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { supabaseAdmin } from '@/lib/supabase';
-import { getSession } from '@/lib/auth';
+import { getSessionFromRequest } from '@/lib/auth';
 import * as XLSX from 'xlsx';
 
 export async function GET(req: NextRequest) {
-  const session = await getSession();
+  const session = getSessionFromRequest(req);
   if (!session) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   if (session.role !== 'admin') return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
 
@@ -13,7 +13,7 @@ export async function GET(req: NextRequest) {
 
   const { data, error } = await supabaseAdmin
     .from('visitor_registrations')
-    .select('*, units(unit_number, address)')
+    .select('*, units(address)')
     .order('created_at', { ascending: false });
 
   if (error) {
@@ -22,7 +22,7 @@ export async function GET(req: NextRequest) {
 
   const rows = (data || []).map((v: any) => ({
     'Access Code': v.access_code ?? '',
-    'Unit': v.units?.unit_number ?? '',
+    'Unit': v.units?.address ?? '',
     'Guest': v.visitor_name ?? '',
     'Plate': v.license_plate ?? '',
     'State': v.plate_state ?? '',

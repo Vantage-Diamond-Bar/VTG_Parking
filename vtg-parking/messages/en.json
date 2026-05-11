@@ -51,6 +51,13 @@
     "success_title": "Registration Submitted!",
     "success_desc": "Your vehicle(s) have been registered. The management office will review and confirm.",
     "register_another": "Register Another Vehicle",
+    "registrant_type": "Registrant Type",
+    "registrant_type_owner": "Owner",
+    "registrant_type_tenant": "Tenant / Renter",
+    "plate_hint": "No spaces — enter full plate number (e.g. ABC1234)",
+    "email_consent": "By submitting, I consent to receive annual vehicle registration renewal reminders at this email address.",
+    "doc_required_3plus": "Registering 3 or more vehicles requires registration documents for ALL vehicles (including vehicles 1 and 2).",
+    "doc_required": "Document required when registering 3 or more vehicles.",
     "error_plate_conflict": "This license plate is already registered as a resident vehicle.",
     "required": "This field is required."
   },
@@ -93,6 +100,7 @@
     "quota_used": "{used} of {total} nights used this month",
     "quota_exceeded": "Monthly visitor quota exceeded (10/10 nights). Please contact the management office.",
     "error_plate_conflict": "This license plate is registered as a resident vehicle and cannot be registered as a visitor.",
+    "plate_hint": "No spaces — enter full plate number (e.g. ABC1234)",
     "required": "This field is required.",
     "end_after_start": "Check-out must be after check-in."
   },
@@ -222,7 +230,7 @@
     "import_units": "Import from Excel",
     "import_excel": "Import from Excel",
     "importing": "Importing...",
-    "import_empty": "No valid rows found in the file. Ensure columns are named unit_number and address.",
+    "import_empty": "No valid rows found in the file. Ensure the column is named address.",
     "add_email": "Add Email",
     "label": "Label",
     "email_label_placeholder": "e.g. Property Manager",
@@ -275,7 +283,15 @@
     "alert_units": "Units Registered",
     "alert_count": "Registrations",
     "alert_month": "Month",
-    "doc": "Registration Doc"
+    "doc": "Registration Doc",
+    "overdue_vehicles": "Overdue Registrations",
+    "overdue_desc": "Vehicles registered over 1 year ago — renewal reminder due",
+    "no_overdue": "No overdue registrations.",
+    "registrant_type": "Type",
+    "view": "View",
+    "prev": "Prev",
+    "next": "Next",
+    "page_of": "Page {page} of {total}"
   },
   "common": {
     "loading": "Loading...",

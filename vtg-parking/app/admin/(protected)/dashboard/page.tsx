@@ -1,4 +1,5 @@
 import { getTranslations } from 'next-intl/server';
+import { supabaseAdmin } from '@/lib/supabase';
 
 interface Stats {
   total_residents: number;
@@ -21,6 +22,18 @@ interface Violation {
   type: string;
   plate: string;
   description: string;
+}
+
+interface OverdueVehicle {
+  id: string;
+  owner_name: string;
+  owner_email: string;
+  make: string;
+  model: string;
+  color: string;
+  license_plate: string;
+  created_at: string;
+  units: { address: string } | null;
 }
 
 async function getStats(): Promise<Stats | null> {
@@ -62,12 +75,25 @@ async function getRecentViolations(): Promise<Violation[]> {
   }
 }
 
+async function getOverdueVehicles(): Promise<OverdueVehicle[]> {
+  const oneYearAgo = new Date();
+  oneYearAgo.setFullYear(oneYearAgo.getFullYear() - 1);
+  const { data } = await supabaseAdmin
+    .from('resident_vehicles')
+    .select('id, owner_name, owner_email, make, model, color, license_plate, created_at, units(address)')
+    .lt('created_at', oneYearAgo.toISOString())
+    .order('created_at', { ascending: true })
+    .limit(20);
+  return (data ?? []) as OverdueVehicle[];
+}
+
 export default async function AdminDashboardPage() {
   const t = await getTranslations('admin');
-  const [stats, alerts, violations] = await Promise.all([
+  const [stats, alerts, violations, overdueVehicles] = await Promise.all([
     getStats(),
     getAlerts(),
     getRecentViolations(),
+    getOverdueVehicles(),
   ]);
 
   return (
@@ -75,7 +101,7 @@ export default async function AdminDashboardPage() {
       <h1 className="text-2xl font-bold text-gray-900 mb-6">{t('dashboard')}</h1>
 
       {/* Stat Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+      <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
         <div className="bg-white rounded-xl shadow-sm p-6 border border-gray-100">
           <p className="text-sm text-gray-500">{t('total_residents')}</p>
           <p className="text-3xl font-bold text-gray-900 mt-1">
@@ -94,7 +120,56 @@ export default async function AdminDashboardPage() {
             {stats?.violations_this_month ?? '—'}
           </p>
         </div>
+        <div className={`rounded-xl shadow-sm p-6 border ${overdueVehicles.length > 0 ? 'bg-amber-50 border-amber-200' : 'bg-white border-gray-100'}`}>
+          <p className={`text-sm ${overdueVehicles.length > 0 ? 'text-amber-700' : 'text-gray-500'}`}>
+            {t('overdue_vehicles')}
+          </p>
+          <p className={`text-3xl font-bold mt-1 ${overdueVehicles.length > 0 ? 'text-amber-800' : 'text-gray-900'}`}>
+            {overdueVehicles.length}
+          </p>
+        </div>
       </div>
+
+      {/* Overdue Registrations */}
+      {overdueVehicles.length > 0 && (
+        <div className="bg-white rounded-xl shadow-sm border border-amber-200 mb-8">
+          <div className="px-6 py-4 border-b border-amber-100 bg-amber-50 rounded-t-xl">
+            <h2 className="text-lg font-semibold text-amber-900">⚠️ {t('overdue_vehicles')}</h2>
+            <p className="text-sm text-amber-700 mt-0.5">{t('overdue_desc')}</p>
+          </div>
+          <div className="overflow-x-auto">
+            <table className="w-full text-sm">
+              <thead className="bg-gray-50 text-gray-600 uppercase text-xs">
+                <tr>
+                  <th className="px-6 py-3 text-left">{t('unit')}</th>
+                  <th className="px-6 py-3 text-left">{t('owner')}</th>
+                  <th className="px-6 py-3 text-left">{t('vehicle')}</th>
+                  <th className="px-6 py-3 text-left">{t('plate')}</th>
+                  <th className="px-6 py-3 text-left">{t('registered')}</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-gray-100">
+                {overdueVehicles.map((v) => (
+                  <tr key={v.id} className="hover:bg-amber-50">
+                    <td className="px-6 py-3 text-gray-700">{v.units?.address ?? '—'}</td>
+                    <td className="px-6 py-3">
+                      <div className="font-medium">{v.owner_name}</div>
+                      <div className="text-xs text-gray-400">{v.owner_email}</div>
+                    </td>
+                    <td className="px-6 py-3 text-gray-600">
+                      {[v.color, v.make, v.model].filter(Boolean).join(' ')}
+                    </td>
+                    <td className="px-6 py-3 font-mono font-semibold text-gray-800">{v.license_plate}</td>
+                    <td className="px-6 py-3 text-red-600 font-medium">
+                      {new Date(v.created_at).toLocaleDateString()}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      )}
 
       {/* Unresolved Abuse Alerts */}
       <div className="bg-white rounded-xl shadow-sm border border-gray-100 mb-8">

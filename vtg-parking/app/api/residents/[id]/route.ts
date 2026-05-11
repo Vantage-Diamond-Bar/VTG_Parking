@@ -1,19 +1,19 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { supabaseAdmin } from '@/lib/supabase'
-import { getSession } from '@/lib/auth'
+import { getSessionFromRequest } from '@/lib/auth'
 
 export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
-  const session = await getSession()
+  const session = getSessionFromRequest(req)
   if (!session) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
   if (session.role !== 'admin') return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
 
   const { id } = await params
   const body = await req.json()
-  const { make, model, color, license_plate, plate_state, owner_phone, owner_email, opt_in_sms, opt_in_email } = body
+  const { make, model, color, license_plate, plate_state, owner_phone, owner_email, opt_in_sms, opt_in_email, registrant_type } = body
 
   const { data, error } = await supabaseAdmin
     .from('resident_vehicles')
-    .update({ make, model, color, license_plate, plate_state, owner_phone, owner_email, opt_in_sms, opt_in_email })
+    .update({ make, model, color, license_plate, plate_state, owner_phone, owner_email, opt_in_sms, opt_in_email, registrant_type })
     .eq('id', id)
     .select()
     .single()
@@ -23,7 +23,7 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
 }
 
 export async function DELETE(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
-  const session = await getSession()
+  const session = getSessionFromRequest(req)
   if (!session) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
   if (session.role !== 'admin') return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
 

@@ -14,7 +14,9 @@
       "Bash(mkdir -p \"C:\\\\Users\\\\wuxjj\\\\OneDrive\\\\吴潇俊的文档\\\\Claude\\\\Temp Project\\\\VTG_Parking\\\\vtg-parking\\\\app\\\\api\\\\admin\\\\emails\\\\[id]\")",
       "Bash(npx tsc *)",
       "Bash(npm run *)",
-      "PowerShell(Get-ChildItem -Recurse -Filter \"route.ts\" \"C:\\\\Users\\\\wuxjj\\\\OneDrive\\\\吴潇俊的文档\\\\Claude\\\\Temp Project\\\\VTG_Parking\\\\vtg-parking\\\\app\\\\api\" | Where-Object { $_.DirectoryName -match '\\\\[' } | Select-Object -ExpandProperty FullName)"
+      "PowerShell(Get-ChildItem -Recurse -Filter \"route.ts\" \"C:\\\\Users\\\\wuxjj\\\\OneDrive\\\\吴潇俊的文档\\\\Claude\\\\Temp Project\\\\VTG_Parking\\\\vtg-parking\\\\app\\\\api\" | Where-Object { $_.DirectoryName -match '\\\\[' } | Select-Object -ExpandProperty FullName)",
+      "Bash(Get-ChildItem -Recurse \"C:\\\\Users\\\\wuxjj\\\\OneDrive\\\\吴潇俊的文档\\\\Claude\\\\Temp Project\\\\VTG_Parking\\\\vtg-parking\\\\app\\\\api\\\\residents\")",
+      "Bash(Select-Object FullName)"
     ]
   }
 }

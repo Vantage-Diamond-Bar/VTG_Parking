@@ -6,18 +6,19 @@ import { useForm } from 'react-hook-form';
 
 interface Resident {
   id: string;
-  unit_number: string;
+  units?: { address: string };
   owner_name: string;
+  registrant_type?: string;
   year: string;
   make: string;
   model: string;
   color: string;
-  plate: string;
-  state: string;
-  phone: string;
-  email: string;
-  doc_url?: string;
-  registered_at: string;
+  license_plate: string;
+  plate_state: string;
+  owner_phone: string;
+  owner_email: string;
+  registration_doc_url?: string;
+  created_at: string;
   opt_in_email?: boolean;
   opt_in_sms?: boolean;
 }
@@ -26,10 +27,11 @@ interface EditFormData {
   make: string;
   model: string;
   color: string;
-  plate: string;
-  state: string;
-  phone: string;
-  email: string;
+  license_plate: string;
+  plate_state: string;
+  owner_phone: string;
+  owner_email: string;
+  registrant_type: string;
   opt_in_email: boolean;
   opt_in_sms: boolean;
 }
@@ -54,12 +56,12 @@ export default function AdminResidentsPage() {
     try {
       const params = new URLSearchParams();
       if (q) params.set('search', q);
-      params.set('page', String(pg));
+      params.set('page', String(pg - 1));
       params.set('limit', String(PAGE_SIZE));
       const res = await fetch(`/api/residents?${params}`);
       if (res.ok) {
         const data = await res.json();
-        setResidents(Array.isArray(data) ? data : data.items ?? []);
+        setResidents(Array.isArray(data) ? data : data.data ?? []);
         setTotal(Array.isArray(data) ? data.length : data.total ?? 0);
       }
     } finally {
@@ -67,7 +69,6 @@ export default function AdminResidentsPage() {
     }
   }, []);
 
-  // Debounced search
   useEffect(() => {
     const timer = setTimeout(() => {
       setPage(1);
@@ -87,10 +88,11 @@ export default function AdminResidentsPage() {
       make: r.make,
       model: r.model,
       color: r.color,
-      plate: r.plate,
-      state: r.state,
-      phone: r.phone,
-      email: r.email,
+      license_plate: r.license_plate,
+      plate_state: r.plate_state,
+      owner_phone: r.owner_phone,
+      owner_email: r.owner_email,
+      registrant_type: r.registrant_type ?? 'owner',
       opt_in_email: r.opt_in_email ?? false,
       opt_in_sms: r.opt_in_sms ?? false,
     });
@@ -146,18 +148,16 @@ export default function AdminResidentsPage() {
         </div>
       </div>
 
-      {/* Search */}
       <div className="mb-4">
         <input
           type="text"
           value={search}
           onChange={(e) => setSearch(e.target.value)}
-          placeholder={t('search_residents')}
+          placeholder={t('search')}
           className="border border-gray-300 rounded-lg px-3 py-2 text-sm w-72 focus:outline-none focus:ring-2 focus:ring-blue-500"
         />
       </div>
 
-      {/* Table */}
       <div className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
         <div className="overflow-x-auto">
           <table className="w-full text-sm">
@@ -165,9 +165,10 @@ export default function AdminResidentsPage() {
               <tr>
                 <th className="px-4 py-3 text-left">{t('unit')}</th>
                 <th className="px-4 py-3 text-left">{t('owner')}</th>
+                <th className="px-4 py-3 text-left">{t('registrant_type')}</th>
                 <th className="px-4 py-3 text-left">{t('vehicle')}</th>
                 <th className="px-4 py-3 text-left">{t('color')}</th>
-                <th className="px-4 py-3 text-left">{t('plate_state')}</th>
+                <th className="px-4 py-3 text-left">{t('plate')}/{t('state')}</th>
                 <th className="px-4 py-3 text-left">{t('phone')}</th>
                 <th className="px-4 py-3 text-left">{t('email')}</th>
                 <th className="px-4 py-3 text-left">{t('doc')}</th>
@@ -178,30 +179,39 @@ export default function AdminResidentsPage() {
             <tbody className="divide-y divide-gray-100">
               {loading ? (
                 <tr>
-                  <td colSpan={10} className="px-4 py-8 text-center text-gray-400">
+                  <td colSpan={11} className="px-4 py-8 text-center text-gray-400">
                     {t('loading')}
                   </td>
                 </tr>
               ) : residents.length === 0 ? (
                 <tr>
-                  <td colSpan={10} className="px-4 py-8 text-center text-gray-400">
+                  <td colSpan={11} className="px-4 py-8 text-center text-gray-400">
                     {t('no_results')}
                   </td>
                 </tr>
               ) : (
                 residents.map((r) => (
                   <tr key={r.id} className="hover:bg-gray-50">
-                    <td className="px-4 py-3 font-medium">{r.unit_number}</td>
+                    <td className="px-4 py-3 font-medium">{r.units?.address ?? '—'}</td>
                     <td className="px-4 py-3">{r.owner_name}</td>
+                    <td className="px-4 py-3">
+                      <span className={`inline-block text-xs px-2 py-0.5 rounded-full ${
+                        r.registrant_type === 'tenant'
+                          ? 'bg-purple-100 text-purple-700'
+                          : 'bg-blue-100 text-blue-700'
+                      }`}>
+                        {r.registrant_type === 'tenant' ? 'Tenant' : 'Owner'}
+                      </span>
+                    </td>
                     <td className="px-4 py-3">{[r.year, r.make, r.model].filter(Boolean).join(' ')}</td>
                     <td className="px-4 py-3">{r.color}</td>
-                    <td className="px-4 py-3 font-mono">{r.plate} / {r.state}</td>
-                    <td className="px-4 py-3">{r.phone}</td>
-                    <td className="px-4 py-3 truncate max-w-[140px]">{r.email}</td>
+                    <td className="px-4 py-3 font-mono">{r.license_plate} / {r.plate_state}</td>
+                    <td className="px-4 py-3">{r.owner_phone}</td>
+                    <td className="px-4 py-3 truncate max-w-[140px]">{r.owner_email}</td>
                     <td className="px-4 py-3">
-                      {r.doc_url ? (
+                      {r.registration_doc_url ? (
                         <a
-                          href={r.doc_url}
+                          href={r.registration_doc_url}
                           target="_blank"
                           rel="noreferrer"
                           className="text-blue-600 hover:underline"
@@ -211,7 +221,7 @@ export default function AdminResidentsPage() {
                       ) : '—'}
                     </td>
                     <td className="px-4 py-3 text-gray-500">
-                      {new Date(r.registered_at).toLocaleDateString()}
+                      {new Date(r.created_at).toLocaleDateString()}
                     </td>
                     <td className="px-4 py-3">
                       <div className="flex gap-2">
@@ -236,10 +246,9 @@ export default function AdminResidentsPage() {
           </table>
         </div>
 
-        {/* Pagination */}
         <div className="flex items-center justify-between px-4 py-3 border-t border-gray-100">
           <span className="text-xs text-gray-500">
-            {t('page')} {page} / {totalPages}
+            {t('prev') && `${page} / ${totalPages}`}
           </span>
           <div className="flex gap-2">
             <button
@@ -264,9 +273,16 @@ export default function AdminResidentsPage() {
       {editTarget && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
           <div className="bg-white rounded-xl shadow-xl w-full max-w-lg p-6">
-            <h2 className="text-lg font-semibold text-gray-900 mb-4">{t('edit_resident')}</h2>
+            <h2 className="text-lg font-semibold text-gray-900 mb-4">{t('edit')}</h2>
             <form onSubmit={handleSubmit(onEditSubmit)} className="space-y-3">
               <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="block text-xs font-medium text-gray-700 mb-1">{t('registrant_type')}</label>
+                  <select {...register('registrant_type')} className="w-full border border-gray-300 rounded px-2 py-1.5 text-sm">
+                    <option value="owner">Owner</option>
+                    <option value="tenant">Tenant / Renter</option>
+                  </select>
+                </div>
                 <div>
                   <label className="block text-xs font-medium text-gray-700 mb-1">{t('make')}</label>
                   <input {...register('make')} className="w-full border border-gray-300 rounded px-2 py-1.5 text-sm" />
@@ -281,29 +297,29 @@ export default function AdminResidentsPage() {
                 </div>
                 <div>
                   <label className="block text-xs font-medium text-gray-700 mb-1">{t('plate')}</label>
-                  <input {...register('plate')} className="w-full border border-gray-300 rounded px-2 py-1.5 text-sm font-mono" />
+                  <input {...register('license_plate')} className="w-full border border-gray-300 rounded px-2 py-1.5 text-sm font-mono" />
                 </div>
                 <div>
                   <label className="block text-xs font-medium text-gray-700 mb-1">{t('state')}</label>
-                  <input {...register('state')} className="w-full border border-gray-300 rounded px-2 py-1.5 text-sm" />
+                  <input {...register('plate_state')} className="w-full border border-gray-300 rounded px-2 py-1.5 text-sm" />
                 </div>
                 <div>
                   <label className="block text-xs font-medium text-gray-700 mb-1">{t('phone')}</label>
-                  <input {...register('phone')} className="w-full border border-gray-300 rounded px-2 py-1.5 text-sm" />
+                  <input {...register('owner_phone')} className="w-full border border-gray-300 rounded px-2 py-1.5 text-sm" />
                 </div>
                 <div className="col-span-2">
                   <label className="block text-xs font-medium text-gray-700 mb-1">{t('email')}</label>
-                  <input {...register('email')} type="email" className="w-full border border-gray-300 rounded px-2 py-1.5 text-sm" />
+                  <input {...register('owner_email')} type="email" className="w-full border border-gray-300 rounded px-2 py-1.5 text-sm" />
                 </div>
               </div>
               <div className="flex gap-4">
                 <label className="flex items-center gap-2 text-sm text-gray-700">
                   <input type="checkbox" {...register('opt_in_email')} />
-                  {t('opt_in_email')}
+                  Email notifications
                 </label>
                 <label className="flex items-center gap-2 text-sm text-gray-700">
                   <input type="checkbox" {...register('opt_in_sms')} />
-                  {t('opt_in_sms')}
+                  SMS notifications
                 </label>
               </div>
               <div className="flex justify-end gap-3 pt-2">
@@ -332,7 +348,7 @@ export default function AdminResidentsPage() {
           <div className="bg-white rounded-xl shadow-xl w-full max-w-sm p-6">
             <h2 className="text-lg font-semibold text-gray-900 mb-2">{t('confirm_delete')}</h2>
             <p className="text-sm text-gray-600 mb-6">
-              {t('confirm_delete_resident', { name: deleteTarget.owner_name })}
+              {deleteTarget.owner_name} — {deleteTarget.license_plate}
             </p>
             <div className="flex justify-end gap-3">
               <button

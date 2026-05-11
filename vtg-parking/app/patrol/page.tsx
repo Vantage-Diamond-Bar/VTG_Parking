@@ -8,7 +8,7 @@ type SearchTab = 'plate' | 'code';
 interface LookupResult {
   found: boolean;
   type?: 'resident' | 'visitor';
-  unit_number?: string;
+  address?: string;
   owner_name?: string;
   guest_name?: string;
   year?: string;
@@ -163,7 +163,7 @@ export default function PatrolPage() {
             </span>
           </div>
           <div className="grid grid-cols-2 gap-3 text-sm">
-            <div><span className="text-blue-600 font-medium">{t('unit')}:</span> <span className="font-semibold">{result.unit_number}</span></div>
+            <div><span className="text-blue-600 font-medium">{t('unit')}:</span> <span className="font-semibold">{result.address}</span></div>
             <div><span className="text-blue-600 font-medium">{t('owner')}:</span> <span className="font-semibold">{result.owner_name}</span></div>
             <div><span className="text-blue-600 font-medium">{t('vehicle')}:</span> <span className="font-semibold">{[result.year, result.make, result.model].filter(Boolean).join(' ')}</span></div>
             <div><span className="text-blue-600 font-medium">{t('color')}:</span> <span className="font-semibold">{result.color}</span></div>
@@ -191,7 +191,7 @@ export default function PatrolPage() {
             </div>
           </div>
           <div className="grid grid-cols-2 gap-3 text-sm">
-            <div><span className={`text-${cardColor}-600 font-medium`}>{t('unit')}:</span> <span className="font-semibold">{result.unit_number}</span></div>
+            <div><span className={`text-${cardColor}-600 font-medium`}>{t('unit')}:</span> <span className="font-semibold">{result.address}</span></div>
             {result.guest_name && (
               <div><span className={`text-${cardColor}-600 font-medium`}>{t('guest_name')}:</span> <span className="font-semibold">{result.guest_name}</span></div>
             )}

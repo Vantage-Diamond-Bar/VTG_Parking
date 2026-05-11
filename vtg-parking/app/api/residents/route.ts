@@ -4,7 +4,7 @@ import { normalizedPlate } from '@/lib/utils';
 
 export async function POST(req: NextRequest) {
   const body = await req.json();
-  const { unit_id, owner_name, owner_phone, owner_email, opt_in_sms, opt_in_email, vehicles } = body;
+  const { unit_id, owner_name, owner_phone, owner_email, opt_in_sms, opt_in_email, registrant_type, vehicles } = body;
 
   for (const vehicle of vehicles) {
     const plate = normalizedPlate(vehicle.license_plate);
@@ -47,8 +47,9 @@ export async function POST(req: NextRequest) {
     owner_name,
     owner_phone,
     owner_email,
+    registrant_type: registrant_type ?? 'owner',
     opt_in_sms: opt_in_sms ?? false,
-    opt_in_email: opt_in_email ?? false,
+    opt_in_email: opt_in_email ?? true,
     year: v.year,
     make: v.make,
     model: v.model,
@@ -76,13 +77,13 @@ export async function GET(req: NextRequest) {
 
   let query = supabaseAdmin
     .from('resident_vehicles')
-    .select('*, units(unit_number, address)', { count: 'exact' })
+    .select('*, units(address)', { count: 'exact' })
     .order('created_at', { ascending: false })
     .range(offset, offset + limit - 1);
 
   if (search) {
     query = query.or(
-      `license_plate.ilike.%${search}%,owner_name.ilike.%${search}%,units.unit_number.ilike.%${search}%`
+      `license_plate.ilike.%${search}%,owner_name.ilike.%${search}%`
     );
   }
 

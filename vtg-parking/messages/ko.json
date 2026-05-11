@@ -51,6 +51,13 @@
     "success_title": "등록이 완료되었습니다!",
     "success_desc": "차량 정보가 제출되었습니다. 관리 사무소에서 검토 후 확인해 드립니다.",
     "register_another": "다른 차량 등록",
+    "registrant_type": "등록인 유형",
+    "registrant_type_owner": "소유자",
+    "registrant_type_tenant": "세입자",
+    "plate_hint": "공백 없이 번호판 전체를 입력하세요 (예: ABC1234)",
+    "email_consent": "제출 시 이 이메일 주소로 연간 차량 등록 갱신 알림 수신에 동의합니다.",
+    "doc_required_3plus": "차량 3대 이상 등록 시, 모든 차량(1, 2번째 차량 포함)의 등록 서류를 업로드해야 합니다.",
+    "doc_required": "차량 3대 이상 등록 시 서류 업로드가 필요합니다.",
     "error_plate_conflict": "이 번호판은 이미 입주민 차량으로 등록되어 있습니다.",
     "required": "필수 입력 항목입니다."
   },
@@ -93,6 +100,7 @@
     "quota_used": "이번 달 {used}/{total}박 사용",
     "quota_exceeded": "이번 달 방문객 주차 한도를 모두 사용했습니다 (10/10박). 관리 사무소에 문의하세요.",
     "error_plate_conflict": "이 번호판은 입주민 차량으로 등록되어 있어 방문객으로 등록할 수 없습니다.",
+    "plate_hint": "공백 없이 번호판 전체를 입력하세요 (예: ABC1234)",
     "required": "필수 입력 항목입니다.",
     "end_after_start": "종료 시간은 시작 시간 이후여야 합니다."
   },
@@ -222,7 +230,7 @@
     "import_units": "Excel에서 가져오기",
     "import_excel": "Excel에서 가져오기",
     "importing": "가져오는 중...",
-    "import_empty": "유효한 데이터가 없습니다. 열 이름이 unit_number와 address인지 확인하세요.",
+    "import_empty": "유효한 데이터가 없습니다. 열 이름이 address인지 확인하세요.",
     "add_email": "이메일 추가",
     "label": "담당자명",
     "email_label_placeholder": "예: 관리 담당자",
@@ -275,7 +283,15 @@
     "alert_units": "등록 세대",
     "alert_count": "등록 횟수",
     "alert_month": "월",
-    "doc": "등록증"
+    "doc": "등록증",
+    "overdue_vehicles": "갱신 미완료 등록",
+    "overdue_desc": "1년 이상 미갱신 차량 — 갱신 알림 필요",
+    "no_overdue": "갱신 미완료 등록이 없습니다.",
+    "registrant_type": "유형",
+    "view": "보기",
+    "prev": "이전",
+    "next": "다음",
+    "page_of": "{page} / {total} 페이지"
   },
   "common": {
     "loading": "로딩 중...",

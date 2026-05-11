@@ -70,6 +70,10 @@ export default function VisitorPage() {
     const errors: Record<string, string> = {}
     if (!unitId) errors.unit_id = t('required')
     if (!licensePlate.trim()) errors.license_plate = t('required')
+    if (!plateState) errors.plate_state = t('required')
+    if (!make) errors.make = t('required')
+    if (!model.trim()) errors.model = t('required')
+    if (!color) errors.color = t('required')
     if (!startDatetime) errors.start_datetime = t('required')
     if (!endDatetime) errors.end_datetime = t('required')
     if (startDatetime && endDatetime && endDatetime <= startDatetime) {
@@ -280,15 +284,18 @@ export default function VisitorPage() {
                         <input
                           type="text"
                           value={licensePlate}
-                          onChange={(e) => setLicensePlate(e.target.value.toUpperCase())}
+                          title={t('plate_hint')}
+                          placeholder="ABC1234"
+                          onChange={(e) => setLicensePlate(e.target.value.replace(/\s/g, '').toUpperCase())}
                           className={inputCls}
                         />
+                        <p className="text-xs text-gray-400 mt-1">{t('plate_hint')}</p>
                         {fieldErrors.license_plate && (
                           <p className="text-red-500 text-xs mt-1">{fieldErrors.license_plate}</p>
                         )}
                       </div>
                       <div>
-                        <label className={labelCls}>{t('plate_state')}</label>
+                        <label className={labelCls}>{t('plate_state')} *</label>
                         <select
                           value={plateState}
                           onChange={(e) => setPlateState(e.target.value)}
@@ -301,12 +308,15 @@ export default function VisitorPage() {
                             </option>
                           ))}
                         </select>
+                        {fieldErrors.plate_state && (
+                          <p className="text-red-500 text-xs mt-1">{fieldErrors.plate_state}</p>
+                        )}
                       </div>
                     </div>
 
                     <div className="grid grid-cols-3 gap-4">
                       <div>
-                        <label className={labelCls}>{t('make')}</label>
+                        <label className={labelCls}>{t('make')} *</label>
                         <select
                           value={make}
                           onChange={(e) => setMake(e.target.value)}
@@ -317,18 +327,24 @@ export default function VisitorPage() {
                             <option key={m} value={m}>{m}</option>
                           ))}
                         </select>
+                        {fieldErrors.make && (
+                          <p className="text-red-500 text-xs mt-1">{fieldErrors.make}</p>
+                        )}
                       </div>
                       <div>
-                        <label className={labelCls}>{t('model')}</label>
+                        <label className={labelCls}>{t('model')} *</label>
                         <input
                           type="text"
                           value={model}
                           onChange={(e) => setModel(e.target.value)}
                           className={inputCls}
                         />
+                        {fieldErrors.model && (
+                          <p className="text-red-500 text-xs mt-1">{fieldErrors.model}</p>
+                        )}
                       </div>
                       <div>
-                        <label className={labelCls}>{t('color')}</label>
+                        <label className={labelCls}>{t('color')} *</label>
                         <select
                           value={color}
                           onChange={(e) => setColor(e.target.value)}
@@ -341,6 +357,9 @@ export default function VisitorPage() {
                             </option>
                           ))}
                         </select>
+                        {fieldErrors.color && (
+                          <p className="text-red-500 text-xs mt-1">{fieldErrors.color}</p>
+                        )}
                       </div>
                     </div>
                   </div>

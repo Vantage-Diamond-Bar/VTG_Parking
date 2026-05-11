@@ -6,7 +6,6 @@ import { useForm } from 'react-hook-form';
 
 interface Unit {
   id: string;
-  unit_number: string;
   address: string;
   active: boolean;
 }
@@ -45,7 +44,7 @@ export default function AdminUnitsPage() {
     const res = await fetch('/api/admin/units', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ unit_number: data.address, address: data.address }),
+      body: JSON.stringify({ address: data.address }),
     });
     if (res.ok) {
       reset();
@@ -77,10 +76,10 @@ export default function AdminUnitsPage() {
       const arrayBuffer = await file.arrayBuffer();
       const workbook = XLSX.read(arrayBuffer, { type: 'array' });
       const sheet = workbook.Sheets[workbook.SheetNames[0]];
-      const rows = XLSX.utils.sheet_to_json<{ unit_number: string; address: string }>(sheet);
+      const rows = XLSX.utils.sheet_to_json<{ address: string }>(sheet);
       const items = rows
-        .filter((r) => r.unit_number && r.address)
-        .map((r) => ({ unit_number: String(r.unit_number), address: String(r.address) }));
+        .filter((r) => r.address)
+        .map((r) => ({ address: String(r.address) }));
 
       if (items.length === 0) {
         alert(t('import_empty'));

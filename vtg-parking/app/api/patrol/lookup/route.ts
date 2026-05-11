@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { supabaseAdmin } from '@/lib/supabase';
-import { getSession } from '@/lib/auth';
+import { getSessionFromRequest } from '@/lib/auth';
 import { normalizedPlate } from '@/lib/utils';
 
 function determineStatus(start: string, end: string): 'active' | 'expired' | 'upcoming' {
@@ -14,7 +14,7 @@ function determineStatus(start: string, end: string): 'active' | 'expired' | 'up
 }
 
 export async function GET(req: NextRequest) {
-  const session = await getSession();
+  const session = getSessionFromRequest(req);
   if (!session) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   if (session.role !== 'admin' && session.role !== 'patrol') {
     return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
@@ -34,7 +34,7 @@ export async function GET(req: NextRequest) {
     // Check resident vehicles
     const { data: resident } = await supabaseAdmin
       .from('resident_vehicles')
-      .select('*, units(unit_number, address)')
+      .select('*, units(address)')
       .ilike('license_plate', plate)
       .maybeSingle();
 
@@ -45,7 +45,7 @@ export async function GET(req: NextRequest) {
     // Check visitor registrations - most recent
     const { data: visitors } = await supabaseAdmin
       .from('visitor_registrations')
-      .select('*, units(unit_number, address)')
+      .select('*, units(address)')
       .ilike('license_plate', plate)
       .order('start_datetime', { ascending: false })
       .limit(1);
@@ -62,7 +62,7 @@ export async function GET(req: NextRequest) {
   // Lookup by access code
   const { data: registration } = await supabaseAdmin
     .from('visitor_registrations')
-    .select('*, units(unit_number, address)')
+    .select('*, units(address)')
     .eq('access_code', code!.toUpperCase())
     .maybeSingle();
 
