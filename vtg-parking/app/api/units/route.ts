@@ -5,7 +5,7 @@ export async function GET() {
   const { data, error } = await supabaseAdmin
     .from('units')
     .select('id, unit_number, address')
-    .eq('is_active', true)
+    .eq('active', true)
     .order('unit_number');
 
   if (error) {

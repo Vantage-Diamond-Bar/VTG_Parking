@@ -7,7 +7,8 @@ export async function POST(req: NextRequest) {
   if (!session) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   if (session.role !== 'admin') return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
 
-  const { units } = await req.json();
+  const body = await req.json();
+  const units = body.units ?? body.items;
 
   if (!Array.isArray(units) || units.length === 0) {
     return NextResponse.json({ error: 'units array is required' }, { status: 400 });
