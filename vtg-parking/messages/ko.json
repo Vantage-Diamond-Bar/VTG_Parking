@@ -304,7 +304,13 @@
     "valid_until": "유효 종료",
     "created": "등록일",
     "license_plate": "번호판",
-    "confirm_delete_visitor": "이 방문 등록을 삭제하시겠습니까?"
+    "confirm_delete_visitor": "이 방문 등록을 삭제하시겠습니까?",
+    "filter_location": "위치로 필터...",
+    "filter_type": "유형으로 필터...",
+    "description": "설명",
+    "reporter_email": "신고자 이메일",
+    "photos_count": "장",
+    "violation_photos": "위반 사진"
   },
   "common": {
     "loading": "로딩 중...",

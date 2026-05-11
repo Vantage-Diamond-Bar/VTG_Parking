@@ -304,7 +304,13 @@
     "valid_until": "有效期至",
     "created": "登记时间",
     "license_plate": "车牌号",
-    "confirm_delete_visitor": "确定要删除这条访客登记记录吗？"
+    "confirm_delete_visitor": "确定要删除这条访客登记记录吗？",
+    "filter_location": "按地点筛选...",
+    "filter_type": "按类型筛选...",
+    "description": "描述",
+    "reporter_email": "举报人邮箱",
+    "photos_count": "张照片",
+    "violation_photos": "违章照片"
   },
   "common": {
     "loading": "加载中...",

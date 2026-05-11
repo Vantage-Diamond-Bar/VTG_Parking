@@ -5,11 +5,11 @@ import { useTranslations } from 'next-intl';
 
 interface Violation {
   id: string;
-  submitted_at: string;
+  created_at: string;
   location: string;
-  type: string;
-  plate: string;
-  description: string;
+  violation_type: string;
+  license_plate?: string;
+  description?: string;
   photo_urls?: string[];
   reporter_email?: string;
 }
@@ -32,10 +32,12 @@ export default function AdminViolationsPage() {
       if (type) params.set('type', type);
       if (fromDate) params.set('from', fromDate);
       if (toDate) params.set('to', toDate);
-      const res = await fetch(`/api/violations?${params}`);
+      const res = await fetch(`/api/admin/violations?${params}`);
+      const json = await res.json();
       if (res.ok) {
-        const data = await res.json();
-        setViolations(Array.isArray(data) ? data : data.items ?? []);
+        setViolations(Array.isArray(json) ? json : json.data ?? []);
+      } else {
+        console.error('Violations fetch error:', json);
       }
     } finally {
       setLoading(false);
@@ -120,17 +122,17 @@ export default function AdminViolationsPage() {
                 violations.map((v) => (
                   <tr key={v.id} className="hover:bg-gray-50">
                     <td className="px-4 py-3 text-gray-600 whitespace-nowrap">
-                      {new Date(v.submitted_at).toLocaleString()}
+                      {new Date(v.created_at).toLocaleString()}
                     </td>
                     <td className="px-4 py-3">{v.location}</td>
                     <td className="px-4 py-3">
                       <span className="inline-block bg-orange-100 text-orange-700 text-xs px-2 py-0.5 rounded-full">
-                        {v.type}
+                        {v.violation_type}
                       </span>
                     </td>
-                    <td className="px-4 py-3 font-mono font-semibold">{v.plate}</td>
+                    <td className="px-4 py-3 font-mono font-semibold">{v.license_plate || '—'}</td>
                     <td className="px-4 py-3 max-w-[200px] truncate text-gray-600" title={v.description}>
-                      {v.description}
+                      {v.description || '—'}
                     </td>
                     <td className="px-4 py-3">
                       {v.photo_urls && v.photo_urls.length > 0 ? (
