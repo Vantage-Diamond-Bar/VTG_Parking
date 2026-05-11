@@ -22,7 +22,7 @@ export async function GET(req: NextRequest) {
     supabaseAdmin
       .from('violation_reports')
       .select('id', { count: 'exact', head: true })
-      .gte('created_at', monthStart),
+      .gte('submitted_at', monthStart),
   ]);
 
   return NextResponse.json({

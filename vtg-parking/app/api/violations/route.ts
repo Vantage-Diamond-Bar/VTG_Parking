@@ -88,13 +88,13 @@ export async function GET(req: NextRequest) {
   let query = supabaseAdmin
     .from('violation_reports')
     .select('*', { count: 'exact' })
-    .order('created_at', { ascending: false })
+    .order('submitted_at', { ascending: false })
     .range(offset, offset + limit - 1);
 
   if (location) query = query.ilike('location', `%${location}%`);
   if (type) query = query.eq('violation_type', type);
-  if (from) query = query.gte('created_at', from);
-  if (to) query = query.lte('created_at', to);
+  if (from) query = query.gte('submitted_at', from);
+  if (to) query = query.lte('submitted_at', to);
 
   const { data, error, count } = await query;
 

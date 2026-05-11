@@ -5,7 +5,7 @@ import { useTranslations } from 'next-intl';
 
 interface Violation {
   id: string;
-  created_at: string;
+  submitted_at: string;
   location: string;
   violation_type: string;
   license_plate?: string;
@@ -122,7 +122,7 @@ export default function AdminViolationsPage() {
                 violations.map((v) => (
                   <tr key={v.id} className="hover:bg-gray-50">
                     <td className="px-4 py-3 text-gray-600 whitespace-nowrap">
-                      {new Date(v.created_at).toLocaleString()}
+                      {new Date(v.submitted_at).toLocaleString()}
                     </td>
                     <td className="px-4 py-3">{v.location}</td>
                     <td className="px-4 py-3">

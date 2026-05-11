@@ -42,7 +42,7 @@ async function getStats(): Promise<Stats | null> {
   const [residentsResult, visitorsResult, violationsResult] = await Promise.all([
     supabaseAdmin.from('resident_vehicles').select('id', { count: 'exact', head: true }),
     supabaseAdmin.from('visitor_registrations').select('id', { count: 'exact', head: true }).gte('created_at', monthStart),
-    supabaseAdmin.from('violation_reports').select('id', { count: 'exact', head: true }).gte('created_at', monthStart),
+    supabaseAdmin.from('violation_reports').select('id', { count: 'exact', head: true }).gte('submitted_at', monthStart),
   ]);
   return {
     total_residents: residentsResult.count ?? 0,
@@ -69,12 +69,12 @@ async function getAlerts(): Promise<Alert[]> {
 async function getRecentViolations(): Promise<Violation[]> {
   const { data } = await supabaseAdmin
     .from('violation_reports')
-    .select('id, created_at, location, violation_type, license_plate, description')
-    .order('created_at', { ascending: false })
+    .select('id, submitted_at, location, violation_type, license_plate, description')
+    .order('submitted_at', { ascending: false })
     .limit(5);
   return (data ?? []).map((v: any) => ({
     id: v.id,
-    submitted_at: v.created_at,
+    submitted_at: v.submitted_at,
     location: v.location,
     type: v.violation_type,
     plate: v.license_plate ?? '',
