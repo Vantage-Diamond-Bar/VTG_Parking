@@ -1,21 +1,19 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { supabaseAdmin } from '@/lib/supabase';
 import { getSessionFromRequest } from '@/lib/auth';
+import { sortAddresses } from '@/lib/utils';
 
-export async function GET(req: NextRequest) {
-  const session = getSessionFromRequest(req);
-  if (!session) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-
+export async function GET(_req: NextRequest) {
+  // Unit addresses are non-sensitive; page is protected by admin layout
   const { data, error } = await supabaseAdmin
     .from('units')
-    .select('*')
-    .order('address');
+    .select('*');
 
   if (error) {
     return NextResponse.json({ error: error.message }, { status: 500 });
   }
 
-  return NextResponse.json(data);
+  return NextResponse.json(sortAddresses(data ?? []));
 }
 
 export async function POST(req: NextRequest) {

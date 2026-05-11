@@ -66,3 +66,19 @@ export const VIOLATION_TYPES = [
 ] as const
 
 export const VISITOR_QUOTA_LIMIT = 10
+
+function parseAddr(addr: string): { street: string; num: number; unit: number } {
+  const m = addr.match(/^(\d+)\s+(.+?)(?:\s+Unit\s+(\d+))?$/i)
+  if (!m) return { street: addr, num: 0, unit: 0 }
+  return { street: m[2]!, num: parseInt(m[1]!), unit: m[3] ? parseInt(m[3]) : 0 }
+}
+
+export function sortAddresses<T extends { address: string }>(items: T[]): T[] {
+  return [...items].sort((a, b) => {
+    const pa = parseAddr(a.address)
+    const pb = parseAddr(b.address)
+    if (pa.street !== pb.street) return pa.street.localeCompare(pb.street)
+    if (pa.num !== pb.num) return pa.num - pb.num
+    return pa.unit - pb.unit
+  })
+}
