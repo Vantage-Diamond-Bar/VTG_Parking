@@ -18,7 +18,7 @@ interface Vehicle {
 
 interface Unit {
   id: string
-  unit_number: string
+  address: string
 }
 
 function emptyVehicle(): Vehicle {
@@ -224,7 +224,7 @@ export default function RegisterPage() {
                   <option value="">{t('unit_placeholder')}</option>
                   {units.map((u) => (
                     <option key={u.id} value={u.id}>
-                      {u.unit_number}
+                      {u.address}
                     </option>
                   ))}
                 </select>

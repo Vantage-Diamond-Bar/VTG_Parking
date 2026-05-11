@@ -12,7 +12,6 @@ interface Unit {
 }
 
 interface AddUnitFormData {
-  unit_number: string;
   address: string;
 }
 
@@ -46,7 +45,7 @@ export default function AdminUnitsPage() {
     const res = await fetch('/api/admin/units', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(data),
+      body: JSON.stringify({ unit_number: data.address, address: data.address }),
     });
     if (res.ok) {
       reset();
@@ -129,19 +128,11 @@ export default function AdminUnitsPage() {
         <h2 className="text-sm font-semibold text-gray-700 mb-3">{t('add_unit')}</h2>
         <form onSubmit={handleSubmit(onAddSubmit)} className="flex flex-wrap gap-3 items-end">
           <div>
-            <label className="block text-xs font-medium text-gray-600 mb-1">{t('unit_number')}</label>
-            <input
-              {...register('unit_number', { required: true })}
-              className="border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-              placeholder="101"
-            />
-          </div>
-          <div>
             <label className="block text-xs font-medium text-gray-600 mb-1">{t('address')}</label>
             <input
               {...register('address', { required: true })}
-              className="border border-gray-300 rounded-lg px-3 py-2 text-sm w-64 focus:outline-none focus:ring-2 focus:ring-blue-500"
-              placeholder="123 Main St #101"
+              className="border border-gray-300 rounded-lg px-3 py-2 text-sm w-80 focus:outline-none focus:ring-2 focus:ring-blue-500"
+              placeholder="123 Terrace Ln E #101"
             />
           </div>
           <button
@@ -159,7 +150,6 @@ export default function AdminUnitsPage() {
           <table className="w-full text-sm">
             <thead className="bg-gray-50 text-gray-600 uppercase text-xs">
               <tr>
-                <th className="px-6 py-3 text-left">{t('unit_number')}</th>
                 <th className="px-6 py-3 text-left">{t('address')}</th>
                 <th className="px-6 py-3 text-left">{t('status')}</th>
                 <th className="px-6 py-3 text-left">{t('actions')}</th>
@@ -168,17 +158,16 @@ export default function AdminUnitsPage() {
             <tbody className="divide-y divide-gray-100">
               {loading ? (
                 <tr>
-                  <td colSpan={4} className="px-6 py-8 text-center text-gray-400">{t('loading')}</td>
+                  <td colSpan={3} className="px-6 py-8 text-center text-gray-400">{t('loading')}</td>
                 </tr>
               ) : units.length === 0 ? (
                 <tr>
-                  <td colSpan={4} className="px-6 py-8 text-center text-gray-400">{t('no_results')}</td>
+                  <td colSpan={3} className="px-6 py-8 text-center text-gray-400">{t('no_results')}</td>
                 </tr>
               ) : (
                 units.map((unit) => (
                   <tr key={unit.id} className="hover:bg-gray-50">
-                    <td className="px-6 py-4 font-medium">{unit.unit_number}</td>
-                    <td className="px-6 py-4 text-gray-600">{unit.address}</td>
+                    <td className="px-6 py-4 font-medium">{unit.address}</td>
                     <td className="px-6 py-4">
                       <span
                         className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${

@@ -7,7 +7,7 @@ import { US_STATES, CAR_COLORS, VISITOR_QUOTA_LIMIT } from '@/lib/utils'
 
 interface Unit {
   id: string
-  unit_number: string
+  address: string
 }
 
 interface QuotaData {
@@ -221,7 +221,7 @@ export default function VisitorPage() {
                   <option value="">{t('unit_placeholder')}</option>
                   {units.map((u) => (
                     <option key={u.id} value={u.id}>
-                      {u.unit_number}
+                      {u.address}
                     </option>
                   ))}
                 </select>
