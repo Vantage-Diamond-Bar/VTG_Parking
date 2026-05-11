@@ -35,6 +35,16 @@ export const CAR_COLORS = [
   'Yellow','Orange','Brown','Gold','Beige','Purple','Other',
 ]
 
+export const CAR_MAKES = [
+  'Acura','Alfa Romeo','Aston Martin','Audi','Bentley','BMW','Buick',
+  'Cadillac','Chevrolet','Chrysler','Dodge','Ferrari','Fiat','Ford',
+  'Genesis','GMC','Honda','Hyundai','Infiniti','Jaguar','Jeep','Kia',
+  'Lamborghini','Land Rover','Lexus','Lincoln','Maserati','Mazda',
+  'Mercedes-Benz','MINI','Mitsubishi','Nissan','Porsche','Ram',
+  'Rivian','Rolls-Royce','Subaru','Tesla','Toyota','Volkswagen','Volvo',
+  'Other',
+]
+
 export const VIOLATION_LOCATIONS = [
   'Terrace Ln E',
   'Terrace Ln W',

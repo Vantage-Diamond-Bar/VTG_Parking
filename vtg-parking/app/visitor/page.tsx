@@ -3,7 +3,7 @@
 import { useState, useEffect } from 'react'
 import Link from 'next/link'
 import { useTranslations } from 'next-intl'
-import { US_STATES, CAR_COLORS, VISITOR_QUOTA_LIMIT } from '@/lib/utils'
+import { US_STATES, CAR_COLORS, CAR_MAKES, VISITOR_QUOTA_LIMIT } from '@/lib/utils'
 
 interface Unit {
   id: string
@@ -307,12 +307,16 @@ export default function VisitorPage() {
                     <div className="grid grid-cols-3 gap-4">
                       <div>
                         <label className={labelCls}>{t('make')}</label>
-                        <input
-                          type="text"
+                        <select
                           value={make}
                           onChange={(e) => setMake(e.target.value)}
                           className={inputCls}
-                        />
+                        >
+                          <option value=""></option>
+                          {CAR_MAKES.map((m) => (
+                            <option key={m} value={m}>{m}</option>
+                          ))}
+                        </select>
                       </div>
                       <div>
                         <label className={labelCls}>{t('model')}</label>

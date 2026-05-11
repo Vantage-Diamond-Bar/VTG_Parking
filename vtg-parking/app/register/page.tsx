@@ -3,7 +3,7 @@
 import { useState, useEffect } from 'react'
 import Link from 'next/link'
 import { useTranslations } from 'next-intl'
-import { US_STATES, CAR_COLORS } from '@/lib/utils'
+import { US_STATES, CAR_COLORS, CAR_MAKES } from '@/lib/utils'
 
 interface Vehicle {
   year: string
@@ -39,7 +39,8 @@ export default function RegisterPage() {
 
   const [units, setUnits] = useState<Unit[]>([])
   const [unitId, setUnitId] = useState('')
-  const [ownerName, setOwnerName] = useState('')
+  const [ownerFirstName, setOwnerFirstName] = useState('')
+  const [ownerLastName, setOwnerLastName] = useState('')
   const [ownerPhone, setOwnerPhone] = useState('')
   const [ownerEmail, setOwnerEmail] = useState('')
   const [optInSms, setOptInSms] = useState(false)
@@ -100,7 +101,8 @@ export default function RegisterPage() {
   function validate(): boolean {
     const errors: Record<string, string> = {}
     if (!unitId) errors.unit_id = t('required')
-    if (!ownerName.trim()) errors.owner_name = t('required')
+    if (!ownerFirstName.trim()) errors.owner_first_name = t('required')
+    if (!ownerLastName.trim()) errors.owner_last_name = t('required')
     vehicles.forEach((v, i) => {
       if (!v.year) errors[`year_${i}`] = t('required')
       if (!v.make.trim()) errors[`make_${i}`] = t('required')
@@ -121,7 +123,7 @@ export default function RegisterPage() {
     try {
       const body = {
         unit_id: unitId,
-        owner_name: ownerName,
+        owner_name: `${ownerFirstName.trim()} ${ownerLastName.trim()}`,
         owner_phone: ownerPhone,
         owner_email: ownerEmail,
         opt_in_sms: optInSms,
@@ -161,7 +163,8 @@ export default function RegisterPage() {
 
   function resetForm() {
     setUnitId('')
-    setOwnerName('')
+    setOwnerFirstName('')
+    setOwnerLastName('')
     setOwnerPhone('')
     setOwnerEmail('')
     setOptInSms(false)
@@ -238,17 +241,31 @@ export default function RegisterPage() {
             <div>
               <h2 className={sectionCls}>{t('section_contact')}</h2>
               <div className="space-y-4">
-                <div>
-                  <label className={labelCls}>{t('owner_name')}</label>
-                  <input
-                    type="text"
-                    value={ownerName}
-                    onChange={(e) => setOwnerName(e.target.value)}
-                    className={inputCls}
-                  />
-                  {fieldErrors.owner_name && (
-                    <p className="text-red-500 text-xs mt-1">{fieldErrors.owner_name}</p>
-                  )}
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <label className={labelCls}>{t('first_name')} *</label>
+                    <input
+                      type="text"
+                      value={ownerFirstName}
+                      onChange={(e) => setOwnerFirstName(e.target.value)}
+                      className={inputCls}
+                    />
+                    {fieldErrors.owner_first_name && (
+                      <p className="text-red-500 text-xs mt-1">{fieldErrors.owner_first_name}</p>
+                    )}
+                  </div>
+                  <div>
+                    <label className={labelCls}>{t('last_name')} *</label>
+                    <input
+                      type="text"
+                      value={ownerLastName}
+                      onChange={(e) => setOwnerLastName(e.target.value)}
+                      className={inputCls}
+                    />
+                    {fieldErrors.owner_last_name && (
+                      <p className="text-red-500 text-xs mt-1">{fieldErrors.owner_last_name}</p>
+                    )}
+                  </div>
                 </div>
                 <div>
                   <label className={labelCls}>{t('phone')}</label>
@@ -349,13 +366,17 @@ export default function RegisterPage() {
 
                     <div className="grid grid-cols-2 gap-4">
                       <div>
-                        <label className={labelCls}>{t('make')}</label>
-                        <input
-                          type="text"
+                        <label className={labelCls}>{t('make')} *</label>
+                        <select
                           value={vehicle.make}
                           onChange={(e) => updateVehicle(index, 'make', e.target.value)}
                           className={inputCls}
-                        />
+                        >
+                          <option value=""></option>
+                          {CAR_MAKES.map((m) => (
+                            <option key={m} value={m}>{m}</option>
+                          ))}
+                        </select>
                         {fieldErrors[`make_${index}`] && (
                           <p className="text-red-500 text-xs mt-1">{fieldErrors[`make_${index}`]}</p>
                         )}
