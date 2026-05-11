@@ -197,6 +197,7 @@
     "expires": "Registered Until",
     "guest": "Guest",
     "vehicle": "Vehicle",
+    "color": "Color",
     "plate": "Plate",
     "login": "Patrol Login",
     "login_subtitle": "Enter your patrol credentials to continue.",

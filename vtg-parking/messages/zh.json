@@ -197,6 +197,7 @@
     "expires": "有效期至",
     "guest": "访客",
     "vehicle": "车辆",
+    "color": "颜色",
     "plate": "车牌",
     "login": "巡逻员登录",
     "login_subtitle": "请输入巡逻员账号密码。",

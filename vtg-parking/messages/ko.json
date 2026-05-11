@@ -197,6 +197,7 @@
     "expires": "유효 기간",
     "guest": "방문객",
     "vehicle": "차량",
+    "color": "색상",
     "plate": "번호판",
     "login": "순찰 로그인",
     "login_subtitle": "순찰 계정으로 로그인하세요.",
