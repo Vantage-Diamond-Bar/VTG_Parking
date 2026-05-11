@@ -20,6 +20,7 @@ export default function AdminEmailsPage() {
   const t = useTranslations('admin');
   const [emails, setEmails] = useState<NotificationEmail[]>([]);
   const [loading, setLoading] = useState(false);
+  const [submitError, setSubmitError] = useState('');
 
   const { register, handleSubmit, reset } = useForm<AddEmailFormData>();
 
@@ -41,6 +42,7 @@ export default function AdminEmailsPage() {
   }, []);
 
   const onAddSubmit = async (data: AddEmailFormData) => {
+    setSubmitError('');
     const res = await fetch('/api/admin/emails', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -49,6 +51,9 @@ export default function AdminEmailsPage() {
     if (res.ok) {
       reset();
       fetchEmails();
+    } else {
+      const body = await res.json().catch(() => ({}));
+      setSubmitError(`Error ${res.status}: ${body.error ?? 'Unknown error'}`);
     }
   };
 
@@ -99,6 +104,9 @@ export default function AdminEmailsPage() {
             {t('add')}
           </button>
         </form>
+        {submitError && (
+          <p className="mt-2 text-sm text-red-600">{submitError}</p>
+        )}
       </div>
 
       {/* Table */}
