@@ -1,4 +1,5 @@
 import { cookies } from 'next/headers'
+import type { NextRequest } from 'next/server'
 import { supabaseAdmin } from './supabase'
 import bcrypt from 'bcryptjs'
 
@@ -34,19 +35,27 @@ export async function verifyCredentials(
   return { id: user.id, username: user.username, role: user.role, display_name: user.display_name }
 }
 
+function decodeSession(value: string): AuthUser | null {
+  try {
+    return JSON.parse(Buffer.from(value, 'base64').toString('utf-8')) as AuthUser
+  } catch {
+    return null
+  }
+}
+
+// For Server Components and layouts — uses next/headers
 export async function getSession(): Promise<AuthUser | null> {
   const cookieStore = await cookies()
   const sessionCookie = cookieStore.get('session')
   if (!sessionCookie) return null
+  return decodeSession(sessionCookie.value)
+}
 
-  try {
-    const session = JSON.parse(
-      Buffer.from(sessionCookie.value, 'base64').toString('utf-8')
-    )
-    return session as AuthUser
-  } catch {
-    return null
-  }
+// For Route Handlers — reads directly from the incoming request
+export function getSessionFromRequest(req: NextRequest): AuthUser | null {
+  const sessionCookie = req.cookies.get('session')
+  if (!sessionCookie) return null
+  return decodeSession(sessionCookie.value)
 }
 
 export function encodeSession(user: AuthUser): string {

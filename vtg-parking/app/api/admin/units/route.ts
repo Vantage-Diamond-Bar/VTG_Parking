@@ -1,9 +1,25 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { supabaseAdmin } from '@/lib/supabase';
-import { getSession } from '@/lib/auth';
+import { getSessionFromRequest } from '@/lib/auth';
+
+export async function GET(req: NextRequest) {
+  const session = getSessionFromRequest(req);
+  if (!session) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+
+  const { data, error } = await supabaseAdmin
+    .from('units')
+    .select('*')
+    .order('unit_number');
+
+  if (error) {
+    return NextResponse.json({ error: error.message }, { status: 500 });
+  }
+
+  return NextResponse.json(data);
+}
 
 export async function POST(req: NextRequest) {
-  const session = await getSession();
+  const session = getSessionFromRequest(req);
   if (!session) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   if (session.role !== 'admin') return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
 
@@ -20,20 +36,4 @@ export async function POST(req: NextRequest) {
   }
 
   return NextResponse.json({ success: true, unit: data });
-}
-
-export async function GET() {
-  const session = await getSession();
-  if (!session) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-
-  const { data, error } = await supabaseAdmin
-    .from('units')
-    .select('*')
-    .order('unit_number');
-
-  if (error) {
-    return NextResponse.json({ error: error.message }, { status: 500 });
-  }
-
-  return NextResponse.json(data);
 }
