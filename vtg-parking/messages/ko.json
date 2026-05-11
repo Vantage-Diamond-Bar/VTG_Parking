@@ -291,7 +291,18 @@
     "view": "보기",
     "prev": "이전",
     "next": "다음",
-    "page_of": "{page} / {total} 페이지"
+    "page_of": "{page} / {total} 페이지",
+    "from": "시작일",
+    "to": "종료일",
+    "filter_unit": "세대로 필터...",
+    "guest_name": "방문객 이름",
+    "plate_state": "번호판 / 주",
+    "vehicle": "차량",
+    "valid_from": "유효 시작",
+    "valid_until": "유효 종료",
+    "created": "등록일",
+    "license_plate": "번호판",
+    "confirm_delete_visitor": "이 방문 등록을 삭제하시겠습니까?"
   },
   "common": {
     "loading": "로딩 중...",

@@ -7,14 +7,14 @@ interface Visitor {
   id: string;
   access_code: string;
   units?: { address: string };
-  guest_name?: string;
-  plate: string;
-  state: string;
+  visitor_name?: string;
+  license_plate: string;
+  plate_state: string;
   make?: string;
   model?: string;
   color?: string;
-  valid_from: string;
-  valid_until: string;
+  start_datetime: string;
+  end_datetime: string;
   created_at: string;
 }
 
@@ -37,7 +37,7 @@ export default function AdminVisitorsPage() {
       const res = await fetch(`/api/visitors?${params}`);
       if (res.ok) {
         const data = await res.json();
-        setVisitors(Array.isArray(data) ? data : data.items ?? []);
+        setVisitors(Array.isArray(data) ? data : data.data ?? []);
       }
     } finally {
       setLoading(false);
@@ -151,11 +151,11 @@ export default function AdminVisitorsPage() {
                   <tr key={v.id} className="hover:bg-gray-50">
                     <td className="px-4 py-3 font-mono font-bold tracking-widest text-blue-700">{v.access_code}</td>
                     <td className="px-4 py-3">{v.units?.address ?? '—'}</td>
-                    <td className="px-4 py-3">{v.guest_name || '—'}</td>
-                    <td className="px-4 py-3 font-mono">{v.plate} / {v.state}</td>
+                    <td className="px-4 py-3">{v.visitor_name || '—'}</td>
+                    <td className="px-4 py-3 font-mono">{v.license_plate} / {v.plate_state}</td>
                     <td className="px-4 py-3">{[v.make, v.model, v.color].filter(Boolean).join(' ')}</td>
-                    <td className="px-4 py-3 text-gray-600">{new Date(v.valid_from).toLocaleString()}</td>
-                    <td className="px-4 py-3 text-gray-600">{new Date(v.valid_until).toLocaleString()}</td>
+                    <td className="px-4 py-3 text-gray-600">{new Date(v.start_datetime).toLocaleString()}</td>
+                    <td className="px-4 py-3 text-gray-600">{new Date(v.end_datetime).toLocaleString()}</td>
                     <td className="px-4 py-3 text-gray-500">{new Date(v.created_at).toLocaleDateString()}</td>
                     <td className="px-4 py-3">
                       <button

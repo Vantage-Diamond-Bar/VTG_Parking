@@ -166,7 +166,7 @@ export default function RegisterPage() {
         if (data?.error === 'plate_conflict') {
           setError(t('error_plate_conflict'))
         } else {
-          setError(data?.message ?? 'Submission failed')
+          setError(data?.error ?? data?.message ?? 'Submission failed')
         }
         return
       }

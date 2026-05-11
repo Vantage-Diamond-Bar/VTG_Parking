@@ -128,7 +128,7 @@ export default function PatrolPage() {
         return <span className="inline-block bg-green-600 text-white text-xs font-bold px-3 py-1 rounded-full uppercase tracking-wide">ACTIVE</span>;
       case 'expired':
         return <span className="inline-block bg-red-600 text-white text-xs font-bold px-3 py-1 rounded-full uppercase tracking-wide">EXPIRED</span>;
-      case 'not_yet_active':
+      case 'upcoming':
         return <span className="inline-block bg-yellow-500 text-white text-xs font-bold px-3 py-1 rounded-full uppercase tracking-wide">NOT YET ACTIVE</span>;
       default:
         return null;

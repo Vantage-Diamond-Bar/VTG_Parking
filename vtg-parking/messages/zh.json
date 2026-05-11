@@ -291,7 +291,18 @@
     "view": "查看",
     "prev": "上一页",
     "next": "下一页",
-    "page_of": "第 {page} / {total} 页"
+    "page_of": "第 {page} / {total} 页",
+    "from": "开始日期",
+    "to": "结束日期",
+    "filter_unit": "按门牌号筛选...",
+    "guest_name": "访客姓名",
+    "plate_state": "车牌 / 州",
+    "vehicle": "车辆",
+    "valid_from": "有效期从",
+    "valid_until": "有效期至",
+    "created": "登记时间",
+    "license_plate": "车牌号",
+    "confirm_delete_visitor": "确定要删除这条访客登记记录吗？"
   },
   "common": {
     "loading": "加载中...",

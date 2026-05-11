@@ -291,7 +291,18 @@
     "view": "View",
     "prev": "Prev",
     "next": "Next",
-    "page_of": "Page {page} of {total}"
+    "page_of": "Page {page} of {total}",
+    "from": "From",
+    "to": "To",
+    "filter_unit": "Filter by unit...",
+    "guest_name": "Guest Name",
+    "plate_state": "Plate / State",
+    "vehicle": "Vehicle",
+    "valid_from": "Valid From",
+    "valid_until": "Valid Until",
+    "created": "Created",
+    "license_plate": "License Plate",
+    "confirm_delete_visitor": "Are you sure you want to delete this visitor registration?"
   },
   "common": {
     "loading": "Loading...",

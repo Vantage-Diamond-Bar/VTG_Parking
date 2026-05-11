@@ -39,7 +39,18 @@ export async function GET(req: NextRequest) {
       .maybeSingle();
 
     if (resident) {
-      return NextResponse.json({ type: 'resident', vehicle: resident });
+      return NextResponse.json({
+        found: true,
+        type: 'resident',
+        address: (resident.units as any)?.address ?? null,
+        owner_name: resident.owner_name,
+        year: resident.year,
+        make: resident.make,
+        model: resident.model,
+        color: resident.color,
+        plate: resident.license_plate,
+        state: resident.plate_state,
+      });
     }
 
     // Check visitor registrations - most recent
@@ -53,10 +64,23 @@ export async function GET(req: NextRequest) {
     if (visitors && visitors.length > 0) {
       const reg = visitors[0];
       const status = determineStatus(reg.start_datetime, reg.end_datetime);
-      return NextResponse.json({ type: 'visitor', registration: reg, status });
+      return NextResponse.json({
+        found: true,
+        type: 'visitor',
+        address: (reg.units as any)?.address ?? null,
+        guest_name: reg.visitor_name ?? null,
+        plate: reg.license_plate,
+        state: reg.plate_state,
+        make: reg.make,
+        model: reg.model,
+        color: reg.color,
+        valid_from: reg.start_datetime,
+        valid_until: reg.end_datetime,
+        status,
+      });
     }
 
-    return NextResponse.json({ type: 'not_found' });
+    return NextResponse.json({ found: false, type: 'not_found' });
   }
 
   // Lookup by access code
@@ -67,9 +91,22 @@ export async function GET(req: NextRequest) {
     .maybeSingle();
 
   if (!registration) {
-    return NextResponse.json({ type: 'not_found' });
+    return NextResponse.json({ found: false, type: 'not_found' });
   }
 
   const status = determineStatus(registration.start_datetime, registration.end_datetime);
-  return NextResponse.json({ type: 'visitor', registration, status });
+  return NextResponse.json({
+    found: true,
+    type: 'visitor',
+    address: (registration.units as any)?.address ?? null,
+    guest_name: registration.visitor_name ?? null,
+    plate: registration.license_plate,
+    state: registration.plate_state,
+    make: registration.make,
+    model: registration.model,
+    color: registration.color,
+    valid_from: registration.start_datetime,
+    valid_until: registration.end_datetime,
+    status,
+  });
 }
