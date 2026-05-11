@@ -84,7 +84,7 @@ async function getOverdueVehicles(): Promise<OverdueVehicle[]> {
     .lt('created_at', oneYearAgo.toISOString())
     .order('created_at', { ascending: true })
     .limit(20);
-  return (data ?? []) as OverdueVehicle[];
+  return (data ?? []) as unknown as OverdueVehicle[];
 }
 
 export default async function AdminDashboardPage() {
