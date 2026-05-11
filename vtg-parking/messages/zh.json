@@ -312,7 +312,8 @@
     "description": "描述",
     "reporter_email": "举报人邮箱",
     "photos_count": "张照片",
-    "violation_photos": "违章照片"
+    "violation_photos": "违章照片",
+    "all": "全部"
   },
   "common": {
     "loading": "加载中...",

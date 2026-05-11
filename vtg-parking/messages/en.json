@@ -312,7 +312,8 @@
     "description": "Description",
     "reporter_email": "Reporter Email",
     "photos_count": "photo(s)",
-    "violation_photos": "Violation Photos"
+    "violation_photos": "Violation Photos",
+    "all": "All"
   },
   "common": {
     "loading": "Loading...",
