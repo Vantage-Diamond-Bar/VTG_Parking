@@ -3,7 +3,7 @@
 import { useState, useEffect } from 'react'
 import Link from 'next/link'
 import { useTranslations } from 'next-intl'
-import { US_STATES, CAR_COLORS, CAR_MAKES, VISITOR_QUOTA_LIMIT } from '@/lib/utils'
+import { US_STATES, CAR_COLORS, CAR_MAKES, VISITOR_QUOTA_LIMIT, formatPhone } from '@/lib/utils'
 
 interface Unit {
   id: string
@@ -24,6 +24,7 @@ export default function VisitorPage() {
   const [quotaLoading, setQuotaLoading] = useState(false)
 
   const [visitorName, setVisitorName] = useState('')
+  const [visitorPhone, setVisitorPhone] = useState('')
   const [licensePlate, setLicensePlate] = useState('')
   const [plateState, setPlateState] = useState('')
   const [make, setMake] = useState('')
@@ -69,6 +70,8 @@ export default function VisitorPage() {
   function validate(): boolean {
     const errors: Record<string, string> = {}
     if (!unitId) errors.unit_id = t('required')
+    if (!visitorPhone.trim()) errors.visitor_phone = t('required')
+    else if (visitorPhone.replace(/\D/g, '').length < 10) errors.visitor_phone = 'Enter a valid 10-digit phone number.'
     if (!licensePlate.trim()) errors.license_plate = t('required')
     if (!plateState) errors.plate_state = t('required')
     if (!make) errors.make = t('required')
@@ -92,6 +95,7 @@ export default function VisitorPage() {
       const body = {
         unit_id: unitId,
         visitor_name: visitorName,
+        visitor_phone: visitorPhone,
         license_plate: licensePlate.toUpperCase(),
         plate_state: plateState,
         make,
@@ -136,6 +140,7 @@ export default function VisitorPage() {
     setUnitId('')
     setQuota(null)
     setVisitorName('')
+    setVisitorPhone('')
     setLicensePlate('')
     setPlateState('')
     setMake('')
@@ -184,17 +189,30 @@ export default function VisitorPage() {
               </button>
             </div>
 
-            <p className="text-sm text-gray-500 mb-2">
-              {t('valid_until')}: <span className="font-medium text-gray-800">{validStr}</span>
+            <p className="text-sm text-gray-500 mb-6">
+              {t('valid_until')}: <span className="font-semibold text-gray-800">{validStr}</span>
             </p>
-            <p className="text-sm text-gray-400 mb-6">{t('dashboard_instruction')}</p>
 
-            <button
-              onClick={resetForm}
-              className="w-full bg-blue-600 text-white py-3 rounded-lg font-semibold hover:bg-blue-700 transition-colors"
-            >
-              {t('register_another')}
-            </button>
+            <div className="bg-amber-50 border-2 border-amber-400 rounded-xl px-5 py-4 mb-6 text-center">
+              <p className="text-amber-900 font-bold text-base leading-snug">
+                📋 {t('dashboard_instruction')}
+              </p>
+            </div>
+
+            <div className="flex gap-3 mb-3">
+              <button
+                onClick={() => window.print()}
+                className="flex-1 bg-gray-800 text-white py-3 rounded-lg font-semibold hover:bg-gray-900 transition-colors flex items-center justify-center gap-2"
+              >
+                🖨️ {t('print')}
+              </button>
+              <button
+                onClick={resetForm}
+                className="flex-1 bg-blue-600 text-white py-3 rounded-lg font-semibold hover:bg-blue-700 transition-colors"
+              >
+                {t('register_another')}
+              </button>
+            </div>
           </div>
         </div>
       </div>
@@ -268,14 +286,29 @@ export default function VisitorPage() {
                 <div>
                   <h2 className={sectionCls}>{t('section_vehicle')}</h2>
                   <div className="space-y-4">
-                    <div>
-                      <label className={labelCls}>{t('visitor_name')}</label>
-                      <input
-                        type="text"
-                        value={visitorName}
-                        onChange={(e) => setVisitorName(e.target.value)}
-                        className={inputCls}
-                      />
+                    <div className="grid grid-cols-2 gap-4">
+                      <div>
+                        <label className={labelCls}>{t('visitor_name')}</label>
+                        <input
+                          type="text"
+                          value={visitorName}
+                          onChange={(e) => setVisitorName(e.target.value)}
+                          className={inputCls}
+                        />
+                      </div>
+                      <div>
+                        <label className={labelCls}>{t('visitor_phone')} *</label>
+                        <input
+                          type="tel"
+                          value={visitorPhone}
+                          onChange={(e) => setVisitorPhone(formatPhone(e.target.value))}
+                          placeholder="(626)555-1234"
+                          className={inputCls}
+                        />
+                        {fieldErrors.visitor_phone && (
+                          <p className="text-red-500 text-xs mt-1">{fieldErrors.visitor_phone}</p>
+                        )}
+                      </div>
                     </div>
 
                     <div className="grid grid-cols-2 gap-4">

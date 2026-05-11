@@ -5,7 +5,7 @@ import { getSessionFromRequest } from '@/lib/auth';
 
 export async function POST(req: NextRequest) {
   const body = await req.json();
-  const { unit_id, visitor_name, license_plate, plate_state, make, model, color, start_datetime, end_datetime } = body;
+  const { unit_id, visitor_name, visitor_phone, license_plate, plate_state, make, model, color, start_datetime, end_datetime } = body;
 
   // 1. Normalize plate
   const plate = normalizedPlate(license_plate);
@@ -60,6 +60,7 @@ export async function POST(req: NextRequest) {
     .insert({
       unit_id,
       visitor_name,
+      visitor_phone: visitor_phone ?? null,
       license_plate: plate,
       plate_state,
       make,

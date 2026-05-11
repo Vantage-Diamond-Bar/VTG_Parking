@@ -34,10 +34,12 @@ export default function AdminVisitorsPage() {
       if (unitId) params.set('unit_id', unitId);
       if (fromDate) params.set('from', fromDate);
       if (toDate) params.set('to', toDate);
-      const res = await fetch(`/api/visitors?${params}`);
+      const res = await fetch(`/api/visitors?${params}`, { credentials: 'include' });
+      const json = await res.json();
       if (res.ok) {
-        const data = await res.json();
-        setVisitors(Array.isArray(data) ? data : data.data ?? []);
+        setVisitors(Array.isArray(json) ? json : json.data ?? []);
+      } else {
+        console.error('Visitors fetch error:', json);
       }
     } finally {
       setLoading(false);

@@ -3,7 +3,7 @@
 import { useState, useEffect } from 'react'
 import Link from 'next/link'
 import { useTranslations } from 'next-intl'
-import { US_STATES, CAR_COLORS, CAR_MAKES } from '@/lib/utils'
+import { US_STATES, CAR_COLORS, CAR_MAKES, formatPhone } from '@/lib/utils'
 
 interface Vehicle {
   year: string
@@ -305,7 +305,8 @@ export default function RegisterPage() {
                   <input
                     type="tel"
                     value={ownerPhone}
-                    onChange={(e) => setOwnerPhone(e.target.value)}
+                    onChange={(e) => setOwnerPhone(formatPhone(e.target.value))}
+                    placeholder="(626)555-1234"
                     className={inputCls}
                   />
                 </div>

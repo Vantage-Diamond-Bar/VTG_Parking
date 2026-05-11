@@ -101,6 +101,8 @@
     "quota_exceeded": "Monthly visitor quota exceeded (10/10 nights). Please contact the management office.",
     "error_plate_conflict": "This license plate is registered as a resident vehicle and cannot be registered as a visitor.",
     "plate_hint": "No spaces — enter full plate number (e.g. ABC1234)",
+    "visitor_phone": "Contact Phone",
+    "print": "Print",
     "required": "This field is required.",
     "end_after_start": "Check-out must be after check-in."
   },

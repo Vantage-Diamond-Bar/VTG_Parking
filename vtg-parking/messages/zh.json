@@ -101,6 +101,8 @@
     "quota_exceeded": "本月免费访客停车额度已用完（10/10 晚）。如需特殊安排，请联系物业管理处。",
     "error_plate_conflict": "该车牌已登记为住户车辆，无法作为访客车辆登记。",
     "plate_hint": "请勿输入空格，直接填写完整车牌号（如 ABC1234）",
+    "visitor_phone": "联系电话",
+    "print": "打印",
     "required": "此项为必填项。",
     "end_after_start": "结束时间必须晚于开始时间。"
   },
