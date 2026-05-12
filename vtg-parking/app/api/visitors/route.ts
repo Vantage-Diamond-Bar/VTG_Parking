@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { supabaseAdmin } from '@/lib/supabase';
-import { generateAccessCode, getYearMonth, normalizedPlate, VISITOR_QUOTA_LIMIT } from '@/lib/utils';
+import { generateAccessCode, getYearMonth, normalizedPlate, VISITOR_QUOTA_LIMIT, countNights } from '@/lib/utils';
 import { getSessionFromRequest } from '@/lib/auth';
 
 export async function POST(req: NextRequest) {
@@ -21,7 +21,7 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: 'plate_conflict' }, { status: 409 });
   }
 
-  // 3. Check quota
+  // 3. Check quota — count actual nights (midnight crossings) in this registration
   const year_month = getYearMonth();
   const { data: quota } = await supabaseAdmin
     .from('visitor_monthly_quota')
@@ -30,7 +30,10 @@ export async function POST(req: NextRequest) {
     .eq('year_month', year_month)
     .maybeSingle();
 
-  if (quota && quota.nights_used >= VISITOR_QUOTA_LIMIT) {
+  const newNights = countNights(start_datetime, end_datetime);
+  const currentNightsUsed = quota?.nights_used ?? 0;
+
+  if (currentNightsUsed + newNights > VISITOR_QUOTA_LIMIT) {
     return NextResponse.json({ error: 'quota_exceeded' }, { status: 429 });
   }
 
@@ -77,12 +80,11 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: insertError.message }, { status: 500 });
   }
 
-  // 6. Upsert visitor monthly quota
-  const currentNights = quota?.nights_used ?? 0;
+  // 6. Upsert visitor monthly quota with actual night count
   await supabaseAdmin
     .from('visitor_monthly_quota')
     .upsert(
-      { unit_id, year_month, nights_used: currentNights + 1 },
+      { unit_id, year_month, nights_used: currentNightsUsed + newNights },
       { onConflict: 'unit_id,year_month' }
     );
 

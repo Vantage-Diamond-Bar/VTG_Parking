@@ -67,6 +67,21 @@ export const VIOLATION_TYPES = [
 
 export const VISITOR_QUOTA_LIMIT = 10
 
+/**
+ * Count how many midnight boundaries (00:00) fall within a parking period.
+ * Equivalent to: floor(end_date) - floor(start_date) in calendar days.
+ * e.g. May 12 22:00 → May 15 08:00 = 3 nights (crosses May 13, 14, 15 00:00)
+ *      May 12 08:00 → May 12 23:00 = 0 nights (no midnight crossed)
+ */
+export function countNights(startStr: string, endStr: string): number {
+  const sd = startStr.slice(0, 10)
+  const ed = endStr.slice(0, 10)
+  if (!sd || !ed || sd.length < 10 || ed.length < 10) return 0
+  const start = Date.UTC(+sd.slice(0, 4), +sd.slice(5, 7) - 1, +sd.slice(8, 10))
+  const end   = Date.UTC(+ed.slice(0, 4), +ed.slice(5, 7) - 1, +ed.slice(8, 10))
+  return Math.max(0, Math.round((end - start) / 86_400_000))
+}
+
 export function maskEmail(email: string): string {
   const atIdx = email.indexOf('@')
   if (atIdx < 0) return email
