@@ -40,12 +40,14 @@ export async function sendViolationReport(report: {
     <p style="color:#666;font-size:12px;margin-top:16px;">This report was submitted via the VTG Community Parking Management System.</p>
   `
 
-  await resend.emails.send({
-    from: EMAIL_FROM,
-    to: recipients,
-    subject: `[Parking Violation] ${report.violation_type} — ${report.location}`,
-    html,
-  })
+  const subject = `[Parking Violation] ${report.violation_type} — ${report.location}`
+
+  // Send individually so one rejected address doesn't block others
+  await Promise.allSettled(
+    recipients.map((to) =>
+      resend.emails.send({ from: EMAIL_FROM, to, subject, html })
+    )
+  )
 }
 
 export async function sendVacationDecision({

@@ -58,15 +58,18 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: insertError.message }, { status: 500 });
   }
 
-  await sendViolationReport({
-    location,
-    violation_type,
-    license_plate: license_plate ?? undefined,
-    description: description ?? undefined,
-    reporter_email: reporter_email ?? undefined,
-    photo_urls,
-    submitted_at: new Date().toISOString(),
-  });
+  // Best-effort email — never fail the request if email delivery fails
+  try {
+    await sendViolationReport({
+      location,
+      violation_type,
+      license_plate: license_plate ?? undefined,
+      description: description ?? undefined,
+      reporter_email: reporter_email ?? undefined,
+      photo_urls,
+      submitted_at: new Date().toISOString(),
+    });
+  } catch {}
 
   return NextResponse.json({ success: true });
 }
