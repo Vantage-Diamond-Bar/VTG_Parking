@@ -137,7 +137,7 @@ export default function AdminVacationPage() {
                 <th className="px-4 py-3 text-left">{tv('applicant')}</th>
                 <th className="px-4 py-3 text-left">{t('vehicle')}</th>
                 <th className="px-4 py-3 text-left">{tv('period')}</th>
-                <th className="px-4 py-3 text-left">{tv('registered_vehicle')}</th>
+                <th className="px-4 py-3 text-left">{tv('vehicle_check')}</th>
                 <th className="px-4 py-3 text-left">{t('status')}</th>
                 <th className="px-4 py-3 text-left">{t('actions')}</th>
               </tr>
@@ -165,13 +165,22 @@ export default function AdminVacationPage() {
                     <div>{new Date(r.start_datetime).toLocaleDateString()}</div>
                     <div className="text-gray-400">→ {new Date(r.end_datetime).toLocaleDateString()}</div>
                   </td>
-                  <td className="px-4 py-3 text-center">
+                  <td className="px-4 py-3 text-xs space-y-1">
+                    {/* Row 1: is_registered_vehicle */}
                     {r.is_registered_vehicle === null ? (
-                      <span className="text-gray-400 text-xs">—</span>
+                      <div className="text-gray-400">— {tv('registered_vehicle')}</div>
                     ) : r.is_registered_vehicle ? (
-                      <span className="text-green-600 font-semibold text-xs">✓ {tv('yes')}</span>
+                      <div className="text-green-600 font-semibold">✓ {tv('registered_vehicle')}</div>
                     ) : (
-                      <span className="text-red-500 font-semibold text-xs">✗ {tv('no')}</span>
+                      <div className="text-red-500 font-semibold">✗ {tv('registered_vehicle')}</div>
+                    )}
+                    {/* Row 2: is_eligible */}
+                    {r.is_eligible === null ? (
+                      <div className="text-gray-400">— {tv('eligible')}</div>
+                    ) : r.is_eligible ? (
+                      <div className="text-green-600 font-semibold">✓ {tv('eligible')}</div>
+                    ) : (
+                      <div className="text-red-500 font-semibold">✗ {tv('eligible')}</div>
                     )}
                   </td>
                   <td className="px-4 py-3">
@@ -211,13 +220,22 @@ export default function AdminVacationPage() {
 
             <div className="px-6 py-4 space-y-4 text-sm">
               {/* Status badge */}
-              <div className="flex items-center gap-2">
+              <div className="flex flex-wrap items-center gap-2">
                 <span className={`inline-flex items-center px-3 py-1 rounded-full text-xs font-semibold ${statusBadge(selected.status)}`}>
                   {statusLabel(selected.status)}
                 </span>
                 {selected.is_registered_vehicle !== null && (
                   <span className={`text-xs font-medium px-3 py-1 rounded-full ${selected.is_registered_vehicle ? 'bg-green-50 text-green-700' : 'bg-red-50 text-red-600'}`}>
                     {selected.is_registered_vehicle ? `✓ ${tv('vehicle_registered')}` : `✗ ${tv('vehicle_not_registered')}`}
+                  </span>
+                )}
+                {selected.is_eligible !== null ? (
+                  <span className={`text-xs font-medium px-3 py-1 rounded-full ${selected.is_eligible ? 'bg-green-50 text-green-700' : 'bg-red-50 text-red-600'}`}>
+                    {selected.is_eligible ? `✓ ${tv('eligible')}` : `✗ ${tv('not_eligible')}`}
+                  </span>
+                ) : (
+                  <span className="text-xs font-medium px-3 py-1 rounded-full bg-gray-100 text-gray-500">
+                    — {tv('eligible')}
                   </span>
                 )}
               </div>
