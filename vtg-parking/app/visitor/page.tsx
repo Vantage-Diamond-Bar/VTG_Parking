@@ -6,6 +6,8 @@ import { useTranslations } from 'next-intl'
 import { US_STATES, CAR_COLORS, CAR_MAKES, VISITOR_QUOTA_LIMIT } from '@/lib/utils'
 import PhoneInput from '@/components/PhoneInput'
 
+type VerifyState = 'idle' | 'loading' | 'no_vehicles' | 'awaiting_email' | 'verifying' | 'mismatch' | 'overdue' | 'verified'
+
 interface Unit {
   id: string
   address: string
@@ -21,8 +23,12 @@ export default function VisitorPage() {
 
   const [units, setUnits] = useState<Unit[]>([])
   const [unitId, setUnitId] = useState('')
+
+  // Verification flow
+  const [verifyState, setVerifyState] = useState<VerifyState>('idle')
+  const [emailHints, setEmailHints] = useState<string[]>([])
+  const [hostEmail, setHostEmail] = useState('')
   const [quota, setQuota] = useState<QuotaData | null>(null)
-  const [quotaLoading, setQuotaLoading] = useState(false)
 
   const [visitorName, setVisitorName] = useState('')
   const [visitorPhone, setVisitorPhone] = useState('')
@@ -49,22 +55,47 @@ export default function VisitorPage() {
 
   useEffect(() => {
     if (!unitId) {
+      setVerifyState('idle')
+      setEmailHints([])
+      setHostEmail('')
       setQuota(null)
       return
     }
-    setQuotaLoading(true)
-    const yearMonth = new Date().toISOString().slice(0, 7)
-    fetch(`/api/visitors/quota?unit_id=${unitId}&year_month=${yearMonth}`)
+    setVerifyState('loading')
+    fetch(`/api/visitors/unit-status?unit_id=${unitId}`)
       .then((r) => r.json())
       .then((data) => {
-        setQuota({
-          used: data.used ?? 0,
-          limit: data.limit ?? VISITOR_QUOTA_LIMIT,
-        })
+        if (!data.has_vehicles) {
+          setVerifyState('no_vehicles')
+        } else {
+          setEmailHints(data.email_hints ?? [])
+          setVerifyState('awaiting_email')
+        }
       })
-      .catch(() => setQuota(null))
-      .finally(() => setQuotaLoading(false))
+      .catch(() => setVerifyState('idle'))
   }, [unitId])
+
+  async function handleVerify() {
+    setVerifyState('verifying')
+    try {
+      const res = await fetch('/api/visitors/verify-host', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ unit_id: unitId, email: hostEmail }),
+      })
+      const data = await res.json()
+      if (data.status === 'ok') {
+        setQuota(data.quota)
+        setVerifyState('verified')
+      } else if (data.status === 'overdue') {
+        setVerifyState('overdue')
+      } else {
+        setVerifyState('mismatch')
+      }
+    } catch {
+      setVerifyState('mismatch')
+    }
+  }
 
   const quotaExceeded = quota !== null && quota.used >= quota.limit
 
@@ -139,6 +170,9 @@ export default function VisitorPage() {
 
   function resetForm() {
     setUnitId('')
+    setVerifyState('idle')
+    setEmailHints([])
+    setHostEmail('')
     setQuota(null)
     setVisitorName('')
     setVisitorPhone('')
@@ -253,13 +287,69 @@ export default function VisitorPage() {
                 )}
               </div>
 
-              {/* Quota Bar */}
+              {/* Verification area */}
               {unitId && (
                 <div className="mt-4">
-                  {quotaLoading ? (
+                  {verifyState === 'loading' && (
                     <p className="text-sm text-gray-400">{t('loading_quota')}</p>
-                  ) : quota ? (
+                  )}
+
+                  {verifyState === 'no_vehicles' && (
+                    <div className="bg-amber-50 border border-amber-300 rounded-lg px-4 py-3 text-sm text-amber-800">
+                      🚫 {t('no_vehicles_message')}
+                    </div>
+                  )}
+
+                  {verifyState === 'overdue' && (
+                    <div className="bg-red-50 border border-red-300 rounded-lg px-4 py-3 text-sm text-red-800">
+                      ⚠️ {t('overdue_message')}
+                    </div>
+                  )}
+
+                  {(verifyState === 'awaiting_email' || verifyState === 'verifying' || verifyState === 'mismatch') && (
+                    <div className="border border-blue-200 bg-blue-50 rounded-lg px-4 py-4 space-y-3">
+                      <p className="text-sm font-semibold text-blue-900">{t('verify_email_title')}</p>
+                      <p className="text-xs text-blue-700">{t('verify_email_desc')}</p>
+                      {emailHints.length > 0 && (
+                        <div>
+                          <p className="text-xs text-gray-500 mb-1">{t('email_hint_prefix')}</p>
+                          <div className="flex flex-wrap gap-2">
+                            {emailHints.map((hint, i) => (
+                              <span key={i} className="font-mono text-sm bg-white border border-blue-200 rounded px-2 py-0.5 text-blue-800">
+                                {hint}
+                              </span>
+                            ))}
+                          </div>
+                        </div>
+                      )}
+                      <div className="flex gap-2">
+                        <input
+                          type="email"
+                          value={hostEmail}
+                          onChange={(e) => setHostEmail(e.target.value)}
+                          placeholder={t('host_email')}
+                          className="flex-1 border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                        />
+                        <button
+                          type="button"
+                          onClick={handleVerify}
+                          disabled={!hostEmail.trim() || verifyState === 'verifying'}
+                          className="bg-blue-600 text-white px-4 py-2 rounded-lg text-sm font-semibold hover:bg-blue-700 transition-colors disabled:opacity-50"
+                        >
+                          {verifyState === 'verifying' ? t('verifying') : t('verify')}
+                        </button>
+                      </div>
+                      {verifyState === 'mismatch' && (
+                        <p className="text-red-600 text-xs">{t('email_mismatch')}</p>
+                      )}
+                    </div>
+                  )}
+
+                  {verifyState === 'verified' && quota && (
                     <div>
+                      <div className="flex items-center gap-2 mb-2">
+                        <span className="text-green-600 text-xs font-semibold">✓ {t('email_verified')}</span>
+                      </div>
                       <div className="flex justify-between text-sm mb-1">
                         <span className="text-gray-600">{t('quota_label')}</span>
                         <span className={`font-semibold ${quotaExceeded ? 'text-red-600' : 'text-gray-800'}`}>
@@ -276,172 +366,174 @@ export default function VisitorPage() {
                         <p className="text-red-600 text-sm mt-2 font-medium">{t('quota_exceeded')}</p>
                       )}
                     </div>
-                  ) : null}
+                  )}
                 </div>
               )}
             </div>
 
-            {/* Vehicle Info */}
-            <fieldset disabled={quotaExceeded}>
-              <div className="space-y-8">
-                <div>
-                  <h2 className={sectionCls}>{t('section_vehicle')}</h2>
-                  <div className="space-y-4">
-                    <div className="grid grid-cols-2 gap-4">
-                      <div>
-                        <label className={labelCls}>{t('visitor_name')}</label>
-                        <input
-                          type="text"
-                          value={visitorName}
-                          onChange={(e) => setVisitorName(e.target.value)}
-                          className={inputCls}
-                        />
+            {/* Vehicle Info — only shown after verified */}
+            {verifyState === 'verified' && (
+              <fieldset disabled={quotaExceeded}>
+                <div className="space-y-8">
+                  <div>
+                    <h2 className={sectionCls}>{t('section_vehicle')}</h2>
+                    <div className="space-y-4">
+                      <div className="grid grid-cols-2 gap-4">
+                        <div>
+                          <label className={labelCls}>{t('visitor_name')}</label>
+                          <input
+                            type="text"
+                            value={visitorName}
+                            onChange={(e) => setVisitorName(e.target.value)}
+                            className={inputCls}
+                          />
+                        </div>
+                        <div>
+                          <label className={labelCls}>{t('visitor_phone')} *</label>
+                          <PhoneInput
+                            value={visitorPhone}
+                            onChange={setVisitorPhone}
+                          />
+                          {fieldErrors.visitor_phone && (
+                            <p className="text-red-500 text-xs mt-1">{fieldErrors.visitor_phone}</p>
+                          )}
+                        </div>
                       </div>
-                      <div>
-                        <label className={labelCls}>{t('visitor_phone')} *</label>
-                        <PhoneInput
-                          value={visitorPhone}
-                          onChange={setVisitorPhone}
-                        />
-                        {fieldErrors.visitor_phone && (
-                          <p className="text-red-500 text-xs mt-1">{fieldErrors.visitor_phone}</p>
-                        )}
+
+                      <div className="grid grid-cols-2 gap-4">
+                        <div>
+                          <label className={labelCls}>{t('license_plate')} *</label>
+                          <input
+                            type="text"
+                            value={licensePlate}
+                            title={t('plate_hint')}
+                            placeholder="ABC1234"
+                            onChange={(e) => setLicensePlate(e.target.value.replace(/\s/g, '').toUpperCase())}
+                            className={inputCls}
+                          />
+                          <p className="text-xs text-gray-400 mt-1">{t('plate_hint')}</p>
+                          {fieldErrors.license_plate && (
+                            <p className="text-red-500 text-xs mt-1">{fieldErrors.license_plate}</p>
+                          )}
+                        </div>
+                        <div>
+                          <label className={labelCls}>{t('plate_state')} *</label>
+                          <select
+                            value={plateState}
+                            onChange={(e) => setPlateState(e.target.value)}
+                            className={inputCls}
+                          >
+                            <option value=""></option>
+                            {US_STATES.map((s) => (
+                              <option key={s} value={s}>
+                                {s}
+                              </option>
+                            ))}
+                          </select>
+                          {fieldErrors.plate_state && (
+                            <p className="text-red-500 text-xs mt-1">{fieldErrors.plate_state}</p>
+                          )}
+                        </div>
+                      </div>
+
+                      <div className="grid grid-cols-3 gap-4">
+                        <div>
+                          <label className={labelCls}>{t('make')} *</label>
+                          <select
+                            value={make}
+                            onChange={(e) => setMake(e.target.value)}
+                            className={inputCls}
+                          >
+                            <option value=""></option>
+                            {CAR_MAKES.map((m) => (
+                              <option key={m} value={m}>{m}</option>
+                            ))}
+                          </select>
+                          {fieldErrors.make && (
+                            <p className="text-red-500 text-xs mt-1">{fieldErrors.make}</p>
+                          )}
+                        </div>
+                        <div>
+                          <label className={labelCls}>{t('model')} *</label>
+                          <input
+                            type="text"
+                            value={model}
+                            onChange={(e) => setModel(e.target.value)}
+                            className={inputCls}
+                          />
+                          {fieldErrors.model && (
+                            <p className="text-red-500 text-xs mt-1">{fieldErrors.model}</p>
+                          )}
+                        </div>
+                        <div>
+                          <label className={labelCls}>{t('color')} *</label>
+                          <select
+                            value={color}
+                            onChange={(e) => setColor(e.target.value)}
+                            className={inputCls}
+                          >
+                            <option value=""></option>
+                            {CAR_COLORS.map((c) => (
+                              <option key={c} value={c}>
+                                {c}
+                              </option>
+                            ))}
+                          </select>
+                          {fieldErrors.color && (
+                            <p className="text-red-500 text-xs mt-1">{fieldErrors.color}</p>
+                          )}
+                        </div>
                       </div>
                     </div>
+                  </div>
 
+                  {/* Dates */}
+                  <div>
+                    <h2 className={sectionCls}>{t('section_dates')}</h2>
                     <div className="grid grid-cols-2 gap-4">
                       <div>
-                        <label className={labelCls}>{t('license_plate')} *</label>
+                        <label className={labelCls}>{t('start_datetime')} *</label>
                         <input
-                          type="text"
-                          value={licensePlate}
-                          title={t('plate_hint')}
-                          placeholder="ABC1234"
-                          onChange={(e) => setLicensePlate(e.target.value.replace(/\s/g, '').toUpperCase())}
+                          type="datetime-local"
+                          value={startDatetime}
+                          onChange={(e) => setStartDatetime(e.target.value)}
                           className={inputCls}
                         />
-                        <p className="text-xs text-gray-400 mt-1">{t('plate_hint')}</p>
-                        {fieldErrors.license_plate && (
-                          <p className="text-red-500 text-xs mt-1">{fieldErrors.license_plate}</p>
+                        {fieldErrors.start_datetime && (
+                          <p className="text-red-500 text-xs mt-1">{fieldErrors.start_datetime}</p>
                         )}
                       </div>
                       <div>
-                        <label className={labelCls}>{t('plate_state')} *</label>
-                        <select
-                          value={plateState}
-                          onChange={(e) => setPlateState(e.target.value)}
-                          className={inputCls}
-                        >
-                          <option value=""></option>
-                          {US_STATES.map((s) => (
-                            <option key={s} value={s}>
-                              {s}
-                            </option>
-                          ))}
-                        </select>
-                        {fieldErrors.plate_state && (
-                          <p className="text-red-500 text-xs mt-1">{fieldErrors.plate_state}</p>
-                        )}
-                      </div>
-                    </div>
-
-                    <div className="grid grid-cols-3 gap-4">
-                      <div>
-                        <label className={labelCls}>{t('make')} *</label>
-                        <select
-                          value={make}
-                          onChange={(e) => setMake(e.target.value)}
-                          className={inputCls}
-                        >
-                          <option value=""></option>
-                          {CAR_MAKES.map((m) => (
-                            <option key={m} value={m}>{m}</option>
-                          ))}
-                        </select>
-                        {fieldErrors.make && (
-                          <p className="text-red-500 text-xs mt-1">{fieldErrors.make}</p>
-                        )}
-                      </div>
-                      <div>
-                        <label className={labelCls}>{t('model')} *</label>
+                        <label className={labelCls}>{t('end_datetime')} *</label>
                         <input
-                          type="text"
-                          value={model}
-                          onChange={(e) => setModel(e.target.value)}
+                          type="datetime-local"
+                          value={endDatetime}
+                          onChange={(e) => setEndDatetime(e.target.value)}
                           className={inputCls}
                         />
-                        {fieldErrors.model && (
-                          <p className="text-red-500 text-xs mt-1">{fieldErrors.model}</p>
-                        )}
-                      </div>
-                      <div>
-                        <label className={labelCls}>{t('color')} *</label>
-                        <select
-                          value={color}
-                          onChange={(e) => setColor(e.target.value)}
-                          className={inputCls}
-                        >
-                          <option value=""></option>
-                          {CAR_COLORS.map((c) => (
-                            <option key={c} value={c}>
-                              {c}
-                            </option>
-                          ))}
-                        </select>
-                        {fieldErrors.color && (
-                          <p className="text-red-500 text-xs mt-1">{fieldErrors.color}</p>
+                        {fieldErrors.end_datetime && (
+                          <p className="text-red-500 text-xs mt-1">{fieldErrors.end_datetime}</p>
                         )}
                       </div>
                     </div>
                   </div>
                 </div>
 
-                {/* Dates */}
-                <div>
-                  <h2 className={sectionCls}>{t('section_dates')}</h2>
-                  <div className="grid grid-cols-2 gap-4">
-                    <div>
-                      <label className={labelCls}>{t('start_datetime')} *</label>
-                      <input
-                        type="datetime-local"
-                        value={startDatetime}
-                        onChange={(e) => setStartDatetime(e.target.value)}
-                        className={inputCls}
-                      />
-                      {fieldErrors.start_datetime && (
-                        <p className="text-red-500 text-xs mt-1">{fieldErrors.start_datetime}</p>
-                      )}
-                    </div>
-                    <div>
-                      <label className={labelCls}>{t('end_datetime')} *</label>
-                      <input
-                        type="datetime-local"
-                        value={endDatetime}
-                        onChange={(e) => setEndDatetime(e.target.value)}
-                        className={inputCls}
-                      />
-                      {fieldErrors.end_datetime && (
-                        <p className="text-red-500 text-xs mt-1">{fieldErrors.end_datetime}</p>
-                      )}
-                    </div>
+                {error && (
+                  <div className="bg-red-50 border border-red-200 text-red-700 rounded-lg px-4 py-3 text-sm mt-6">
+                    {error}
                   </div>
-                </div>
-              </div>
+                )}
 
-              {error && (
-                <div className="bg-red-50 border border-red-200 text-red-700 rounded-lg px-4 py-3 text-sm mt-6">
-                  {error}
-                </div>
-              )}
-
-              <button
-                type="submit"
-                disabled={submitting || quotaExceeded}
-                className="w-full bg-blue-600 text-white py-3 rounded-lg font-semibold hover:bg-blue-700 transition-colors disabled:opacity-50 mt-6"
-              >
-                {submitting ? t('submitting') : t('submit')}
-              </button>
-            </fieldset>
+                <button
+                  type="submit"
+                  disabled={submitting || quotaExceeded}
+                  className="w-full bg-blue-600 text-white py-3 rounded-lg font-semibold hover:bg-blue-700 transition-colors disabled:opacity-50 mt-6"
+                >
+                  {submitting ? t('submitting') : t('submit')}
+                </button>
+              </fieldset>
+            )}
           </form>
         </div>
       </div>

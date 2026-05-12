@@ -34,6 +34,20 @@ export async function POST(req: NextRequest) {
     }
   }
 
+  // Block submission if unit has overdue registrations
+  const oneYearAgo = new Date()
+  oneYearAgo.setFullYear(oneYearAgo.getFullYear() - 1)
+  const { data: unitVehicles } = await supabaseAdmin
+    .from('resident_vehicles')
+    .select('created_at')
+    .eq('unit_id', unit_id)
+  const hasOverdue = (unitVehicles ?? []).some(
+    (v) => new Date(v.created_at) < oneYearAgo
+  )
+  if (hasOverdue) {
+    return NextResponse.json({ error: 'registration_overdue' }, { status: 403 })
+  }
+
   const { data, error } = await supabaseAdmin
     .from('vacation_parking_requests')
     .insert({

@@ -110,7 +110,11 @@ export default function VacationPage() {
       })
       const data = await res.json()
       if (!res.ok) {
-        setError(data?.error ?? 'Submission failed. Please try again.')
+        if (data?.error === 'registration_overdue') {
+          setError(t('error_registration_overdue'))
+        } else {
+          setError(data?.error ?? 'Submission failed. Please try again.')
+        }
         return
       }
       setSuccess(true)

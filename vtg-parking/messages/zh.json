@@ -104,7 +104,17 @@
     "visitor_phone": "联系电话",
     "print": "打印",
     "required": "此项为必填项。",
-    "end_after_start": "结束时间必须晚于开始时间。"
+    "end_after_start": "结束时间必须晚于开始时间。",
+    "no_vehicles_message": "该住户未登记过车辆，无法使用户外guest parking，建议停入自家车库。",
+    "verify_email_title": "住户邮箱验证",
+    "verify_email_desc": "请输入该住户预留的邮箱地址以继续操作。",
+    "email_hint_prefix": "预留邮箱提示：",
+    "host_email": "住户邮箱地址",
+    "verify": "验证",
+    "verifying": "验证中...",
+    "email_mismatch": "邮箱地址不匹配，请重试。",
+    "overdue_message": "住户车辆注册信息已过期，需要更新注册信息后才能申请guest parking。",
+    "email_verified": "邮箱已验证"
   },
   "vacation": {
     "title": "度假延长停车申请",
@@ -150,7 +160,8 @@
     "submit_another": "再次提交申请",
     "back_home": "返回首页",
     "required": "此项为必填项。",
-    "end_after_start": "结束时间必须晚于开始时间。"
+    "end_after_start": "结束时间必须晚于开始时间。",
+    "error_registration_overdue": "您的住户车辆注册信息已过期，请先更新注册信息，再提交度假延长停车申请。"
   },
   "vacation_admin": {
     "title": "度假延长停车",

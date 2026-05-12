@@ -67,6 +67,21 @@ export const VIOLATION_TYPES = [
 
 export const VISITOR_QUOTA_LIMIT = 10
 
+export function maskEmail(email: string): string {
+  const atIdx = email.indexOf('@')
+  if (atIdx < 0) return email
+  const local = email.slice(0, atIdx)
+  const domain = email.slice(atIdx + 1)
+  function maskPart(s: string): string {
+    if (s.length <= 2) return s
+    return s[0] + '*'.repeat(s.length - 2) + s[s.length - 1]
+  }
+  const dotIdx = domain.lastIndexOf('.')
+  const domainName = dotIdx > 0 ? domain.slice(0, dotIdx) : domain
+  const domainSuffix = dotIdx > 0 ? domain.slice(dotIdx) : ''
+  return `${maskPart(local)}@${maskPart(domainName)}${domainSuffix}`
+}
+
 export function formatPhone(raw: string): string {
   const digits = raw.replace(/\D/g, '').slice(0, 10)
   if (digits.length < 4) return digits

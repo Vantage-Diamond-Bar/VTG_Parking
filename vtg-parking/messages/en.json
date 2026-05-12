@@ -104,7 +104,17 @@
     "visitor_phone": "Contact Phone",
     "print": "Print",
     "required": "This field is required.",
-    "end_after_start": "Check-out must be after check-in."
+    "end_after_start": "Check-out must be after check-in.",
+    "no_vehicles_message": "This unit has no registered vehicles. Outdoor guest parking is not available. We recommend using your assigned garage.",
+    "verify_email_title": "Host Verification Required",
+    "verify_email_desc": "Please enter the email address on file for this unit to continue.",
+    "email_hint_prefix": "Registered email hint(s):",
+    "host_email": "Host Email Address",
+    "verify": "Verify",
+    "verifying": "Verifying...",
+    "email_mismatch": "Email does not match our records. Please try again.",
+    "overdue_message": "This unit's vehicle registration is overdue. Please renew your registration before applying for guest parking.",
+    "email_verified": "Email verified"
   },
   "vacation": {
     "title": "Vacation Extended Parking Request",
@@ -150,7 +160,8 @@
     "submit_another": "Submit Another Request",
     "back_home": "Back to Home",
     "required": "This field is required.",
-    "end_after_start": "End time must be after start time."
+    "end_after_start": "End time must be after start time.",
+    "error_registration_overdue": "Your unit's vehicle registration is overdue. Please update your registration before submitting a vacation parking request."
   },
   "vacation_admin": {
     "title": "Vacation Extended Parking",
