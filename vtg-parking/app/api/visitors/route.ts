@@ -94,12 +94,12 @@ export async function POST(req: NextRequest) {
     );
 
   // 7. Check for abuse: same plate used by 2+ units this month
-  const monthStart = `${year_month}-01`;
+  const abuseMonthStart = `${year_month}-01`;
   const { data: sameplateLogs } = await supabaseAdmin
     .from('visitor_registrations')
     .select('unit_id')
     .ilike('license_plate', plate)
-    .gte('created_at', monthStart);
+    .gte('created_at', abuseMonthStart);
 
   if (sameplateLogs) {
     const uniqueUnits = new Set(sameplateLogs.map((r: any) => r.unit_id));
