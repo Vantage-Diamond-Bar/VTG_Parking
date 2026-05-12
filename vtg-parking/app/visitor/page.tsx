@@ -347,20 +347,29 @@ export default function VisitorPage() {
 
                   {verifyState === 'verified' && quota && (
                     <div>
-                      <div className="flex items-center gap-2 mb-2">
+                      <div className="flex items-center gap-2 mb-3">
                         <span className="text-green-600 text-xs font-semibold">✓ {t('email_verified')}</span>
                       </div>
-                      <div className="flex justify-between text-sm mb-1">
-                        <span className="text-gray-600">{t('quota_label')}</span>
-                        <span className={`font-semibold ${quotaExceeded ? 'text-red-600' : 'text-gray-800'}`}>
-                          {quota.used} / {quota.limit} {t('nights')}
+                      <p className="text-sm font-medium text-gray-700 mb-2">
+                        {t('quota_remaining_label')}
+                        <span className={`ml-1 font-bold ${quotaExceeded ? 'text-red-600' : 'text-green-600'}`}>
+                          {quota.limit - quota.used}/{quota.limit}
                         </span>
+                      </p>
+                      <div className="w-full flex rounded-full h-5 overflow-hidden">
+                        {quota.used > 0 && (
+                          <div
+                            className="bg-red-400 transition-all"
+                            style={{ width: `${Math.min((quota.used / quota.limit) * 100, 100)}%` }}
+                          />
+                        )}
+                        {!quotaExceeded && (
+                          <div className="bg-green-400 flex-1 transition-all" />
+                        )}
                       </div>
-                      <div className="w-full bg-gray-200 rounded-full h-2">
-                        <div
-                          className={`h-2 rounded-full transition-all ${quotaExceeded ? 'bg-red-500' : 'bg-blue-500'}`}
-                          style={{ width: `${Math.min((quota.used / quota.limit) * 100, 100)}%` }}
-                        />
+                      <div className="flex justify-between text-xs text-gray-500 mt-1">
+                        <span className="text-red-500">{quota.used} {t('nights_used')}</span>
+                        <span className="text-green-600">{quota.limit - quota.used} {t('nights_remaining')}</span>
                       </div>
                       {quotaExceeded && (
                         <p className="text-red-600 text-sm mt-2 font-medium">{t('quota_exceeded')}</p>
