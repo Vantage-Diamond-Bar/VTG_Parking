@@ -73,6 +73,17 @@ export const VISITOR_QUOTA_LIMIT = 10
  * e.g. May 12 22:00 → May 15 08:00 = 3 nights (crosses May 13, 14, 15 00:00)
  *      May 12 08:00 → May 12 23:00 = 0 nights (no midnight crossed)
  */
+/** Returns ISO-string boundaries [start, end) for a given "YYYY-MM" month. */
+export function monthBounds(yearMonth: string): { start: string; end: string } {
+  const [y, mo] = yearMonth.split('-').map(Number)
+  const nextMo = mo === 12 ? 1 : mo + 1
+  const nextY  = mo === 12 ? y + 1 : y
+  return {
+    start: `${yearMonth}-01T00:00`,
+    end:   `${String(nextY)}-${String(nextMo).padStart(2, '0')}-01T00:00`,
+  }
+}
+
 export function countNights(startStr: string, endStr: string): number {
   const sd = startStr.slice(0, 10)
   const ed = endStr.slice(0, 10)

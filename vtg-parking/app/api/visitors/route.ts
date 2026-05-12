@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { supabaseAdmin } from '@/lib/supabase';
-import { generateAccessCode, getYearMonth, normalizedPlate, VISITOR_QUOTA_LIMIT, countNights } from '@/lib/utils';
+import { generateAccessCode, getYearMonth, normalizedPlate, VISITOR_QUOTA_LIMIT, countNights, monthBounds } from '@/lib/utils';
 import { getSessionFromRequest } from '@/lib/auth';
 
 export async function POST(req: NextRequest) {
@@ -21,17 +21,22 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: 'plate_conflict' }, { status: 409 });
   }
 
-  // 3. Check quota — count actual nights (midnight crossings) in this registration
+  // 3. Check quota — compute live from visitor_registrations (never trust cached table)
   const year_month = getYearMonth();
-  const { data: quota } = await supabaseAdmin
-    .from('visitor_monthly_quota')
-    .select('nights_used')
-    .eq('unit_id', unit_id)
-    .eq('year_month', year_month)
-    .maybeSingle();
+  const { start: monthStart, end: monthEnd } = monthBounds(year_month);
 
+  const { data: existingRegs } = await supabaseAdmin
+    .from('visitor_registrations')
+    .select('start_datetime, end_datetime')
+    .eq('unit_id', unit_id)
+    .gte('start_datetime', monthStart)
+    .lt('start_datetime', monthEnd);
+
+  const currentNightsUsed = (existingRegs ?? []).reduce(
+    (sum, r) => sum + countNights(r.start_datetime, r.end_datetime),
+    0
+  );
   const newNights = countNights(start_datetime, end_datetime);
-  const currentNightsUsed = quota?.nights_used ?? 0;
 
   if (currentNightsUsed + newNights > VISITOR_QUOTA_LIMIT) {
     return NextResponse.json({ error: 'quota_exceeded' }, { status: 429 });

@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { supabaseAdmin } from '@/lib/supabase';
-import { VISITOR_QUOTA_LIMIT } from '@/lib/utils';
+import { VISITOR_QUOTA_LIMIT, countNights, monthBounds } from '@/lib/utils';
 
 export async function GET(req: NextRequest) {
   const { searchParams } = new URL(req.url);
@@ -11,19 +11,26 @@ export async function GET(req: NextRequest) {
     return NextResponse.json({ error: 'unit_id and year_month are required' }, { status: 400 });
   }
 
-  const { data, error } = await supabaseAdmin
-    .from('visitor_monthly_quota')
-    .select('nights_used')
+  const { start, end } = monthBounds(year_month);
+
+  const { data: regs, error } = await supabaseAdmin
+    .from('visitor_registrations')
+    .select('start_datetime, end_datetime')
     .eq('unit_id', unit_id)
-    .eq('year_month', year_month)
-    .maybeSingle();
+    .gte('start_datetime', start)
+    .lt('start_datetime', end);
 
   if (error) {
     return NextResponse.json({ error: error.message }, { status: 500 });
   }
 
+  const nights_used = (regs ?? []).reduce(
+    (sum, r) => sum + countNights(r.start_datetime, r.end_datetime),
+    0
+  );
+
   return NextResponse.json({
-    nights_used: data?.nights_used ?? 0,
+    nights_used,
     quota_limit: VISITOR_QUOTA_LIMIT,
   });
 }

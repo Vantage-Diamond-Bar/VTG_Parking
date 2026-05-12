@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { supabaseAdmin } from '@/lib/supabase'
-import { VISITOR_QUOTA_LIMIT } from '@/lib/utils'
+import { VISITOR_QUOTA_LIMIT, countNights, monthBounds, getYearMonth } from '@/lib/utils'
 
 export async function POST(req: NextRequest) {
   const { unit_id, email } = await req.json()
@@ -41,18 +41,26 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ status: 'overdue' })
   }
 
-  const yearMonth = new Date().toISOString().slice(0, 7)
-  const { data: quotaRow } = await supabaseAdmin
-    .from('visitor_monthly_quota')
-    .select('nights_used')
+  // Compute nights_used dynamically from actual visitor_registrations
+  const yearMonth = getYearMonth()
+  const { start, end } = monthBounds(yearMonth)
+
+  const { data: regs } = await supabaseAdmin
+    .from('visitor_registrations')
+    .select('start_datetime, end_datetime')
     .eq('unit_id', unit_id)
-    .eq('year_month', yearMonth)
-    .maybeSingle()
+    .gte('start_datetime', start)
+    .lt('start_datetime', end)
+
+  const nights_used = (regs ?? []).reduce(
+    (sum, r) => sum + countNights(r.start_datetime, r.end_datetime),
+    0
+  )
 
   return NextResponse.json({
     status: 'ok',
     quota: {
-      used: quotaRow?.nights_used ?? 0,
+      used: nights_used,
       limit: VISITOR_QUOTA_LIMIT,
     },
   })
