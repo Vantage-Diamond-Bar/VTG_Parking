@@ -3,7 +3,8 @@
 import { useState, useEffect } from 'react'
 import Link from 'next/link'
 import { useTranslations } from 'next-intl'
-import { US_STATES, CAR_COLORS, CAR_MAKES, VISITOR_QUOTA_LIMIT, formatPhone } from '@/lib/utils'
+import { US_STATES, CAR_COLORS, CAR_MAKES, VISITOR_QUOTA_LIMIT } from '@/lib/utils'
+import PhoneInput from '@/components/PhoneInput'
 
 interface Unit {
   id: string
@@ -298,12 +299,9 @@ export default function VisitorPage() {
                       </div>
                       <div>
                         <label className={labelCls}>{t('visitor_phone')} *</label>
-                        <input
-                          type="tel"
+                        <PhoneInput
                           value={visitorPhone}
-                          onChange={(e) => setVisitorPhone(formatPhone(e.target.value))}
-                          placeholder="(626)555-1234"
-                          className={inputCls}
+                          onChange={setVisitorPhone}
                         />
                         {fieldErrors.visitor_phone && (
                           <p className="text-red-500 text-xs mt-1">{fieldErrors.visitor_phone}</p>

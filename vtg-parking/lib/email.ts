@@ -48,6 +48,72 @@ export async function sendViolationReport(report: {
   })
 }
 
+export async function sendVacationDecision({
+  firstName,
+  lastName,
+  unitAddress,
+  vehicle,
+  startDatetime,
+  endDatetime,
+  status,
+  admin_notes,
+}: {
+  firstName: string
+  lastName: string
+  unitAddress: string
+  vehicle: { year: number; make: string; model: string; color: string; license_plate: string }
+  startDatetime: string
+  endDatetime: string
+  status: 'approved' | 'rejected'
+  admin_notes?: string
+}) {
+  const { data: emailRows } = await supabaseAdmin
+    .from('notification_emails')
+    .select('email')
+    .eq('active', true)
+
+  if (!emailRows || emailRows.length === 0) return
+
+  const recipients = emailRows.map((r) => r.email)
+
+  const isApproved = status === 'approved'
+  const headerColor = isApproved ? '#15803d' : '#b91c1c'
+  const statusText = isApproved ? 'APPROVED ✓' : 'REJECTED ✗'
+  const start = new Date(startDatetime).toLocaleString('en-US', { dateStyle: 'medium', timeStyle: 'short' })
+  const end = new Date(endDatetime).toLocaleString('en-US', { dateStyle: 'medium', timeStyle: 'short' })
+
+  const html = `
+    <div style="font-family:sans-serif;max-width:600px;margin:0 auto;">
+      <div style="background:${headerColor};color:white;padding:24px;border-radius:8px 8px 0 0;">
+        <h1 style="margin:0;font-size:18px;">VTG Community Parking</h1>
+        <p style="margin:6px 0 0;opacity:0.9;font-size:14px;">Vacation Extended Parking — ${statusText}</p>
+      </div>
+      <div style="background:white;padding:24px;border:1px solid #e5e7eb;border-top:none;border-radius:0 0 8px 8px;">
+        <p>Dear <strong>${firstName} ${lastName}</strong>,</p>
+        <p>Your Vacation Extended Parking request for <strong>${unitAddress}</strong> has been <strong>${isApproved ? 'approved' : 'rejected'}</strong>.</p>
+        <table style="border-collapse:collapse;width:100%;margin:16px 0;">
+          <tr><td style="padding:8px;background:#f9fafb;font-weight:bold;font-size:13px;">Vehicle</td><td style="padding:8px;">${vehicle.year} ${vehicle.color} ${vehicle.make} ${vehicle.model} — <span style="font-family:monospace;font-weight:bold;">${vehicle.license_plate}</span></td></tr>
+          <tr><td style="padding:8px;background:#f9fafb;font-weight:bold;font-size:13px;">Parking Period</td><td style="padding:8px;">${start} → ${end}</td></tr>
+          ${admin_notes ? `<tr><td style="padding:8px;background:#f9fafb;font-weight:bold;font-size:13px;">Admin Notes</td><td style="padding:8px;">${admin_notes}</td></tr>` : ''}
+        </table>
+        ${isApproved
+          ? '<p style="color:#15803d;">Your vehicle is authorized to remain parked in the same location for the approved period without risk of citation.</p>'
+          : '<p style="color:#b91c1c;">Your request was not approved. Please contact the VTG management office if you have questions.</p>'
+        }
+        <hr style="border:none;border-top:1px solid #e5e7eb;margin:20px 0;">
+        <p style="font-size:11px;color:#9ca3af;margin:0;">VTG Community Parking Management System</p>
+      </div>
+    </div>
+  `
+
+  await resend.emails.send({
+    from: EMAIL_FROM,
+    to: recipients,
+    subject: `[Vacation Parking] ${statusText} — ${firstName} ${lastName} (${unitAddress})`,
+    html,
+  })
+}
+
 export async function sendRegistrationReminder({
   ownerName,
   ownerEmail,

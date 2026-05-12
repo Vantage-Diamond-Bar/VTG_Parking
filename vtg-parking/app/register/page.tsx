@@ -3,7 +3,8 @@
 import { useState, useEffect } from 'react'
 import Link from 'next/link'
 import { useTranslations } from 'next-intl'
-import { US_STATES, CAR_COLORS, CAR_MAKES, formatPhone } from '@/lib/utils'
+import { US_STATES, CAR_COLORS, CAR_MAKES } from '@/lib/utils'
+import PhoneInput, { dialCode } from '@/components/PhoneInput'
 
 interface Vehicle {
   year: string
@@ -44,7 +45,6 @@ export default function RegisterPage() {
   const [ownerLastName, setOwnerLastName] = useState('')
   const [ownerPhone, setOwnerPhone] = useState('')
   const [ownerEmail, setOwnerEmail] = useState('')
-  const [optInSms, setOptInSms] = useState(false)
   const [vehicles, setVehicles] = useState<Vehicle[]>([emptyVehicle()])
   const [submitting, setSubmitting] = useState(false)
   const [success, setSuccess] = useState(false)
@@ -98,12 +98,20 @@ export default function RegisterPage() {
     setVehicles((prev) => prev.filter((_, i) => i !== index))
   }
 
+  function validatePhone(phone: string): boolean {
+    // Strip country code prefix (e.g. "+1 ") and check remaining digits
+    const local = phone.replace(/^\+\d+(-\w+)?\s/, '')
+    return local.replace(/\D/g, '').length >= 7
+  }
+
   function validate(): boolean {
     const errors: Record<string, string> = {}
     if (!unitId) errors.unit_id = t('required')
     if (!registrantType) errors.registrant_type = t('required')
     if (!ownerFirstName.trim()) errors.owner_first_name = t('required')
     if (!ownerLastName.trim()) errors.owner_last_name = t('required')
+    if (!ownerPhone.trim()) errors.owner_phone = t('required')
+    else if (!validatePhone(ownerPhone)) errors.owner_phone = 'Please enter a valid phone number.'
     if (!ownerEmail.trim()) errors.owner_email = t('required')
     else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(ownerEmail.trim())) {
       errors.owner_email = 'Please enter a valid email address.'
@@ -116,16 +124,8 @@ export default function RegisterPage() {
       if (!v.color) errors[`color_${i}`] = t('required')
       if (!v.license_plate.trim()) errors[`plate_${i}`] = t('required')
       if (!v.plate_state) errors[`state_${i}`] = t('required')
+      if (!v.registration_doc_base64) errors[`doc_${i}`] = t('required')
     })
-
-    // When registering 3+ vehicles, all must have documents
-    if (vehicles.length >= 3) {
-      vehicles.forEach((v, i) => {
-        if (!v.registration_doc_base64) {
-          errors[`doc_${i}`] = t('doc_required')
-        }
-      })
-    }
 
     setFieldErrors(errors)
     return Object.keys(errors).length === 0
@@ -143,7 +143,7 @@ export default function RegisterPage() {
         owner_name: `${ownerFirstName.trim()} ${ownerLastName.trim()}`,
         owner_phone: ownerPhone,
         owner_email: ownerEmail,
-        opt_in_sms: optInSms,
+        opt_in_sms: true,
         opt_in_email: true,
         vehicles: vehicles.map((v) => ({
           year: Number(v.year),
@@ -185,7 +185,6 @@ export default function RegisterPage() {
     setOwnerLastName('')
     setOwnerPhone('')
     setOwnerEmail('')
-    setOptInSms(false)
     setVehicles([emptyVehicle()])
     setSuccess(false)
     setError('')
@@ -263,9 +262,6 @@ export default function RegisterPage() {
                     <option value="owner">{t('registrant_type_owner')}</option>
                     <option value="tenant">{t('registrant_type_tenant')}</option>
                   </select>
-                  {fieldErrors.registrant_type && (
-                    <p className="text-red-500 text-xs mt-1">{fieldErrors.registrant_type}</p>
-                  )}
                 </div>
               </div>
             </div>
@@ -301,14 +297,14 @@ export default function RegisterPage() {
                   </div>
                 </div>
                 <div>
-                  <label className={labelCls}>{t('phone')}</label>
-                  <input
-                    type="tel"
+                  <label className={labelCls}>{t('phone')} *</label>
+                  <PhoneInput
                     value={ownerPhone}
-                    onChange={(e) => setOwnerPhone(formatPhone(e.target.value))}
-                    placeholder="(626)555-1234"
-                    className={inputCls}
+                    onChange={setOwnerPhone}
                   />
+                  {fieldErrors.owner_phone && (
+                    <p className="text-red-500 text-xs mt-1">{fieldErrors.owner_phone}</p>
+                  )}
                 </div>
                 <div>
                   <label className={labelCls}>{t('email')} *</label>
@@ -322,18 +318,9 @@ export default function RegisterPage() {
                     <p className="text-red-500 text-xs mt-1">{fieldErrors.owner_email}</p>
                   )}
                 </div>
-                <label className="flex items-center gap-2 text-sm text-gray-700 cursor-pointer">
-                  <input
-                    type="checkbox"
-                    checked={optInSms}
-                    onChange={(e) => setOptInSms(e.target.checked)}
-                    className="rounded"
-                  />
-                  {t('opt_in_sms')}
-                </label>
-                {/* Email consent notice (opt-in is always true) */}
+                {/* Combined consent notice */}
                 <p className="text-xs text-gray-500 bg-blue-50 border border-blue-100 rounded-lg px-3 py-2">
-                  {t('email_consent')}
+                  {t('contact_consent')}
                 </p>
               </div>
             </div>
@@ -341,13 +328,6 @@ export default function RegisterPage() {
             {/* Vehicle Section */}
             <div>
               <h2 className={sectionCls}>{t('section_vehicle')}</h2>
-
-              {/* Warning banner for 3+ vehicles */}
-              {vehicles.length >= 3 && (
-                <div className="mb-4 bg-amber-50 border border-amber-200 text-amber-800 rounded-lg px-4 py-3 text-sm">
-                  {t('doc_required_3plus')}
-                </div>
-              )}
 
               <div className="space-y-6">
                 {vehicles.map((vehicle, index) => (
@@ -467,12 +447,11 @@ export default function RegisterPage() {
                       </div>
                     </div>
 
-                    {/* Document Upload */}
+                    {/* Document Upload — always required */}
                     <div>
                       <h3 className="text-sm font-semibold text-gray-700 mb-2">{t('section_docs')}</h3>
                       <label className={labelCls}>
-                        {t('upload_doc')}
-                        {vehicles.length >= 3 && <span className="text-red-500 ml-1">*</span>}
+                        {t('upload_doc')} <span className="text-red-500">*</span>
                       </label>
                       <input
                         type="file"

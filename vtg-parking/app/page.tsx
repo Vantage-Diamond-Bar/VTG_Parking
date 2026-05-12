@@ -44,6 +44,11 @@ export default async function HomePage() {
               🚔 {t('patrol_portal')}
             </Link>
           </div>
+          <div className="flex justify-center mt-4">
+            <Link href="/vacation" className="text-xs text-gray-400 hover:text-gray-600 underline underline-offset-2 transition-colors">
+              🏖️ {t('vacation_portal')}
+            </Link>
+          </div>
         </div>
       </main>
       <footer className="text-center py-6 text-xs text-gray-400 border-t border-gray-100">
