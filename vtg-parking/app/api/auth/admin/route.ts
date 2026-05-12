@@ -16,7 +16,7 @@ export async function POST(req: NextRequest) {
 
   const sessionToken = encodeSession(user);
 
-  const res = NextResponse.json({ ok: true, role: user.role });
+  const res = NextResponse.json({ ok: true, role: user.role, token: sessionToken });
   res.cookies.set('session', sessionToken, {
     httpOnly: true,
     secure: process.env.NODE_ENV === 'production',

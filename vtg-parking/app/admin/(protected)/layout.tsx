@@ -2,6 +2,7 @@ import { redirect } from 'next/navigation';
 import { getSession } from '@/lib/auth';
 import { getTranslations } from 'next-intl/server';
 import Link from 'next/link';
+import { AdminFetchInterceptor } from '@/components/AdminFetchInterceptor';
 
 export default async function AdminProtectedLayout({
   children,
@@ -63,6 +64,7 @@ export default async function AdminProtectedLayout({
 
       {/* Main content */}
       <main className="flex-1 bg-gray-50 overflow-auto">
+        <AdminFetchInterceptor />
         {children}
       </main>
     </div>

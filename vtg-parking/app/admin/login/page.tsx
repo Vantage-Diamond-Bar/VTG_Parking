@@ -28,6 +28,7 @@ export default function AdminLoginPage() {
       if (res.ok) {
         const json = await res.json();
         if (json.role) {
+          if (json.token) localStorage.setItem('vtg_admin_token', json.token);
           window.location.href = '/admin/dashboard';
         } else {
           setError(t('invalid_credentials'));

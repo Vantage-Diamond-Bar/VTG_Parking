@@ -51,11 +51,13 @@ export async function getSession(): Promise<AuthUser | null> {
   return decodeSession(sessionCookie.value)
 }
 
-// For Route Handlers — reads directly from the incoming request
+// For Route Handlers — reads from cookie first, falls back to X-Session-Token header
 export function getSessionFromRequest(req: NextRequest): AuthUser | null {
   const sessionCookie = req.cookies.get('session')
-  if (!sessionCookie) return null
-  return decodeSession(sessionCookie.value)
+  if (sessionCookie) return decodeSession(sessionCookie.value)
+  const headerToken = req.headers.get('X-Session-Token')
+  if (headerToken) return decodeSession(headerToken)
+  return null
 }
 
 export function encodeSession(user: AuthUser): string {
