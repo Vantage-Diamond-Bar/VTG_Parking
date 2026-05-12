@@ -51,7 +51,7 @@ export default function AdminVisitorsPage() {
   }, [fetchVisitors]);
 
   const handleDelete = async (id: string) => {
-    const res = await fetch(`/api/visitors/${id}`, { method: 'DELETE' });
+    const res = await fetch(`/api/visitors/${id}`, { method: 'DELETE', credentials: 'include' });
     if (res.ok) {
       setDeleteTarget(null);
       fetchVisitors();

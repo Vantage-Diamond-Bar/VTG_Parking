@@ -70,11 +70,14 @@ async function getAlerts(): Promise<Alert[]> {
 }
 
 async function getRecentViolations(): Promise<Violation[]> {
+  const sevenDaysAgo = new Date()
+  sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7)
   const { data } = await supabaseAdmin
     .from('violation_reports')
     .select('id, submitted_at, location, violation_type, license_plate, description')
+    .gte('submitted_at', sevenDaysAgo.toISOString())
     .order('submitted_at', { ascending: false })
-    .limit(5);
+    .limit(20);
   return (data ?? []).map((v: any) => ({
     id: v.id,
     submitted_at: v.submitted_at,
@@ -236,24 +239,37 @@ export default async function AdminDashboardPage() {
       {/* Recent Violations */}
       <div className="bg-white rounded-xl shadow-sm border border-gray-100">
         <div className="px-6 py-4 border-b border-gray-100">
-          <h2 className="text-lg font-semibold text-gray-900">{t('recent_violations')}</h2>
+          <h2 className="text-lg font-semibold text-gray-900">{t('recent_violations')} <span className="text-sm font-normal text-gray-400 ml-1">(last 7 days)</span></h2>
         </div>
         {violations.length === 0 ? (
           <p className="text-sm text-gray-500 px-6 py-4">{t('no_violations')}</p>
         ) : (
           <ul className="divide-y divide-gray-100">
-            {violations.map((v) => (
-              <li key={v.id} className="px-6 py-4 flex items-center justify-between text-sm">
-                <div>
-                  <span className="font-mono font-semibold text-gray-900 mr-3">{v.plate}</span>
-                  <span className="text-gray-600 mr-3">{v.location}</span>
-                  <span className="inline-block bg-orange-100 text-orange-700 text-xs px-2 py-0.5 rounded-full">{v.type}</span>
-                </div>
-                <span className="text-gray-400 text-xs">
-                  {new Date(v.submitted_at).toLocaleDateString()}
-                </span>
-              </li>
-            ))}
+            {violations.map((v) => {
+              const submittedAt = new Date(v.submitted_at)
+              const diffMs = Date.now() - submittedAt.getTime()
+              const diffMin = Math.floor(diffMs / 60000)
+              const diffHr = Math.floor(diffMin / 60)
+              const diffDay = Math.floor(diffHr / 24)
+              const ago = diffDay > 0
+                ? `${diffDay}d ${diffHr % 24}h ago`
+                : diffHr > 0
+                  ? `${diffHr}h ${diffMin % 60}m ago`
+                  : `${diffMin}m ago`
+              return (
+                <li key={v.id} className="px-6 py-4 flex items-center justify-between text-sm">
+                  <div>
+                    {v.plate && <span className="font-mono font-semibold text-gray-900 mr-3">{v.plate}</span>}
+                    <span className="text-gray-600 mr-3">{v.location}</span>
+                    <span className="inline-block bg-orange-100 text-orange-700 text-xs px-2 py-0.5 rounded-full">{v.type}</span>
+                  </div>
+                  <div className="text-right shrink-0 ml-4">
+                    <div className="text-gray-500 text-xs">{submittedAt.toLocaleString()}</div>
+                    <div className="text-gray-400 text-xs">{ago}</div>
+                  </div>
+                </li>
+              )
+            })}
           </ul>
         )}
       </div>

@@ -50,6 +50,58 @@ export async function sendViolationReport(report: {
   )
 }
 
+export async function sendViolationHearing({
+  violation_id,
+  location,
+  violation_type,
+  license_plate,
+  unit_address,
+  submitted_at,
+  admin_notes,
+}: {
+  violation_id: string
+  location: string
+  violation_type: string
+  license_plate?: string | null
+  unit_address?: string | null
+  submitted_at: string
+  admin_notes?: string | null
+}) {
+  const { data: emailRows } = await supabaseAdmin
+    .from('notification_emails')
+    .select('email')
+    .eq('active', true)
+
+  if (!emailRows || emailRows.length === 0) return
+
+  const recipients = emailRows.map((r) => r.email)
+
+  const html = `
+    <h2>📋 Parking Violation Hearing Request</h2>
+    <table style="border-collapse:collapse;width:100%;font-family:sans-serif;">
+      <tr><td style="padding:8px;font-weight:bold;background:#f5f5f5;">Violation ID</td><td style="padding:8px;">${violation_id}</td></tr>
+      <tr><td style="padding:8px;font-weight:bold;background:#f5f5f5;">Unit</td><td style="padding:8px;">${unit_address || 'Unknown'}</td></tr>
+      <tr><td style="padding:8px;font-weight:bold;background:#f5f5f5;">Location</td><td style="padding:8px;">${location}</td></tr>
+      <tr><td style="padding:8px;font-weight:bold;background:#f5f5f5;">Violation Type</td><td style="padding:8px;">${violation_type}</td></tr>
+      <tr><td style="padding:8px;font-weight:bold;background:#f5f5f5;">License Plate</td><td style="padding:8px;">${license_plate || 'N/A'}</td></tr>
+      <tr><td style="padding:8px;font-weight:bold;background:#f5f5f5;">Originally Submitted</td><td style="padding:8px;">${new Date(submitted_at).toLocaleString()}</td></tr>
+      ${admin_notes ? `<tr><td style="padding:8px;font-weight:bold;background:#f5f5f5;">Admin Notes</td><td style="padding:8px;">${admin_notes}</td></tr>` : ''}
+    </table>
+    <p style="color:#666;font-size:12px;margin-top:16px;">A hearing has been requested for this violation via the VTG Community Parking Management System.</p>
+  `
+
+  await Promise.allSettled(
+    recipients.map((to) =>
+      resend.emails.send({
+        from: EMAIL_FROM,
+        to,
+        subject: `[Parking Violation Hearing] ${violation_type} — ${unit_address || license_plate || violation_id}`,
+        html,
+      })
+    )
+  )
+}
+
 export async function sendVacationDecision({
   applicantEmail,
   firstName,

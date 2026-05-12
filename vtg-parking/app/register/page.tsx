@@ -468,9 +468,15 @@ export default function RegisterPage() {
                         <span className="text-sm font-medium text-gray-700">{t('is_oversized_label')}</span>
                       </label>
                       {vehicle.is_oversized && (
-                        <p className="text-xs text-amber-800 bg-amber-50 border border-amber-200 rounded-lg px-3 py-2.5 ml-7">
-                          {t('oversized_notice')}
-                        </p>
+                        <div className="ml-7 bg-amber-50 border border-amber-300 rounded-lg px-4 py-3 text-sm text-amber-900 space-y-2">
+                          <p className="font-semibold">{t('oversized_notice_title')}</p>
+                          <ul className="list-disc list-inside space-y-1 text-sm">
+                            <li>{t('oversized_notice_item1')}</li>
+                            <li>{t('oversized_notice_item2')}</li>
+                            <li>{t('oversized_notice_item3')}</li>
+                          </ul>
+                          <p className="text-xs text-amber-700 pt-1">{t('oversized_notice_footer')}</p>
+                        </div>
                       )}
                     </div>
 

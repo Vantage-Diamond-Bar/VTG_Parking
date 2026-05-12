@@ -41,6 +41,29 @@ export async function POST(req: NextRequest) {
     }
   }
 
+  // Auto-identify unit from plate
+  let unit_address: string | null = null
+  if (license_plate) {
+    const plate = license_plate.toUpperCase().replace(/\s+/g, '')
+    const { data: rv } = await supabaseAdmin
+      .from('resident_vehicles')
+      .select('unit_id, units(address)')
+      .ilike('license_plate', plate)
+      .maybeSingle()
+    if (rv) {
+      unit_address = (rv.units as any)?.address ?? null
+    } else {
+      const { data: vr } = await supabaseAdmin
+        .from('visitor_registrations')
+        .select('unit_id, units(address)')
+        .ilike('license_plate', plate)
+        .order('created_at', { ascending: false })
+        .limit(1)
+        .maybeSingle()
+      if (vr) unit_address = (vr.units as any)?.address ?? null
+    }
+  }
+
   const { data: report, error: insertError } = await supabaseAdmin
     .from('violation_reports')
     .insert({
@@ -50,6 +73,7 @@ export async function POST(req: NextRequest) {
       description: description || null,
       reporter_email: reporter_email || null,
       photo_urls,
+      unit_address,
     })
     .select()
     .single();

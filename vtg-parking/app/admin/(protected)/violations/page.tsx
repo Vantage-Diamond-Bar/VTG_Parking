@@ -2,6 +2,16 @@
 
 import { useState, useEffect, useCallback } from 'react';
 import { useTranslations } from 'next-intl';
+import { VIOLATION_TYPES, VIOLATION_LOCATIONS } from '@/lib/utils';
+
+interface HistoryItem {
+  id: string;
+  submitted_at: string;
+  violation_type: string;
+  status: string;
+  final_license_plate?: string;
+  license_plate?: string;
+}
 
 interface Violation {
   id: string;
@@ -12,86 +22,150 @@ interface Violation {
   description?: string;
   photo_urls?: string[];
   reporter_email?: string;
+  unit_address?: string;
+  status: string;
+  resolution_type?: string;
+  admin_notes?: string;
+  call_hearing?: boolean;
+  processed_at?: string;
+  final_license_plate?: string;
+  final_violation_type?: string;
+  final_location?: string;
+  violation_history?: HistoryItem[];
 }
+
+type Tab = 'pending' | 'no_action' | 'resolved' | 'all';
+
+const STATUS_COLORS: Record<string, string> = {
+  pending: 'bg-yellow-100 text-yellow-800',
+  no_action: 'bg-gray-100 text-gray-600',
+  resolved: 'bg-green-100 text-green-800',
+};
+
+const RESOLUTION_OPTIONS = [
+  'warning_issued',
+  'fine_issued',
+  'towed',
+  'vehicle_moved',
+  'owner_notified',
+  'other',
+];
 
 export default function AdminViolationsPage() {
   const t = useTranslations('admin');
-  const [location, setLocation] = useState('');
-  const [type, setType] = useState('');
-  const [fromDate, setFromDate] = useState('');
-  const [toDate, setToDate] = useState('');
+  const [tab, setTab] = useState<Tab>('pending');
   const [violations, setViolations] = useState<Violation[]>([]);
   const [loading, setLoading] = useState(false);
   const [photoModal, setPhotoModal] = useState<string[] | null>(null);
+  const [viewViolation, setViewViolation] = useState<Violation | null>(null);
+
+  // Modal edit state
+  const [editPlate, setEditPlate] = useState('');
+  const [editType, setEditType] = useState('');
+  const [editLocation, setEditLocation] = useState('');
+  const [plateLoading, setPlateLoading] = useState(false);
+  const [plateResult, setPlateResult] = useState<{ unit_address: string | null; source?: string } | null>(null);
+  const [resolution, setResolution] = useState<'no_action' | 'resolved' | ''>('');
+  const [resolutionType, setResolutionType] = useState('');
+  const [callHearing, setCallHearing] = useState(false);
+  const [adminNotes, setAdminNotes] = useState('');
+  const [saving, setSaving] = useState(false);
 
   const fetchViolations = useCallback(async () => {
     setLoading(true);
     try {
       const params = new URLSearchParams();
-      if (location) params.set('location', location);
-      if (type) params.set('type', type);
-      if (fromDate) params.set('from', fromDate);
-      if (toDate) params.set('to', toDate);
+      if (tab !== 'all') params.set('status', tab);
+      params.set('limit', '100');
       const res = await fetch(`/api/admin/violations?${params}`);
       const json = await res.json();
-      if (res.ok) {
-        setViolations(Array.isArray(json) ? json : json.data ?? []);
-      } else {
-        console.error('Violations fetch error:', json);
-      }
+      if (res.ok) setViolations(json.data ?? []);
     } finally {
       setLoading(false);
     }
-  }, [location, type, fromDate, toDate]);
+  }, [tab]);
 
-  useEffect(() => {
-    fetchViolations();
-  }, [fetchViolations]);
+  useEffect(() => { fetchViolations(); }, [fetchViolations]);
+
+  function openModal(v: Violation) {
+    setViewViolation(v);
+    setEditPlate(v.final_license_plate ?? v.license_plate ?? '');
+    setEditType(v.final_violation_type ?? v.violation_type ?? '');
+    setEditLocation(v.final_location ?? v.location ?? '');
+    setResolution(v.status === 'pending' ? '' : v.status as any);
+    setResolutionType(v.resolution_type ?? '');
+    setCallHearing(v.call_hearing ?? false);
+    setAdminNotes(v.admin_notes ?? '');
+    setPlateResult(null);
+  }
+
+  async function lookupPlate() {
+    if (!editPlate.trim()) return;
+    setPlateLoading(true);
+    try {
+      const res = await fetch('/api/admin/violations/lookup-plate', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ plate: editPlate }),
+      });
+      const json = await res.json();
+      setPlateResult(json);
+    } finally {
+      setPlateLoading(false);
+    }
+  }
+
+  async function handleSave() {
+    if (!viewViolation) return;
+    if (!resolution) return;
+    setSaving(true);
+    try {
+      const res = await fetch(`/api/admin/violations/${viewViolation.id}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          status: resolution,
+          resolution_type: resolutionType || null,
+          admin_notes: adminNotes || null,
+          call_hearing: callHearing,
+          final_license_plate: editPlate || null,
+          final_violation_type: editType || null,
+          final_location: editLocation || null,
+        }),
+      });
+      if (res.ok) {
+        setViewViolation(null);
+        fetchViolations();
+      }
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  const tabs: { key: Tab; label: string }[] = [
+    { key: 'pending', label: t('vio_tab_pending') },
+    { key: 'no_action', label: t('vio_tab_no_action') },
+    { key: 'resolved', label: t('vio_tab_resolved') },
+    { key: 'all', label: t('vio_tab_all') },
+  ];
 
   return (
     <div className="p-8">
       <h1 className="text-2xl font-bold text-gray-900 mb-6">{t('violations')}</h1>
 
-      {/* Filters */}
-      <div className="flex flex-wrap gap-3 mb-5 bg-white border border-gray-100 rounded-xl p-4 shadow-sm">
-        <input
-          type="text"
-          value={location}
-          onChange={(e) => setLocation(e.target.value)}
-          placeholder={t('filter_location')}
-          className="border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-        />
-        <input
-          type="text"
-          value={type}
-          onChange={(e) => setType(e.target.value)}
-          placeholder={t('filter_type')}
-          className="border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-        />
-        <div className="flex items-center gap-2">
-          <label className="text-xs text-gray-500">{t('from')}</label>
-          <input
-            type="date"
-            value={fromDate}
-            onChange={(e) => setFromDate(e.target.value)}
-            className="border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-          />
-        </div>
-        <div className="flex items-center gap-2">
-          <label className="text-xs text-gray-500">{t('to')}</label>
-          <input
-            type="date"
-            value={toDate}
-            onChange={(e) => setToDate(e.target.value)}
-            className="border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-          />
-        </div>
-        <button
-          onClick={fetchViolations}
-          className="bg-blue-600 text-white text-sm px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors"
-        >
-          {t('search')}
-        </button>
+      {/* Tabs */}
+      <div className="flex gap-1 mb-5 bg-gray-100 rounded-xl p-1 w-fit">
+        {tabs.map((tb) => (
+          <button
+            key={tb.key}
+            onClick={() => setTab(tb.key)}
+            className={`px-5 py-2 rounded-lg text-sm font-medium transition-colors ${
+              tab === tb.key ? 'bg-white text-gray-900 shadow-sm' : 'text-gray-500 hover:text-gray-700'
+            }`}
+          >
+            {tb.label}
+          </button>
+        ))}
       </div>
 
       {/* Table */}
@@ -104,52 +178,73 @@ export default function AdminViolationsPage() {
                 <th className="px-4 py-3 text-left">{t('location')}</th>
                 <th className="px-4 py-3 text-left">{t('type')}</th>
                 <th className="px-4 py-3 text-left">{t('plate')}</th>
-                <th className="px-4 py-3 text-left">{t('description')}</th>
                 <th className="px-4 py-3 text-left">{t('photos')}</th>
                 <th className="px-4 py-3 text-left">{t('reporter_email')}</th>
+                <th className="px-4 py-3 text-left">{t('vio_unit_owner')}</th>
+                <th className="px-4 py-3 text-left">{t('vio_history')}</th>
+                <th className="px-4 py-3 text-left">{t('status')}</th>
+                <th className="px-4 py-3 text-left"></th>
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-100">
               {loading ? (
-                <tr>
-                  <td colSpan={7} className="px-4 py-8 text-center text-gray-400">{t('loading')}</td>
-                </tr>
+                <tr><td colSpan={10} className="px-4 py-8 text-center text-gray-400">{t('loading')}</td></tr>
               ) : violations.length === 0 ? (
-                <tr>
-                  <td colSpan={7} className="px-4 py-8 text-center text-gray-400">{t('no_results')}</td>
-                </tr>
-              ) : (
-                violations.map((v) => (
-                  <tr key={v.id} className="hover:bg-gray-50">
-                    <td className="px-4 py-3 text-gray-600 whitespace-nowrap">
-                      {new Date(v.submitted_at).toLocaleString()}
-                    </td>
-                    <td className="px-4 py-3">{v.location}</td>
-                    <td className="px-4 py-3">
-                      <span className="inline-block bg-orange-100 text-orange-700 text-xs px-2 py-0.5 rounded-full">
-                        {v.violation_type}
+                <tr><td colSpan={10} className="px-4 py-8 text-center text-gray-400">{t('no_results')}</td></tr>
+              ) : violations.map((v) => (
+                <tr key={v.id} className="hover:bg-gray-50">
+                  <td className="px-4 py-3 text-gray-600 whitespace-nowrap text-xs">
+                    {new Date(v.submitted_at).toLocaleString()}
+                  </td>
+                  <td className="px-4 py-3 text-xs max-w-[140px] truncate" title={v.final_location ?? v.location}>
+                    {v.final_location ?? v.location}
+                  </td>
+                  <td className="px-4 py-3">
+                    <span className="inline-block bg-orange-100 text-orange-700 text-xs px-2 py-0.5 rounded-full whitespace-nowrap">
+                      {v.final_violation_type ?? v.violation_type}
+                    </span>
+                  </td>
+                  <td className="px-4 py-3 font-mono font-semibold text-xs">
+                    {v.final_license_plate ?? v.license_plate ?? '—'}
+                  </td>
+                  <td className="px-4 py-3">
+                    {v.photo_urls && v.photo_urls.length > 0 ? (
+                      <button
+                        onClick={() => setPhotoModal(v.photo_urls!)}
+                        className="text-blue-600 hover:underline text-xs"
+                      >
+                        {v.photo_urls.length} {t('photos_count')}
+                      </button>
+                    ) : <span className="text-gray-400 text-xs">—</span>}
+                  </td>
+                  <td className="px-4 py-3 text-gray-500 text-xs">{v.reporter_email || '—'}</td>
+                  <td className="px-4 py-3 text-xs font-medium text-gray-700">
+                    {v.unit_address ? (
+                      <span className="bg-blue-50 text-blue-700 px-2 py-0.5 rounded">{v.unit_address}</span>
+                    ) : '—'}
+                  </td>
+                  <td className="px-4 py-3 text-xs">
+                    {v.violation_history && v.violation_history.length > 0 ? (
+                      <span className={`font-medium ${v.violation_history.length > 1 ? 'text-red-600' : 'text-gray-600'}`}>
+                        {v.violation_history.length} {t('vio_history_count')}
                       </span>
-                    </td>
-                    <td className="px-4 py-3 font-mono font-semibold">{v.license_plate || '—'}</td>
-                    <td className="px-4 py-3 max-w-[200px] truncate text-gray-600" title={v.description}>
-                      {v.description || '—'}
-                    </td>
-                    <td className="px-4 py-3">
-                      {v.photo_urls && v.photo_urls.length > 0 ? (
-                        <button
-                          onClick={() => setPhotoModal(v.photo_urls!)}
-                          className="text-blue-600 hover:underline text-xs"
-                        >
-                          {v.photo_urls.length} {t('photos_count')}
-                        </button>
-                      ) : (
-                        <span className="text-gray-400">—</span>
-                      )}
-                    </td>
-                    <td className="px-4 py-3 text-gray-500">{v.reporter_email || '—'}</td>
-                  </tr>
-                ))
-              )}
+                    ) : <span className="text-gray-400">—</span>}
+                  </td>
+                  <td className="px-4 py-3">
+                    <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${STATUS_COLORS[v.status] ?? 'bg-gray-100 text-gray-600'}`}>
+                      {v.status}
+                    </span>
+                  </td>
+                  <td className="px-4 py-3">
+                    <button
+                      onClick={() => openModal(v)}
+                      className="text-xs bg-blue-50 text-blue-700 hover:bg-blue-100 px-3 py-1 rounded transition-colors"
+                    >
+                      {t('view')}
+                    </button>
+                  </td>
+                </tr>
+              ))}
             </tbody>
           </table>
         </div>
@@ -157,34 +252,212 @@ export default function AdminViolationsPage() {
 
       {/* Photo Viewer Modal */}
       {photoModal && (
-        <div
-          className="fixed inset-0 bg-black/80 flex items-center justify-center z-50 p-4"
-          onClick={() => setPhotoModal(null)}
-        >
-          <div
-            className="bg-white rounded-xl shadow-xl max-w-3xl w-full max-h-[90vh] overflow-y-auto p-6"
-            onClick={(e) => e.stopPropagation()}
-          >
+        <div className="fixed inset-0 bg-black/80 flex items-center justify-center z-50 p-4" onClick={() => setPhotoModal(null)}>
+          <div className="bg-white rounded-xl shadow-xl max-w-3xl w-full max-h-[90vh] overflow-y-auto p-6" onClick={(e) => e.stopPropagation()}>
             <div className="flex items-center justify-between mb-4">
               <h2 className="text-lg font-semibold text-gray-900">{t('violation_photos')}</h2>
-              <button
-                onClick={() => setPhotoModal(null)}
-                className="text-gray-400 hover:text-gray-600 text-xl leading-none"
-              >
-                ✕
-              </button>
+              <button onClick={() => setPhotoModal(null)} className="text-gray-400 hover:text-gray-600 text-xl">✕</button>
             </div>
             <div className="grid grid-cols-2 gap-4">
               {photoModal.map((url, i) => (
                 <a key={i} href={url} target="_blank" rel="noreferrer">
                   {/* eslint-disable-next-line @next/next/no-img-element */}
-                  <img
-                    src={url}
-                    alt={`Photo ${i + 1}`}
-                    className="w-full rounded-lg object-cover border border-gray-100 hover:opacity-90 transition-opacity"
-                  />
+                  <img src={url} alt={`Photo ${i + 1}`} className="w-full rounded-lg object-cover border border-gray-100 hover:opacity-90 transition-opacity" />
                 </a>
               ))}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Process Modal */}
+      {viewViolation && (
+        <div className="fixed inset-0 bg-black/60 flex items-start justify-center z-50 p-4 overflow-y-auto">
+          <div className="bg-white rounded-xl shadow-xl w-full max-w-2xl my-8">
+            <div className="flex items-center justify-between px-6 py-4 border-b border-gray-100">
+              <h2 className="text-lg font-semibold text-gray-900">{t('vio_process_title')}</h2>
+              <button onClick={() => setViewViolation(null)} className="text-gray-400 hover:text-gray-600 text-xl">✕</button>
+            </div>
+
+            <div className="p-6 space-y-5">
+              {/* Original info */}
+              <div className="bg-gray-50 rounded-lg p-4 text-sm space-y-1">
+                <div className="text-xs text-gray-500 mb-2">{t('vio_original_info')}</div>
+                <div><span className="font-medium">{t('submitted')}:</span> {new Date(viewViolation.submitted_at).toLocaleString()}</div>
+                <div><span className="font-medium">{t('location')}:</span> {viewViolation.location}</div>
+                <div><span className="font-medium">{t('type')}:</span> {viewViolation.violation_type}</div>
+                <div><span className="font-medium">{t('plate')}:</span> {viewViolation.license_plate || '—'}</div>
+                {viewViolation.description && <div><span className="font-medium">{t('description')}:</span> {viewViolation.description}</div>}
+                {viewViolation.reporter_email && <div><span className="font-medium">{t('reporter_email')}:</span> {viewViolation.reporter_email}</div>}
+              </div>
+
+              {/* Photos */}
+              {viewViolation.photo_urls && viewViolation.photo_urls.length > 0 && (
+                <div>
+                  <div className="text-sm font-medium text-gray-700 mb-2">{t('photos')}</div>
+                  <div className="flex gap-2 flex-wrap">
+                    {viewViolation.photo_urls.map((url, i) => (
+                      <a key={i} href={url} target="_blank" rel="noreferrer">
+                        {/* eslint-disable-next-line @next/next/no-img-element */}
+                        <img src={url} alt="" className="h-20 w-20 object-cover rounded-lg border border-gray-200 hover:opacity-80" />
+                      </a>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {/* Violation History */}
+              {viewViolation.violation_history && viewViolation.violation_history.length > 0 && (
+                <div>
+                  <div className="text-sm font-medium text-gray-700 mb-2">
+                    {t('vio_history')} — {viewViolation.unit_address || '—'}
+                  </div>
+                  <div className="border border-gray-200 rounded-lg divide-y divide-gray-100 text-xs">
+                    {viewViolation.violation_history.slice(0, 8).map((h) => (
+                      <div key={h.id} className="px-3 py-2 flex justify-between items-center">
+                        <span className="text-gray-700">{h.violation_type}</span>
+                        <div className="flex items-center gap-2">
+                          <span className={`px-1.5 py-0.5 rounded text-xs ${STATUS_COLORS[h.status] ?? 'bg-gray-100 text-gray-600'}`}>{h.status}</span>
+                          <span className="text-gray-400">{new Date(h.submitted_at).toLocaleDateString()}</span>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {/* Editable fields */}
+              <div className="space-y-3">
+                <div className="text-sm font-semibold text-gray-800 border-t pt-4">{t('vio_edit_fields')}</div>
+
+                {/* Plate + Verify */}
+                <div>
+                  <label className="block text-xs text-gray-600 mb-1">{t('plate')}</label>
+                  <div className="flex gap-2">
+                    <input
+                      type="text"
+                      value={editPlate}
+                      onChange={(e) => { setEditPlate(e.target.value); setPlateResult(null); }}
+                      className="border border-gray-300 rounded-lg px-3 py-2 text-sm flex-1 focus:outline-none focus:ring-2 focus:ring-blue-500 font-mono uppercase"
+                      placeholder="ABC1234"
+                    />
+                    <button
+                      onClick={lookupPlate}
+                      disabled={plateLoading}
+                      className="text-sm bg-gray-100 hover:bg-gray-200 px-3 py-2 rounded-lg transition-colors disabled:opacity-50"
+                    >
+                      {plateLoading ? '...' : t('vio_verify_plate')}
+                    </button>
+                  </div>
+                  {plateResult !== null && (
+                    <div className={`mt-1.5 text-xs px-3 py-1.5 rounded-lg ${plateResult.unit_address ? 'bg-green-50 text-green-700' : 'bg-gray-50 text-gray-500'}`}>
+                      {plateResult.unit_address
+                        ? `✓ ${plateResult.source === 'resident' ? t('vio_resident_vehicle') : t('vio_visitor_vehicle')}: ${plateResult.unit_address}`
+                        : t('vio_plate_not_found')}
+                    </div>
+                  )}
+                </div>
+
+                {/* Violation Type */}
+                <div>
+                  <label className="block text-xs text-gray-600 mb-1">{t('type')}</label>
+                  <select
+                    value={editType}
+                    onChange={(e) => setEditType(e.target.value)}
+                    className="border border-gray-300 rounded-lg px-3 py-2 text-sm w-full focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  >
+                    <option value="">—</option>
+                    {VIOLATION_TYPES.map((vt) => (
+                      <option key={vt} value={vt}>{vt}</option>
+                    ))}
+                  </select>
+                </div>
+
+                {/* Location */}
+                <div>
+                  <label className="block text-xs text-gray-600 mb-1">{t('location')}</label>
+                  <select
+                    value={editLocation}
+                    onChange={(e) => setEditLocation(e.target.value)}
+                    className="border border-gray-300 rounded-lg px-3 py-2 text-sm w-full focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  >
+                    <option value="">—</option>
+                    {VIOLATION_LOCATIONS.map((loc) => (
+                      <option key={loc} value={loc}>{loc}</option>
+                    ))}
+                  </select>
+                </div>
+              </div>
+
+              {/* Resolution */}
+              <div className="space-y-3 border-t pt-4">
+                <div className="text-sm font-semibold text-gray-800">{t('vio_resolution')}</div>
+                <div className="flex gap-4">
+                  <label className="flex items-center gap-2 cursor-pointer">
+                    <input type="radio" name="resolution" value="no_action" checked={resolution === 'no_action'} onChange={() => setResolution('no_action')} className="text-blue-600" />
+                    <span className="text-sm">{t('vio_tab_no_action')}</span>
+                  </label>
+                  <label className="flex items-center gap-2 cursor-pointer">
+                    <input type="radio" name="resolution" value="resolved" checked={resolution === 'resolved'} onChange={() => setResolution('resolved')} className="text-blue-600" />
+                    <span className="text-sm">{t('vio_tab_resolved')}</span>
+                  </label>
+                </div>
+
+                {resolution === 'resolved' && (
+                  <div>
+                    <label className="block text-xs text-gray-600 mb-1">{t('vio_resolution_type')}</label>
+                    <select
+                      value={resolutionType}
+                      onChange={(e) => setResolutionType(e.target.value)}
+                      className="border border-gray-300 rounded-lg px-3 py-2 text-sm w-full focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    >
+                      <option value="">— {t('vio_select_resolution')} —</option>
+                      {RESOLUTION_OPTIONS.map((r) => (
+                        <option key={r} value={r}>{t(`vio_res_${r}`)}</option>
+                      ))}
+                    </select>
+                  </div>
+                )}
+
+                {/* Hearing checkbox */}
+                <label className="flex items-start gap-3 cursor-pointer">
+                  <input
+                    type="checkbox"
+                    checked={callHearing}
+                    onChange={(e) => setCallHearing(e.target.checked)}
+                    className="mt-0.5 h-4 w-4 rounded border-gray-300 text-blue-600"
+                  />
+                  <span className="text-sm text-gray-700">{t('vio_call_hearing')}</span>
+                </label>
+
+                {/* Admin Notes */}
+                <div>
+                  <label className="block text-xs text-gray-600 mb-1">{t('vio_admin_notes')}</label>
+                  <textarea
+                    value={adminNotes}
+                    onChange={(e) => setAdminNotes(e.target.value)}
+                    rows={3}
+                    className="border border-gray-300 rounded-lg px-3 py-2 text-sm w-full focus:outline-none focus:ring-2 focus:ring-blue-500 resize-none"
+                    placeholder={t('vio_notes_placeholder')}
+                  />
+                </div>
+              </div>
+            </div>
+
+            <div className="px-6 py-4 border-t border-gray-100 flex justify-end gap-3">
+              <button
+                onClick={() => setViewViolation(null)}
+                className="text-sm border border-gray-300 px-4 py-2 rounded-lg hover:bg-gray-50"
+              >
+                {t('cancel')}
+              </button>
+              <button
+                onClick={handleSave}
+                disabled={saving || !resolution}
+                className="text-sm bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 disabled:opacity-50 transition-colors"
+              >
+                {saving ? t('vio_saving') : t('save')}
+              </button>
             </div>
           </div>
         </div>
