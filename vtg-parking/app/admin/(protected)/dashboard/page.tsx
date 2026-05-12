@@ -5,6 +5,7 @@ interface Stats {
   total_residents: number;
   visitor_registrations_this_month: number;
   violations_this_month: number;
+  pending_vacation: number;
 }
 
 interface Alert {
@@ -39,15 +40,17 @@ interface OverdueVehicle {
 async function getStats(): Promise<Stats | null> {
   const year_month = new Date().toISOString().slice(0, 7);
   const monthStart = `${year_month}-01`;
-  const [residentsResult, visitorsResult, violationsResult] = await Promise.all([
+  const [residentsResult, visitorsResult, violationsResult, vacationResult] = await Promise.all([
     supabaseAdmin.from('resident_vehicles').select('id', { count: 'exact', head: true }),
     supabaseAdmin.from('visitor_registrations').select('id', { count: 'exact', head: true }).gte('created_at', monthStart),
     supabaseAdmin.from('violation_reports').select('id', { count: 'exact', head: true }).gte('submitted_at', monthStart),
+    supabaseAdmin.from('vacation_parking_requests').select('id', { count: 'exact', head: true }).eq('status', 'pending'),
   ]);
   return {
     total_residents: residentsResult.count ?? 0,
     visitor_registrations_this_month: visitorsResult.count ?? 0,
     violations_this_month: violationsResult.count ?? 0,
+    pending_vacation: vacationResult.count ?? 0,
   };
 }
 
@@ -108,7 +111,7 @@ export default async function AdminDashboardPage() {
       <h1 className="text-2xl font-bold text-gray-900 mb-6">{t('dashboard')}</h1>
 
       {/* Stat Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
+      <div className="grid grid-cols-1 md:grid-cols-5 gap-6 mb-8">
         <div className="bg-white rounded-xl shadow-sm p-6 border border-gray-100">
           <p className="text-sm text-gray-500">{t('total_residents')}</p>
           <p className="text-3xl font-bold text-gray-900 mt-1">
@@ -133,6 +136,14 @@ export default async function AdminDashboardPage() {
           </p>
           <p className={`text-3xl font-bold mt-1 ${overdueVehicles.length > 0 ? 'text-amber-800' : 'text-gray-900'}`}>
             {overdueVehicles.length}
+          </p>
+        </div>
+        <div className={`rounded-xl shadow-sm p-6 border ${(stats?.pending_vacation ?? 0) > 0 ? 'bg-purple-50 border-purple-200' : 'bg-white border-gray-100'}`}>
+          <p className={`text-sm ${(stats?.pending_vacation ?? 0) > 0 ? 'text-purple-700' : 'text-gray-500'}`}>
+            {t('pending_vacation')}
+          </p>
+          <p className={`text-3xl font-bold mt-1 ${(stats?.pending_vacation ?? 0) > 0 ? 'text-purple-800' : 'text-gray-900'}`}>
+            {stats?.pending_vacation ?? '—'}
           </p>
         </div>
       </div>

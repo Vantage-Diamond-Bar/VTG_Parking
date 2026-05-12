@@ -80,33 +80,93 @@ export async function GET(req: NextRequest) {
       });
     }
 
+    // Check approved vacation parking requests
+    const now = new Date().toISOString();
+    const { data: vacation } = await supabaseAdmin
+      .from('vacation_parking_requests')
+      .select('*, units(address)')
+      .ilike('license_plate', plate)
+      .eq('status', 'approved')
+      .lte('start_datetime', now)
+      .gte('end_datetime', now)
+      .order('start_datetime', { ascending: false })
+      .limit(1);
+
+    if (vacation && vacation.length > 0) {
+      const v = vacation[0];
+      return NextResponse.json({
+        found: true,
+        type: 'vacation',
+        address: (v.units as any)?.address ?? null,
+        owner_name: `${v.first_name} ${v.last_name}`,
+        plate: v.license_plate,
+        state: v.plate_state,
+        year: v.year,
+        make: v.make,
+        model: v.model,
+        color: v.color,
+        valid_from: v.start_datetime,
+        valid_until: v.end_datetime,
+        access_code: v.access_code,
+        status: 'active',
+      });
+    }
+
     return NextResponse.json({ found: false, type: 'not_found' });
   }
 
-  // Lookup by access code
+  // Lookup by access code — check visitor registrations first
   const { data: registration } = await supabaseAdmin
     .from('visitor_registrations')
     .select('*, units(address)')
     .eq('access_code', code!.toUpperCase())
     .maybeSingle();
 
-  if (!registration) {
+  if (registration) {
+    const status = determineStatus(registration.start_datetime, registration.end_datetime);
+    return NextResponse.json({
+      found: true,
+      type: 'visitor',
+      address: (registration.units as any)?.address ?? null,
+      guest_name: registration.visitor_name ?? null,
+      plate: registration.license_plate,
+      state: registration.plate_state,
+      make: registration.make,
+      model: registration.model,
+      color: registration.color,
+      valid_from: registration.start_datetime,
+      valid_until: registration.end_datetime,
+      status,
+    });
+  }
+
+  // Check vacation parking requests by access_code
+  const { data: vacationByCode } = await supabaseAdmin
+    .from('vacation_parking_requests')
+    .select('*, units(address)')
+    .eq('access_code', code!.toUpperCase())
+    .eq('status', 'approved')
+    .maybeSingle();
+
+  if (!vacationByCode) {
     return NextResponse.json({ found: false, type: 'not_found' });
   }
 
-  const status = determineStatus(registration.start_datetime, registration.end_datetime);
+  const vacationStatus = determineStatus(vacationByCode.start_datetime, vacationByCode.end_datetime);
   return NextResponse.json({
     found: true,
-    type: 'visitor',
-    address: (registration.units as any)?.address ?? null,
-    guest_name: registration.visitor_name ?? null,
-    plate: registration.license_plate,
-    state: registration.plate_state,
-    make: registration.make,
-    model: registration.model,
-    color: registration.color,
-    valid_from: registration.start_datetime,
-    valid_until: registration.end_datetime,
-    status,
+    type: 'vacation',
+    address: (vacationByCode.units as any)?.address ?? null,
+    owner_name: `${vacationByCode.first_name} ${vacationByCode.last_name}`,
+    plate: vacationByCode.license_plate,
+    state: vacationByCode.plate_state,
+    year: vacationByCode.year,
+    make: vacationByCode.make,
+    model: vacationByCode.model,
+    color: vacationByCode.color,
+    valid_from: vacationByCode.start_datetime,
+    valid_until: vacationByCode.end_datetime,
+    access_code: vacationByCode.access_code,
+    status: vacationStatus,
   });
 }

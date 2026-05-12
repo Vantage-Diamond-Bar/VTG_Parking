@@ -56,6 +56,8 @@
     "registrant_type_tenant": "Tenant / Renter",
     "plate_hint": "No spaces — enter full plate number (e.g. ABC1234)",
     "contact_consent": "By submitting this registration, I consent to receive parking-related notifications from VTG Community management via phone, SMS/text message, and email, including annual vehicle registration renewal reminders and community parking updates. Standard message and data rates may apply. Consent is not a condition of residence.",
+    "is_oversized_label": "This vehicle is oversized and can only be parked in outdoor community spaces (not in a garage).",
+    "oversized_notice": "By checking this box, you certify that this vehicle qualifies as oversized and cannot be stored in a residential garage. Per the community's Parking Rules & Regulations, each household is required to park their first two registered vehicles in the assigned garage. A third vehicle or an oversized vehicle may be permitted to park in a community parking space only after a physical garage inspection has been conducted and written approval has been granted by the HOA Board or Parking Committee.",
     "error_plate_conflict": "This license plate is already registered as a resident vehicle.",
     "required": "This field is required."
   },
@@ -107,6 +109,11 @@
   "vacation": {
     "title": "Vacation Extended Parking Request",
     "subtitle": "Submit a request to keep your vehicle parked in the same location for more than 96 hours.",
+    "eligibility_notice_title": "Please Read Before Applying",
+    "eligibility_item_1": "Your vehicle must be registered to your unit AND your unit must have 3 or more registered vehicles, OR the vehicle must be registered as an oversized vehicle.",
+    "eligibility_item_2": "This request requires HOA Board or Parking Committee approval.",
+    "eligibility_item_3": "If approved, you will receive a 6-character access code by email. Place this code visibly on your vehicle dashboard.",
+    "eligibility_item_4": "Approval does not guarantee availability of a specific parking space.",
     "section_unit": "Unit & Registrant",
     "section_applicant": "Applicant Information",
     "section_emergency": "Emergency Contact",
@@ -120,6 +127,10 @@
     "first_name": "First Name",
     "last_name": "Last Name",
     "phone": "Phone Number",
+    "email": "Email Address",
+    "email_hint": "You will receive the approval/rejection notification at this email address.",
+    "reason": "Reason for Request (optional)",
+    "reason_placeholder": "Vacation trip, other reason...",
     "emergency_first_name": "Emergency Contact First Name",
     "emergency_last_name": "Emergency Contact Last Name",
     "emergency_phone": "Emergency Contact Phone",
@@ -157,9 +168,19 @@
     "emergency_contact": "Emergency Contact",
     "vehicle_registered": "Registered Vehicle",
     "vehicle_not_registered": "Not a Registered Vehicle",
+    "email": "Applicant Email",
+    "reason": "Reason for Request",
+    "access_code": "Access Code",
     "make_decision": "Make a Decision",
     "approve": "Approve",
     "reject": "Reject",
+    "rejection_reason": "Rejection Reason",
+    "select_rejection_reason": "Select a reason...",
+    "rejection_not_registered": "Vehicle is not registered to this unit",
+    "rejection_not_qualifying": "Vehicle does not meet eligibility requirements",
+    "rejection_duration_excessive": "Requested duration exceeds maximum allowed",
+    "rejection_insufficient_availability": "Insufficient parking availability",
+    "rejection_other": "Other",
     "admin_notes": "Admin Notes",
     "optional": "optional",
     "notes_placeholder": "Add notes or reason for decision...",
@@ -261,7 +282,8 @@
     "plate": "Plate",
     "login": "Patrol Login",
     "login_subtitle": "Enter your patrol credentials to continue.",
-    "logout": "Log Out"
+    "logout": "Log Out",
+    "vacation_vehicle": "Vacation Extended Parking"
   },
   "admin": {
     "login": "Admin Login",
@@ -374,7 +396,8 @@
     "reporter_email": "Reporter Email",
     "photos_count": "photo(s)",
     "violation_photos": "Violation Photos",
-    "all": "All"
+    "all": "All",
+    "pending_vacation": "Pending Vacation Requests"
   },
   "common": {
     "loading": "Loading...",

@@ -23,6 +23,8 @@ export default function VacationPage() {
   const [emergencyFirstName, setEmergencyFirstName] = useState('')
   const [emergencyLastName, setEmergencyLastName] = useState('')
   const [emergencyPhone, setEmergencyPhone] = useState('')
+  const [email, setEmail] = useState('')
+  const [reason, setReason] = useState('')
   const [startDatetime, setStartDatetime] = useState('')
   const [endDatetime, setEndDatetime] = useState('')
   const [year, setYear] = useState('')
@@ -56,6 +58,8 @@ export default function VacationPage() {
     if (!lastName.trim()) errors.last_name = t('required')
     if (!phone.trim()) errors.phone = t('required')
     else if (!validatePhone(phone)) errors.phone = 'Please enter a valid phone number.'
+    if (!email.trim()) errors.email = t('required')
+    else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.trim())) errors.email = 'Please enter a valid email address.'
     if (!emergencyFirstName.trim()) errors.emergency_first_name = t('required')
     if (!emergencyLastName.trim()) errors.emergency_last_name = t('required')
     if (!emergencyPhone.trim()) errors.emergency_phone = t('required')
@@ -89,6 +93,8 @@ export default function VacationPage() {
           first_name: firstName.trim(),
           last_name: lastName.trim(),
           phone,
+          email: email.trim(),
+          reason: reason.trim() || null,
           emergency_first_name: emergencyFirstName.trim(),
           emergency_last_name: emergencyLastName.trim(),
           emergency_phone: emergencyPhone,
@@ -117,7 +123,8 @@ export default function VacationPage() {
 
   function resetForm() {
     setUnitId(''); setRegistrantType('owner'); setFirstName(''); setLastName('')
-    setPhone(''); setEmergencyFirstName(''); setEmergencyLastName(''); setEmergencyPhone('')
+    setPhone(''); setEmail(''); setReason('');
+    setEmergencyFirstName(''); setEmergencyLastName(''); setEmergencyPhone('')
     setStartDatetime(''); setEndDatetime(''); setYear(''); setMake(''); setModel('')
     setColor(''); setLicensePlate(''); setPlateState('')
     setSuccess(false); setError(''); setFieldErrors({})
@@ -160,6 +167,17 @@ export default function VacationPage() {
         <Link href="/" className="text-sm text-blue-600 hover:underline mb-6 inline-block">
           ← Back
         </Link>
+        {/* Eligibility Notice */}
+        <div className="bg-amber-50 border border-amber-300 rounded-xl p-5 mb-6">
+          <h2 className="text-base font-bold text-amber-900 mb-2">⚠️ {t('eligibility_notice_title')}</h2>
+          <ul className="text-sm text-amber-800 space-y-1.5 list-disc list-inside">
+            <li>{t('eligibility_item_1')}</li>
+            <li>{t('eligibility_item_2')}</li>
+            <li>{t('eligibility_item_3')}</li>
+            <li>{t('eligibility_item_4')}</li>
+          </ul>
+        </div>
+
         <div className="bg-white rounded-2xl shadow-md p-8">
           <h1 className="text-2xl font-bold text-gray-900 mb-1">{t('title')}</h1>
           <p className="text-gray-500 text-sm mb-6">{t('subtitle')}</p>
@@ -209,6 +227,22 @@ export default function VacationPage() {
                   <label className={labelCls}>{t('phone')} *</label>
                   <PhoneInput value={phone} onChange={setPhone} />
                   {fieldErrors.phone && <p className="text-red-500 text-xs mt-1">{fieldErrors.phone}</p>}
+                </div>
+                <div>
+                  <label className={labelCls}>{t('email')} *</label>
+                  <input type="email" value={email} onChange={(e) => setEmail(e.target.value)} className={inputCls} />
+                  <p className="text-xs text-gray-400 mt-1">{t('email_hint')}</p>
+                  {fieldErrors.email && <p className="text-red-500 text-xs mt-1">{fieldErrors.email}</p>}
+                </div>
+                <div>
+                  <label className={labelCls}>{t('reason')}</label>
+                  <textarea
+                    value={reason}
+                    onChange={(e) => setReason(e.target.value)}
+                    rows={3}
+                    placeholder={t('reason_placeholder')}
+                    className={`${inputCls} resize-none`}
+                  />
                 </div>
               </div>
             </div>

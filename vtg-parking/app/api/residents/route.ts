@@ -57,6 +57,7 @@ export async function POST(req: NextRequest) {
     license_plate: v._normalized_plate,
     plate_state: v.plate_state,
     registration_doc_url: v._registration_doc_url,
+    is_oversized: v.is_oversized ?? false,
   }));
 
   const { error } = await supabaseAdmin.from('resident_vehicles').insert(rows);

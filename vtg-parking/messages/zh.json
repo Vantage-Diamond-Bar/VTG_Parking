@@ -56,6 +56,8 @@
     "registrant_type_tenant": "租客",
     "plate_hint": "请勿输入空格，直接填写完整车牌号（如 ABC1234）",
     "contact_consent": "提交即表示我同意接受 VTG 社区物业管理处通过电话、短信及电子邮件发送的停车相关通知，包括年度车辆登记续期提醒及社区停车事务通知。标准短信及数据费用可能适用。同意接收通知并非居住条件。",
+    "is_oversized_label": "该车辆属于大型车辆，只能停放在社区户外公共车位（不可停放在车库）。",
+    "oversized_notice": "勾选此项即表示您确认该车辆属于超大尺寸车辆，无法停放在住宅车库内。根据社区《停车规则与规定》，每户家庭的前两辆登记车辆须停放在已分配的车库内。第三辆车或超大型车辆仅在经过实地车库检查，并获得业主委员会或停车管理委员会书面批准后，方可停放在社区公共停车位。",
     "error_plate_conflict": "该车牌已作为住户车辆登记，无法重复登记。",
     "required": "此项为必填项。"
   },
@@ -107,6 +109,11 @@
   "vacation": {
     "title": "度假延长停车申请",
     "subtitle": "如需将车辆在同一位置停放超过96小时，请提交本申请。",
+    "eligibility_notice_title": "申请前请仔细阅读",
+    "eligibility_item_1": "您的车辆必须已在本门牌下登记，且该门牌下须有3辆或以上登记车辆，或该车辆已被标注为大型车辆。",
+    "eligibility_item_2": "本申请须经业主委员会或停车管理委员会审批。",
+    "eligibility_item_3": "申请获批后，您将通过邮件收到一个6位通行码。请将通行码清晰放置在车辆仪表盘上。",
+    "eligibility_item_4": "审批通过并不保证特定停车位的可用性。",
     "section_unit": "门牌及登记信息",
     "section_applicant": "申请人信息",
     "section_emergency": "紧急联系人",
@@ -120,6 +127,10 @@
     "first_name": "名",
     "last_name": "姓",
     "phone": "联系电话",
+    "email": "电子邮箱",
+    "email_hint": "审批结果通知将发送至此邮箱。",
+    "reason": "申请原因（选填）",
+    "reason_placeholder": "度假出游、其他原因...",
     "emergency_first_name": "紧急联系人名",
     "emergency_last_name": "紧急联系人姓",
     "emergency_phone": "紧急联系人电话",
@@ -157,9 +168,19 @@
     "emergency_contact": "紧急联系人",
     "vehicle_registered": "已登记车辆",
     "vehicle_not_registered": "非登记车辆",
+    "email": "申请人邮箱",
+    "reason": "申请原因",
+    "access_code": "通行码",
     "make_decision": "作出审批决定",
     "approve": "批准",
     "reject": "拒绝",
+    "rejection_reason": "拒绝原因",
+    "select_rejection_reason": "请选择拒绝原因...",
+    "rejection_not_registered": "车辆未在该门牌下登记",
+    "rejection_not_qualifying": "车辆不符合申请资格条件",
+    "rejection_duration_excessive": "申请停放时间超过最长允许时限",
+    "rejection_insufficient_availability": "停车位不足",
+    "rejection_other": "其他原因",
     "admin_notes": "管理员备注",
     "optional": "选填",
     "notes_placeholder": "请添加备注或说明审批原因...",
@@ -261,7 +282,8 @@
     "plate": "车牌",
     "login": "巡逻员登录",
     "login_subtitle": "请输入巡逻员账号密码。",
-    "logout": "退出登录"
+    "logout": "退出登录",
+    "vacation_vehicle": "度假延长停车"
   },
   "admin": {
     "login": "管理员登录",
@@ -374,7 +396,8 @@
     "reporter_email": "举报人邮箱",
     "photos_count": "张照片",
     "violation_photos": "违章照片",
-    "all": "全部"
+    "all": "全部",
+    "pending_vacation": "待审核度假停车申请"
   },
   "common": {
     "loading": "加载中...",

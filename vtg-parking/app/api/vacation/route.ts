@@ -4,7 +4,7 @@ import { supabaseAdmin } from '@/lib/supabase'
 export async function POST(req: NextRequest) {
   const body = await req.json()
   const {
-    unit_id, registrant_type, first_name, last_name, phone,
+    unit_id, registrant_type, first_name, last_name, phone, email, reason,
     emergency_first_name, emergency_last_name, emergency_phone,
     start_datetime, end_datetime,
     year, make, model, color, license_plate, plate_state,
@@ -13,19 +13,38 @@ export async function POST(req: NextRequest) {
   // Check if the submitted vehicle is registered to this unit
   const { data: matchedVehicle } = await supabaseAdmin
     .from('resident_vehicles')
-    .select('id')
+    .select('id, is_oversized')
     .eq('unit_id', unit_id)
     .ilike('license_plate', license_plate)
     .maybeSingle()
+
+  const isRegistered = matchedVehicle !== null
+
+  // Enhanced eligibility: registered AND (oversized OR unit has 3+ vehicles)
+  let isEligible = false
+  if (isRegistered) {
+    if (matchedVehicle.is_oversized) {
+      isEligible = true
+    } else {
+      const { count } = await supabaseAdmin
+        .from('resident_vehicles')
+        .select('id', { count: 'exact', head: true })
+        .eq('unit_id', unit_id)
+      isEligible = (count ?? 0) >= 3
+    }
+  }
 
   const { data, error } = await supabaseAdmin
     .from('vacation_parking_requests')
     .insert({
       unit_id, registrant_type, first_name, last_name, phone,
+      email: email ?? null,
+      reason: reason ?? null,
       emergency_first_name, emergency_last_name, emergency_phone,
       start_datetime, end_datetime,
       year, make, model, color, license_plate, plate_state,
-      is_registered_vehicle: matchedVehicle !== null,
+      is_registered_vehicle: isRegistered,
+      is_eligible: isEligible,
     })
     .select()
     .single()

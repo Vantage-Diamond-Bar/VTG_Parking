@@ -49,6 +49,7 @@ export async function sendViolationReport(report: {
 }
 
 export async function sendVacationDecision({
+  applicantEmail,
   firstName,
   lastName,
   unitAddress,
@@ -56,8 +57,11 @@ export async function sendVacationDecision({
   startDatetime,
   endDatetime,
   status,
+  access_code,
+  rejection_reason,
   admin_notes,
 }: {
+  applicantEmail: string
   firstName: string
   lastName: string
   unitAddress: string
@@ -65,22 +69,32 @@ export async function sendVacationDecision({
   startDatetime: string
   endDatetime: string
   status: 'approved' | 'rejected'
+  access_code?: string
+  rejection_reason?: string
   admin_notes?: string
 }) {
-  const { data: emailRows } = await supabaseAdmin
-    .from('notification_emails')
-    .select('email')
-    .eq('active', true)
-
-  if (!emailRows || emailRows.length === 0) return
-
-  const recipients = emailRows.map((r) => r.email)
+  if (!applicantEmail) return
 
   const isApproved = status === 'approved'
   const headerColor = isApproved ? '#15803d' : '#b91c1c'
   const statusText = isApproved ? 'APPROVED ✓' : 'REJECTED ✗'
   const start = new Date(startDatetime).toLocaleString('en-US', { dateStyle: 'medium', timeStyle: 'short' })
   const end = new Date(endDatetime).toLocaleString('en-US', { dateStyle: 'medium', timeStyle: 'short' })
+
+  const accessCodeSection = isApproved && access_code ? `
+    <div style="background:#eff6ff;border:2px solid #3b82f6;border-radius:8px;padding:20px;margin:20px 0;text-align:center;">
+      <p style="margin:0 0 8px;font-size:13px;color:#1e40af;font-weight:bold;text-transform:uppercase;letter-spacing:0.05em;">Your Parking Access Code</p>
+      <p style="margin:0;font-size:36px;font-family:monospace;font-weight:bold;color:#1e3a8a;letter-spacing:0.2em;">${access_code}</p>
+      <p style="margin:12px 0 0;font-size:12px;color:#3b82f6;">Place this code on your vehicle dashboard during the approved parking period.</p>
+    </div>
+  ` : ''
+
+  const rejectionSection = !isApproved && rejection_reason ? `
+    <div style="background:#fef2f2;border-left:4px solid #dc2626;border-radius:4px;padding:12px 16px;margin:16px 0;">
+      <p style="margin:0;font-size:13px;font-weight:bold;color:#991b1b;">Reason for Rejection:</p>
+      <p style="margin:4px 0 0;color:#7f1d1d;">${rejection_reason}</p>
+    </div>
+  ` : ''
 
   const html = `
     <div style="font-family:sans-serif;max-width:600px;margin:0 auto;">
@@ -91,11 +105,13 @@ export async function sendVacationDecision({
       <div style="background:white;padding:24px;border:1px solid #e5e7eb;border-top:none;border-radius:0 0 8px 8px;">
         <p>Dear <strong>${firstName} ${lastName}</strong>,</p>
         <p>Your Vacation Extended Parking request for <strong>${unitAddress}</strong> has been <strong>${isApproved ? 'approved' : 'rejected'}</strong>.</p>
+        ${accessCodeSection}
         <table style="border-collapse:collapse;width:100%;margin:16px 0;">
           <tr><td style="padding:8px;background:#f9fafb;font-weight:bold;font-size:13px;">Vehicle</td><td style="padding:8px;">${vehicle.year} ${vehicle.color} ${vehicle.make} ${vehicle.model} — <span style="font-family:monospace;font-weight:bold;">${vehicle.license_plate}</span></td></tr>
           <tr><td style="padding:8px;background:#f9fafb;font-weight:bold;font-size:13px;">Parking Period</td><td style="padding:8px;">${start} → ${end}</td></tr>
           ${admin_notes ? `<tr><td style="padding:8px;background:#f9fafb;font-weight:bold;font-size:13px;">Admin Notes</td><td style="padding:8px;">${admin_notes}</td></tr>` : ''}
         </table>
+        ${rejectionSection}
         ${isApproved
           ? '<p style="color:#15803d;">Your vehicle is authorized to remain parked in the same location for the approved period without risk of citation.</p>'
           : '<p style="color:#b91c1c;">Your request was not approved. Please contact the VTG management office if you have questions.</p>'
@@ -108,7 +124,7 @@ export async function sendVacationDecision({
 
   await resend.emails.send({
     from: EMAIL_FROM,
-    to: recipients,
+    to: applicantEmail,
     subject: `[Vacation Parking] ${statusText} — ${firstName} ${lastName} (${unitAddress})`,
     html,
   })

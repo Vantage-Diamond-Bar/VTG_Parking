@@ -7,7 +7,7 @@ type SearchTab = 'plate' | 'code';
 
 interface LookupResult {
   found: boolean;
-  type?: 'resident' | 'visitor';
+  type?: 'resident' | 'visitor' | 'vacation';
   address?: string;
   owner_name?: string;
   guest_name?: string;
@@ -19,7 +19,8 @@ interface LookupResult {
   state?: string;
   valid_from?: string;
   valid_until?: string;
-  status?: 'active' | 'expired' | 'not_yet_active';
+  access_code?: string;
+  status?: 'active' | 'expired' | 'upcoming';
   message?: string;
 }
 
@@ -197,6 +198,53 @@ export default function PatrolPage() {
             )}
             <div><span className={`text-${cardColor}-600 font-medium`}>{t('plate')}:</span> <span className="font-mono font-bold">{result.plate} / {result.state}</span></div>
             <div><span className={`text-${cardColor}-600 font-medium`}>{t('vehicle')}:</span> <span className="font-semibold">{[result.make, result.model, result.color].filter(Boolean).join(' ')}</span></div>
+            {result.valid_from && (
+              <div>
+                <span className={`text-${cardColor}-600 font-medium`}>{t('valid_from')}:</span>{' '}
+                <span className="font-semibold">{new Date(result.valid_from).toLocaleString()}</span>
+              </div>
+            )}
+            {result.valid_until && (
+              <div>
+                <span className={`text-${cardColor}-600 font-medium`}>{t('valid_until')}:</span>{' '}
+                <span className="font-semibold">{new Date(result.valid_until).toLocaleString()}</span>
+              </div>
+            )}
+          </div>
+        </div>
+      );
+    }
+
+    if (result.type === 'vacation') {
+      const isExpired = result.status === 'expired';
+      const isUpcoming = result.status === 'upcoming';
+      const cardColor = isExpired ? 'red' : isUpcoming ? 'yellow' : 'purple';
+      return (
+        <div className={`bg-${cardColor}-50 border-2 border-${cardColor}-300 rounded-xl p-6 mt-6`}>
+          <div className="flex items-center justify-between mb-4">
+            <div className="flex items-center gap-3">
+              <span className="text-2xl">🏖️</span>
+              <h2 className={`text-xl font-bold text-${cardColor}-800`}>{t('vacation_vehicle')}</h2>
+            </div>
+            <div className="flex flex-col items-end gap-1">
+              <span className={`inline-block bg-${cardColor}-700 text-white text-xs font-bold px-3 py-1 rounded-full uppercase tracking-wide`}>
+                VACATION PARKING
+              </span>
+              {getStatusBadge(result.status)}
+            </div>
+          </div>
+          {result.access_code && (
+            <div className={`bg-${cardColor}-100 border border-${cardColor}-200 rounded-lg px-4 py-2 mb-3 text-center`}>
+              <span className={`text-xs font-bold text-${cardColor}-600 uppercase`}>{t('access_code')}: </span>
+              <span className={`font-mono font-bold text-${cardColor}-900 tracking-widest text-lg`}>{result.access_code}</span>
+            </div>
+          )}
+          <div className="grid grid-cols-2 gap-3 text-sm">
+            <div><span className={`text-${cardColor}-600 font-medium`}>{t('unit')}:</span> <span className="font-semibold">{result.address}</span></div>
+            <div><span className={`text-${cardColor}-600 font-medium`}>{t('owner')}:</span> <span className="font-semibold">{result.owner_name}</span></div>
+            <div><span className={`text-${cardColor}-600 font-medium`}>{t('vehicle')}:</span> <span className="font-semibold">{[result.year, result.make, result.model].filter(Boolean).join(' ')}</span></div>
+            <div><span className={`text-${cardColor}-600 font-medium`}>{t('color')}:</span> <span className="font-semibold">{result.color}</span></div>
+            <div><span className={`text-${cardColor}-600 font-medium`}>{t('plate')}:</span> <span className="font-mono font-bold">{result.plate} / {result.state}</span></div>
             {result.valid_from && (
               <div>
                 <span className={`text-${cardColor}-600 font-medium`}>{t('valid_from')}:</span>{' '}

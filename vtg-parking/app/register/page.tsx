@@ -15,6 +15,7 @@ interface Vehicle {
   plate_state: string
   registration_doc_base64: string
   registration_doc_filename: string
+  is_oversized: boolean
 }
 
 interface Unit {
@@ -32,6 +33,7 @@ function emptyVehicle(): Vehicle {
     plate_state: '',
     registration_doc_base64: '',
     registration_doc_filename: '',
+    is_oversized: false,
   }
 }
 
@@ -154,6 +156,7 @@ export default function RegisterPage() {
           plate_state: v.plate_state,
           registration_doc_base64: v.registration_doc_base64,
           registration_doc_filename: v.registration_doc_filename,
+          is_oversized: v.is_oversized,
         })),
       }
       const res = await fetch('/api/residents', {
@@ -445,6 +448,30 @@ export default function RegisterPage() {
                           <p className="text-red-500 text-xs mt-1">{fieldErrors[`state_${index}`]}</p>
                         )}
                       </div>
+                    </div>
+
+                    {/* Oversized Vehicle */}
+                    <div className="space-y-2">
+                      <label className="flex items-start gap-3 cursor-pointer">
+                        <input
+                          type="checkbox"
+                          checked={vehicle.is_oversized}
+                          onChange={(e) => {
+                            setVehicles((prev) => {
+                              const next = [...prev]
+                              next[index] = { ...next[index], is_oversized: e.target.checked }
+                              return next
+                            })
+                          }}
+                          className="mt-0.5 h-4 w-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500 flex-shrink-0"
+                        />
+                        <span className="text-sm font-medium text-gray-700">{t('is_oversized_label')}</span>
+                      </label>
+                      {vehicle.is_oversized && (
+                        <p className="text-xs text-amber-800 bg-amber-50 border border-amber-200 rounded-lg px-3 py-2.5 ml-7">
+                          {t('oversized_notice')}
+                        </p>
+                      )}
                     </div>
 
                     {/* Document Upload — always required */}

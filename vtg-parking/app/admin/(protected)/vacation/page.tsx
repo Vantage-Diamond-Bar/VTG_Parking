@@ -11,6 +11,8 @@ interface VacationRequest {
   first_name: string
   last_name: string
   phone: string
+  email: string | null
+  reason: string | null
   emergency_first_name: string
   emergency_last_name: string
   emergency_phone: string
@@ -23,6 +25,9 @@ interface VacationRequest {
   license_plate: string
   plate_state: string
   is_registered_vehicle: boolean | null
+  is_eligible: boolean | null
+  access_code: string | null
+  rejection_reason: string | null
   admin_notes: string | null
   reviewed_at: string | null
   reviewed_by: string | null
@@ -41,6 +46,7 @@ export default function AdminVacationPage() {
   const [selected, setSelected] = useState<VacationRequest | null>(null)
   const [decisionStatus, setDecisionStatus] = useState<'approved' | 'rejected'>('approved')
   const [adminNotes, setAdminNotes] = useState('')
+  const [rejectionReason, setRejectionReason] = useState('')
   const [submittingDecision, setSubmittingDecision] = useState(false)
   const [decisionError, setDecisionError] = useState('')
 
@@ -69,11 +75,16 @@ export default function AdminVacationPage() {
       const res = await fetch(`/api/admin/vacation/${selected.id}`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ status: decisionStatus, admin_notes: adminNotes }),
+        body: JSON.stringify({
+          status: decisionStatus,
+          admin_notes: adminNotes,
+          rejection_reason: decisionStatus === 'rejected' ? rejectionReason : undefined,
+        }),
       })
       if (res.ok) {
         setSelected(null)
         setAdminNotes('')
+        setRejectionReason('')
         fetchRequests()
       } else {
         const json = await res.json()
@@ -170,7 +181,7 @@ export default function AdminVacationPage() {
                   </td>
                   <td className="px-4 py-3">
                     <button
-                      onClick={() => { setSelected(r); setDecisionStatus('approved'); setAdminNotes(r.admin_notes ?? ''); setDecisionError('') }}
+                      onClick={() => { setSelected(r); setDecisionStatus('approved'); setAdminNotes(r.admin_notes ?? ''); setRejectionReason(''); setDecisionError('') }}
                       className="text-xs text-blue-600 hover:underline"
                     >
                       {t('view')}
@@ -218,13 +229,33 @@ export default function AdminVacationPage() {
                 <div><p className="text-xs text-gray-400 uppercase">{tv('emergency_contact')}</p><p className="font-medium">{selected.emergency_first_name} {selected.emergency_last_name}</p><p className="text-gray-500 text-xs">{selected.emergency_phone}</p></div>
                 <div><p className="text-xs text-gray-400 uppercase">{tv('period')}</p><p className="font-medium">{new Date(selected.start_datetime).toLocaleString()}</p><p className="text-gray-500 text-xs">→ {new Date(selected.end_datetime).toLocaleString()}</p></div>
                 <div><p className="text-xs text-gray-400 uppercase">{t('vehicle')}</p><p className="font-mono font-semibold">{selected.license_plate} / {selected.plate_state}</p><p className="text-gray-500 text-xs">{selected.year} {selected.make} {selected.model} · {selected.color}</p></div>
+                {selected.email && (
+                  <div className="col-span-2"><p className="text-xs text-gray-400 uppercase">{tv('email')}</p><p className="text-gray-700">{selected.email}</p></div>
+                )}
+                {selected.reason && (
+                  <div className="col-span-2"><p className="text-xs text-gray-400 uppercase">{tv('reason')}</p><p className="text-gray-700">{selected.reason}</p></div>
+                )}
               </div>
+
+              {selected.access_code && selected.status === 'approved' && (
+                <div className="bg-blue-50 border border-blue-200 rounded-lg px-4 py-3 text-center">
+                  <p className="text-xs text-blue-600 uppercase font-bold mb-1">{tv('access_code')}</p>
+                  <p className="font-mono font-bold text-2xl text-blue-900 tracking-widest">{selected.access_code}</p>
+                </div>
+              )}
 
               {selected.admin_notes && selected.status !== 'pending' && (
                 <div className="bg-gray-50 rounded-lg px-4 py-3">
                   <p className="text-xs text-gray-400 uppercase mb-1">{tv('admin_notes')}</p>
                   <p className="text-gray-700">{selected.admin_notes}</p>
                   {selected.reviewed_by && <p className="text-xs text-gray-400 mt-1">— {selected.reviewed_by}, {selected.reviewed_at ? new Date(selected.reviewed_at).toLocaleString() : ''}</p>}
+                </div>
+              )}
+
+              {selected.rejection_reason && selected.status === 'rejected' && (
+                <div className="bg-red-50 border border-red-100 rounded-lg px-4 py-3">
+                  <p className="text-xs text-red-400 uppercase mb-1">{tv('rejection_reason')}</p>
+                  <p className="text-red-700">{selected.rejection_reason}</p>
                 </div>
               )}
 
@@ -245,6 +276,23 @@ export default function AdminVacationPage() {
                     ✗ {tv('reject')}
                   </button>
                 </div>
+                {decisionStatus === 'rejected' && (
+                  <div>
+                    <label className="block text-xs font-medium text-gray-600 mb-1">{tv('rejection_reason')} *</label>
+                    <select
+                      value={rejectionReason}
+                      onChange={(e) => setRejectionReason(e.target.value)}
+                      className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-red-400"
+                    >
+                      <option value="">{tv('select_rejection_reason')}</option>
+                      <option value={tv('rejection_not_registered')}>{tv('rejection_not_registered')}</option>
+                      <option value={tv('rejection_not_qualifying')}>{tv('rejection_not_qualifying')}</option>
+                      <option value={tv('rejection_duration_excessive')}>{tv('rejection_duration_excessive')}</option>
+                      <option value={tv('rejection_insufficient_availability')}>{tv('rejection_insufficient_availability')}</option>
+                      <option value={tv('rejection_other')}>{tv('rejection_other')}</option>
+                    </select>
+                  </div>
+                )}
                 <div>
                   <label className="block text-xs font-medium text-gray-600 mb-1">{tv('admin_notes')} ({tv('optional')})</label>
                   <textarea
