@@ -65,6 +65,10 @@ export const VIOLATION_TYPES = [
   'Other',
 ] as const
 
+export const VEHICLE_TYPES = [
+  'Sedan', 'SUV', 'Truck', 'Minivan', 'Station Wagon', 'Full Size Van', 'Motorcycle', 'Boat', 'Other',
+] as const
+
 export const VISITOR_QUOTA_LIMIT = 10
 
 /**

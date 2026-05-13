@@ -3,7 +3,7 @@
 import { useState, useEffect, useCallback } from 'react'
 import Link from 'next/link'
 import { useTranslations } from 'next-intl'
-import { US_STATES, CAR_COLORS, CAR_MAKES, VISITOR_QUOTA_LIMIT, getYearMonth, generateMonthOptions } from '@/lib/utils'
+import { US_STATES, CAR_COLORS, CAR_MAKES, VEHICLE_TYPES, VISITOR_QUOTA_LIMIT, getYearMonth, generateMonthOptions } from '@/lib/utils'
 import PhoneInput from '@/components/PhoneInput'
 
 // ─── Types ─────────────────────────────────────────────────────────────────
@@ -14,7 +14,7 @@ interface VehicleForm {
   year: string; make: string; model: string; color: string
   license_plate: string; plate_state: string
   registration_doc_base64: string; registration_doc_filename: string
-  is_oversized: boolean
+  is_oversized: boolean; vehicle_type: string
 }
 
 interface ResidentVehicle {
@@ -42,7 +42,7 @@ type PageState = 'idle' | 'checking' | 'new' | 'verify' | 'manage' | 'new_succes
 // ─── Helpers ───────────────────────────────────────────────────────────────
 
 function emptyVehicle(): VehicleForm {
-  return { year: '', make: '', model: '', color: '', license_plate: '', plate_state: '', registration_doc_base64: '', registration_doc_filename: '', is_oversized: false }
+  return { year: '', make: '', model: '', color: '', license_plate: '', plate_state: '', registration_doc_base64: '', registration_doc_filename: '', is_oversized: false, vehicle_type: '' }
 }
 
 async function fileToBase64(file: File): Promise<string> {
@@ -90,7 +90,7 @@ export default function RegisterPage() {
   const [submitting, setSubmitting] = useState(false)
   const [submitError, setSubmitError] = useState('')
   const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({})
-
+  const [oversizedPendingCount, setOversizedPendingCount] = useState(0)
   useEffect(() => {
     fetch('/api/units').then(r => r.json()).then(d => setUnits(Array.isArray(d) ? d : d.units ?? [])).catch(() => {})
   }, [])
@@ -215,6 +215,7 @@ export default function RegisterPage() {
             registration_doc_base64: v.registration_doc_base64,
             registration_doc_filename: v.registration_doc_filename,
             is_oversized: v.is_oversized,
+            vehicle_type: v.vehicle_type || null,
           })),
         }),
       })
@@ -223,6 +224,7 @@ export default function RegisterPage() {
         setSubmitError(data?.error === 'plate_conflict' ? t('error_plate_conflict') : (data?.error ?? 'Submission failed'))
         return
       }
+      setOversizedPendingCount(data.oversized_pending_count ?? 0)
       setPageState('new_success')
     } catch {
       setSubmitError('Network error. Please try again.')
@@ -248,9 +250,16 @@ export default function RegisterPage() {
             </svg>
           </div>
           <h2 className="text-2xl font-bold text-gray-900 mb-2">{t('success_title')}</h2>
-          <p className="text-gray-500 mb-6">{t('success_desc')}</p>
+          <p className="text-gray-500 mb-4">{t('success_desc')}</p>
+          {oversizedPendingCount > 0 && (
+            <p className="mb-6 text-sm text-amber-700 bg-amber-50 border border-amber-200 rounded-lg px-4 py-3">
+              {oversizedPendingCount === 1
+                ? 'One oversized vehicle has been submitted for admin review. You will be notified when it is approved.'
+                : `${oversizedPendingCount} oversized vehicles have been submitted for admin review. You will be notified when they are approved.`}
+            </p>
+          )}
           <button
-            onClick={() => { setPageState('idle'); setUnitId(''); setOwnerFirstName(''); setOwnerLastName(''); setOwnerPhone(''); setOwnerEmail(''); setNewVehicles([emptyVehicle()]); }}
+            onClick={() => { setPageState('idle'); setUnitId(''); setOwnerFirstName(''); setOwnerLastName(''); setOwnerPhone(''); setOwnerEmail(''); setNewVehicles([emptyVehicle()]); setOversizedPendingCount(0); }}
             className="w-full bg-blue-600 text-white py-3 rounded-lg font-semibold hover:bg-blue-700 transition-colors"
           >
             {t('register_another')}
@@ -353,7 +362,7 @@ export default function RegisterPage() {
               <div>
                 <h2 className={sectionCls}>{t('section_contact')}</h2>
                 <div className="space-y-4">
-                  <div className="grid grid-cols-2 gap-4">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                     <div>
                       <label className={labelCls}>{t('first_name')} *</label>
                       <input type="text" value={ownerFirstName} onChange={e => setOwnerFirstName(e.target.value)} className={inputCls} />
@@ -441,7 +450,7 @@ function VehicleFormCard({ vehicle, index, showRemove, fieldErrors, t, inputCls,
           <button type="button" onClick={onRemove} className="text-red-500 text-sm hover:text-red-700">Remove</button>
         </div>
       )}
-      <div className="grid grid-cols-2 gap-4">
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
         <div>
           <label className={labelCls}>{t('year')} *</label>
           <input type="number" min={1990} max={2030} value={vehicle.year} onChange={e => onChange('year', e.target.value)} className={inputCls} />
@@ -456,7 +465,7 @@ function VehicleFormCard({ vehicle, index, showRemove, fieldErrors, t, inputCls,
           {fieldErrors[`color_${index}`] && <p className="text-red-500 text-xs mt-1">{fieldErrors[`color_${index}`]}</p>}
         </div>
       </div>
-      <div className="grid grid-cols-2 gap-4">
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
         <div>
           <label className={labelCls}>{t('make')} *</label>
           <select value={vehicle.make} onChange={e => onChange('make', e.target.value)} className={inputCls}>
@@ -471,7 +480,7 @@ function VehicleFormCard({ vehicle, index, showRemove, fieldErrors, t, inputCls,
           {fieldErrors[`model_${index}`] && <p className="text-red-500 text-xs mt-1">{fieldErrors[`model_${index}`]}</p>}
         </div>
       </div>
-      <div className="grid grid-cols-2 gap-4">
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
         <div>
           <label className={labelCls}>{t('license_plate')} *</label>
           <input type="text" value={vehicle.license_plate} onChange={e => onChange('license_plate', e.target.value.replace(/\s/g, '').toUpperCase())} className={inputCls} placeholder="ABC1234" />
@@ -486,6 +495,13 @@ function VehicleFormCard({ vehicle, index, showRemove, fieldErrors, t, inputCls,
           </select>
           {fieldErrors[`state_${index}`] && <p className="text-red-500 text-xs mt-1">{fieldErrors[`state_${index}`]}</p>}
         </div>
+      </div>
+      <div>
+        <label className={labelCls}>{t('vehicle_type')}</label>
+        <select value={vehicle.vehicle_type} onChange={e => onChange('vehicle_type', e.target.value)} className={inputCls}>
+          <option value=""></option>
+          {VEHICLE_TYPES.map(vt => <option key={vt} value={vt}>{vt}</option>)}
+        </select>
       </div>
       <div className="space-y-2">
         <label className="flex items-start gap-3 cursor-pointer">

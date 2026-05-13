@@ -48,6 +48,7 @@ export default function AdminResidentsPage() {
   const [editTarget, setEditTarget] = useState<Resident | null>(null);
   const [deleteTarget, setDeleteTarget] = useState<Resident | null>(null);
   const [deleteLoading, setDeleteLoading] = useState(false);
+  const [docViewUrl, setDocViewUrl] = useState<string | null>(null);
 
   const { register, handleSubmit, reset } = useForm<EditFormData>();
 
@@ -210,14 +211,12 @@ export default function AdminResidentsPage() {
                     <td className="px-4 py-3 truncate max-w-[140px]">{r.owner_email}</td>
                     <td className="px-4 py-3">
                       {r.registration_doc_url ? (
-                        <a
-                          href={r.registration_doc_url}
-                          target="_blank"
-                          rel="noreferrer"
-                          className="text-blue-600 hover:underline"
+                        <button
+                          onClick={() => setDocViewUrl(r.registration_doc_url!)}
+                          className="text-blue-600 hover:underline text-sm"
                         >
                           {t('view')}
-                        </a>
+                        </button>
                       ) : '—'}
                     </td>
                     <td className="px-4 py-3 text-gray-500">
@@ -338,6 +337,54 @@ export default function AdminResidentsPage() {
                 </button>
               </div>
             </form>
+          </div>
+        </div>
+      )}
+
+      {/* Doc Viewer Modal */}
+      {docViewUrl && (
+        <div
+          className="fixed inset-0 bg-black/80 flex items-center justify-center z-50 p-4"
+          onClick={() => setDocViewUrl(null)}
+        >
+          <div
+            className="bg-white rounded-xl shadow-2xl max-w-4xl w-full max-h-[90vh] overflow-hidden flex flex-col"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="flex items-center justify-between px-4 py-3 border-b border-gray-200">
+              <span className="text-sm font-semibold text-gray-700">Registration Document</span>
+              <div className="flex items-center gap-3">
+                <a
+                  href={docViewUrl}
+                  target="_blank"
+                  rel="noreferrer"
+                  className="text-xs text-blue-600 hover:underline"
+                >
+                  Open in new tab ↗
+                </a>
+                <button
+                  onClick={() => setDocViewUrl(null)}
+                  className="text-gray-400 hover:text-gray-600 text-xl leading-none"
+                >
+                  ✕
+                </button>
+              </div>
+            </div>
+            <div className="flex-1 overflow-auto p-2 bg-gray-100">
+              {docViewUrl.match(/\.pdf(\?|$)/i) ? (
+                <iframe
+                  src={docViewUrl}
+                  className="w-full h-full min-h-[70vh] rounded border-0"
+                  title="Registration Document"
+                />
+              ) : (
+                <img
+                  src={docViewUrl}
+                  alt="Registration Document"
+                  className="max-w-full h-auto mx-auto rounded shadow block"
+                />
+              )}
+            </div>
           </div>
         </div>
       )}

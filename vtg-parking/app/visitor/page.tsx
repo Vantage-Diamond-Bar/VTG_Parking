@@ -3,7 +3,7 @@
 import { useState, useEffect } from 'react'
 import Link from 'next/link'
 import { useTranslations } from 'next-intl'
-import { US_STATES, CAR_COLORS, CAR_MAKES, VISITOR_QUOTA_LIMIT, getYearMonth, generateMonthOptions } from '@/lib/utils'
+import { US_STATES, CAR_COLORS, CAR_MAKES, VEHICLE_TYPES, VISITOR_QUOTA_LIMIT, getYearMonth, generateMonthOptions } from '@/lib/utils'
 import PhoneInput from '@/components/PhoneInput'
 
 type VerifyState = 'idle' | 'loading' | 'no_vehicles' | 'awaiting_email' | 'verifying' | 'mismatch' | 'overdue' | 'verified'
@@ -40,6 +40,7 @@ export default function VisitorPage() {
   const [make, setMake] = useState('')
   const [model, setModel] = useState('')
   const [color, setColor] = useState('')
+  const [vehicleType, setVehicleType] = useState('')
   const [startDatetime, setStartDatetime] = useState('')
   const [endDatetime, setEndDatetime] = useState('')
 
@@ -148,6 +149,7 @@ export default function VisitorPage() {
         make,
         model,
         color,
+        vehicle_type: vehicleType || null,
         start_datetime: startDatetime,
         end_datetime: endDatetime,
       }
@@ -196,6 +198,7 @@ export default function VisitorPage() {
     setMake('')
     setModel('')
     setColor('')
+    setVehicleType('')
     setStartDatetime('')
     setEndDatetime('')
     setError('')
@@ -418,7 +421,7 @@ export default function VisitorPage() {
                   <div>
                     <h2 className={sectionCls}>{t('section_vehicle')}</h2>
                     <div className="space-y-4">
-                      <div className="grid grid-cols-2 gap-4">
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                         <div>
                           <label className={labelCls}>{t('visitor_name')}</label>
                           <input
@@ -440,7 +443,7 @@ export default function VisitorPage() {
                         </div>
                       </div>
 
-                      <div className="grid grid-cols-2 gap-4">
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                         <div>
                           <label className={labelCls}>{t('license_plate')} *</label>
                           <input
@@ -476,7 +479,7 @@ export default function VisitorPage() {
                         </div>
                       </div>
 
-                      <div className="grid grid-cols-3 gap-4">
+                      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
                         <div>
                           <label className={labelCls}>{t('make')} *</label>
                           <select
@@ -524,13 +527,27 @@ export default function VisitorPage() {
                           )}
                         </div>
                       </div>
+
+                      <div>
+                        <label className={labelCls}>{t('vehicle_type')}</label>
+                        <select
+                          value={vehicleType}
+                          onChange={(e) => setVehicleType(e.target.value)}
+                          className={inputCls}
+                        >
+                          <option value=""></option>
+                          {VEHICLE_TYPES.map((vt) => (
+                            <option key={vt} value={vt}>{vt}</option>
+                          ))}
+                        </select>
+                      </div>
                     </div>
                   </div>
 
                   {/* Dates */}
                   <div>
                     <h2 className={sectionCls}>{t('section_dates')}</h2>
-                    <div className="grid grid-cols-2 gap-4">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                       <div>
                         <label className={labelCls}>{t('start_datetime')} *</label>
                         <input

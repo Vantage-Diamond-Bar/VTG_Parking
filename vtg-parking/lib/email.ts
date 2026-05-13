@@ -23,8 +23,8 @@ export async function sendViolationReport(report: {
   const recipients = emailRows.map((r) => r.email)
 
   const photoLinks = report.photo_urls
-    .map((url, i) => `<a href="${url}" target="_blank">Photo ${i + 1}</a>`)
-    .join(' | ')
+    .map((url, i) => `<img src="${url}" alt="Photo ${i + 1}" style="max-width:100%;height:auto;display:block;margin:8px 0;border-radius:4px;border:1px solid #e5e7eb;" />`)
+    .join('')
 
   const html = `
     <h2>🚨 Parking Violation Report</h2>

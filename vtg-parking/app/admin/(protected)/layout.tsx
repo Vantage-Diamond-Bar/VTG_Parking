@@ -25,6 +25,7 @@ export default async function AdminProtectedLayout({
     { key: 'emails', href: '/admin/emails', icon: '📧' },
     { key: 'alerts', href: '/admin/alerts', icon: '🔔' },
     { key: 'vacation', href: '/admin/vacation', icon: '🏖️' },
+    { key: 'oversized', href: '/admin/oversized', icon: '🚛' },
   ] as const;
 
   return (

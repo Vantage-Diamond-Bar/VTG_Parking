@@ -3,42 +3,91 @@
 import { useState, useEffect } from 'react'
 import Link from 'next/link'
 import { useTranslations } from 'next-intl'
-import { US_STATES, CAR_COLORS, CAR_MAKES } from '@/lib/utils'
 import PhoneInput from '@/components/PhoneInput'
+
+// ─── Types ────────────────────────────────────────────────────────────────────
 
 interface Unit {
   id: string
   address: string
 }
 
+interface Vehicle {
+  id: string
+  year: number
+  make: string
+  model: string
+  color: string
+  license_plate: string
+  plate_state: string
+  is_oversized: boolean
+  owner_name: string
+  owner_phone: string
+  owner_email: string
+  registrant_type: string
+}
+
+interface Owner {
+  name: string
+  phone: string
+  email: string
+  registrant_type: string
+}
+
+type VacationFlowState =
+  | 'idle'
+  | 'checking'
+  | 'no_vehicles'
+  | 'overdue'
+  | 'not_eligible'
+  | 'awaiting_email'
+  | 'verifying_email'
+  | 'email_mismatch'
+  | 'loading_vehicles'
+  | 'form'
+  | 'submitting'
+  | 'success'
+
+// ─── Component ────────────────────────────────────────────────────────────────
+
 export default function VacationPage() {
   const t = useTranslations('vacation')
 
+  // ── Step 1: Unit list & selection ────────────────────────────────────────
   const [units, setUnits] = useState<Unit[]>([])
   const [unitId, setUnitId] = useState('')
-  const [registrantType, setRegistrantType] = useState<'owner' | 'tenant'>('owner')
-  const [firstName, setFirstName] = useState('')
-  const [lastName, setLastName] = useState('')
-  const [phone, setPhone] = useState('')
+
+  // ── Step 2: Unit check ───────────────────────────────────────────────────
+  const [flowState, setFlowState] = useState<VacationFlowState>('idle')
+  const [emailHints, setEmailHints] = useState<string[]>([])
+
+  // ── Step 3: Email verification ───────────────────────────────────────────
+  const [emailInput, setEmailInput] = useState('')
+  const [verifiedEmail, setVerifiedEmail] = useState('')
+
+  // ── Step 4: Vehicles & owner info ────────────────────────────────────────
+  const [vehicles, setVehicles] = useState<Vehicle[]>([])
+  const [owner, setOwner] = useState<Owner | null>(null)
+  const [selectedVehicleIds, setSelectedVehicleIds] = useState<string[]>([])
+
+  // ── Form fields ──────────────────────────────────────────────────────────
   const [emergencyFirstName, setEmergencyFirstName] = useState('')
   const [emergencyLastName, setEmergencyLastName] = useState('')
   const [emergencyPhone, setEmergencyPhone] = useState('')
-  const [email, setEmail] = useState('')
   const [reason, setReason] = useState('')
   const [startDatetime, setStartDatetime] = useState('')
   const [endDatetime, setEndDatetime] = useState('')
-  const [year, setYear] = useState('')
-  const [make, setMake] = useState('')
-  const [model, setModel] = useState('')
-  const [color, setColor] = useState('')
-  const [licensePlate, setLicensePlate] = useState('')
-  const [plateState, setPlateState] = useState('')
 
-  const [submitting, setSubmitting] = useState(false)
-  const [success, setSuccess] = useState(false)
+  // ── UI state ─────────────────────────────────────────────────────────────
   const [error, setError] = useState('')
   const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({})
 
+  // ── Styles ───────────────────────────────────────────────────────────────
+  const inputCls = 'w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500'
+  const labelCls = 'block text-sm font-medium text-gray-700 mb-1'
+  const sectionCls = 'text-lg font-semibold text-gray-800 mb-4 pb-2 border-b border-gray-200'
+
+  // ── Load units ────────────────────────────────────────────────────────────
   useEffect(() => {
     fetch('/api/units')
       .then((r) => r.json())
@@ -46,6 +95,101 @@ export default function VacationPage() {
       .catch(() => {})
   }, [])
 
+  // ── Unit change → unit-check API call ────────────────────────────────────
+  async function handleUnitChange(id: string) {
+    setUnitId(id)
+    setFlowState('idle')
+    setEmailHints([])
+    setEmailInput('')
+    setVerifiedEmail('')
+    setVehicles([])
+    setOwner(null)
+    setSelectedVehicleIds([])
+    setError('')
+    setFieldErrors({})
+
+    if (!id) return
+
+    setFlowState('checking')
+    try {
+      const res = await fetch(`/api/vacation/unit-check?unit_id=${id}`)
+      const data = await res.json()
+
+      if (!data.has_vehicles) {
+        setFlowState('no_vehicles')
+      } else if (data.has_overdue) {
+        setFlowState('overdue')
+      } else if (!data.is_eligible) {
+        setFlowState('not_eligible')
+      } else {
+        setEmailHints(data.email_hints ?? [])
+        setFlowState('awaiting_email')
+      }
+    } catch {
+      setFlowState('idle')
+    }
+  }
+
+  // ── Email verification ────────────────────────────────────────────────────
+  async function handleVerifyEmail() {
+    if (!emailInput.trim()) return
+    setFlowState('verifying_email')
+    setError('')
+    try {
+      const res = await fetch('/api/visitors/verify-host', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ unit_id: unitId, email: emailInput.trim() }),
+      })
+      const data = await res.json()
+
+      if (data.status === 'ok') {
+        setVerifiedEmail(emailInput.trim())
+        setFlowState('loading_vehicles')
+        await loadVehicles(unitId, emailInput.trim())
+      } else if (data.status === 'overdue') {
+        setFlowState('overdue')
+      } else {
+        setFlowState('email_mismatch')
+      }
+    } catch {
+      setFlowState('email_mismatch')
+    }
+  }
+
+  // ── Load vehicles after email verification ────────────────────────────────
+  async function loadVehicles(uid: string, email: string) {
+    try {
+      const res = await fetch(
+        `/api/vacation/unit-vehicles?unit_id=${uid}&email=${encodeURIComponent(email)}`
+      )
+      const data = await res.json()
+
+      if (!res.ok || data.error === 'email_mismatch') {
+        setFlowState('email_mismatch')
+        return
+      }
+
+      setVehicles(data.vehicles ?? [])
+      setOwner(data.owner ?? null)
+      setFlowState('form')
+    } catch {
+      setFlowState('email_mismatch')
+    }
+  }
+
+  // ── Vehicle checkbox toggle ───────────────────────────────────────────────
+  function toggleVehicle(vehicleId: string) {
+    setSelectedVehicleIds((prev) => {
+      if (prev.includes(vehicleId)) {
+        return prev.filter((id) => id !== vehicleId)
+      }
+      if (prev.length >= 2) return prev
+      return [...prev, vehicleId]
+    })
+  }
+
+  // ── Validation ────────────────────────────────────────────────────────────
   function validatePhone(p: string) {
     const local = p.replace(/^\+\d+(-\w+)?\s/, '')
     return local.replace(/\D/g, '').length >= 7
@@ -53,13 +197,6 @@ export default function VacationPage() {
 
   function validate(): boolean {
     const errors: Record<string, string> = {}
-    if (!unitId) errors.unit_id = t('required')
-    if (!firstName.trim()) errors.first_name = t('required')
-    if (!lastName.trim()) errors.last_name = t('required')
-    if (!phone.trim()) errors.phone = t('required')
-    else if (!validatePhone(phone)) errors.phone = 'Please enter a valid phone number.'
-    if (!email.trim()) errors.email = t('required')
-    else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.trim())) errors.email = 'Please enter a valid email address.'
     if (!emergencyFirstName.trim()) errors.emergency_first_name = t('required')
     if (!emergencyLastName.trim()) errors.emergency_last_name = t('required')
     if (!emergencyPhone.trim()) errors.emergency_phone = t('required')
@@ -68,77 +205,90 @@ export default function VacationPage() {
     if (!endDatetime) errors.end_datetime = t('required')
     if (startDatetime && endDatetime && endDatetime <= startDatetime)
       errors.end_datetime = t('end_after_start')
-    if (!year) errors.year = t('required')
-    if (!make) errors.make = t('required')
-    if (!model.trim()) errors.model = t('required')
-    if (!color) errors.color = t('required')
-    if (!licensePlate.trim()) errors.license_plate = t('required')
-    if (!plateState) errors.plate_state = t('required')
+    if (selectedVehicleIds.length === 0) errors.vehicles = 'Please select at least one vehicle.'
     setFieldErrors(errors)
     return Object.keys(errors).length === 0
   }
 
+  // ── Submit ────────────────────────────────────────────────────────────────
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
     setError('')
     if (!validate()) return
-    setSubmitting(true)
+    if (!owner) return
+
+    setFlowState('submitting')
+
+    const selectedVehicles = vehicles.filter((v) => selectedVehicleIds.includes(v.id))
+
     try {
-      const res = await fetch('/api/vacation', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          unit_id: unitId,
-          registrant_type: registrantType,
-          first_name: firstName.trim(),
-          last_name: lastName.trim(),
-          phone,
-          email: email.trim(),
-          reason: reason.trim() || null,
-          emergency_first_name: emergencyFirstName.trim(),
-          emergency_last_name: emergencyLastName.trim(),
-          emergency_phone: emergencyPhone,
-          start_datetime: startDatetime,
-          end_datetime: endDatetime,
-          year: Number(year),
-          make,
-          model: model.trim(),
-          color,
-          license_plate: licensePlate.replace(/\s/g, '').toUpperCase(),
-          plate_state: plateState,
-        }),
-      })
-      const data = await res.json()
-      if (!res.ok) {
-        if (data?.error === 'registration_overdue') {
-          setError(t('error_registration_overdue'))
-        } else {
-          setError(data?.error ?? 'Submission failed. Please try again.')
+      for (const vehicle of selectedVehicles) {
+        const res = await fetch('/api/vacation', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            unit_id: unitId,
+            registrant_type: vehicle.registrant_type,
+            first_name: owner.name.split(' ')[0] ?? owner.name,
+            last_name: owner.name.split(' ').slice(1).join(' ') || owner.name,
+            phone: owner.phone,
+            email: owner.email,
+            reason: reason.trim() || null,
+            emergency_first_name: emergencyFirstName.trim(),
+            emergency_last_name: emergencyLastName.trim(),
+            emergency_phone: emergencyPhone,
+            start_datetime: startDatetime,
+            end_datetime: endDatetime,
+            year: vehicle.year,
+            make: vehicle.make,
+            model: vehicle.model,
+            color: vehicle.color,
+            license_plate: vehicle.license_plate,
+            plate_state: vehicle.plate_state,
+          }),
+        })
+        const data = await res.json()
+        if (!res.ok) {
+          if (data?.error === 'registration_overdue') {
+            setError(t('error_registration_overdue'))
+          } else {
+            setError(data?.error ?? 'Submission failed. Please try again.')
+          }
+          setFlowState('form')
+          return
         }
-        return
       }
-      setSuccess(true)
+
+      setFlowState('success')
     } catch {
       setError('Network error. Please try again.')
-    } finally {
-      setSubmitting(false)
+      setFlowState('form')
     }
   }
 
-  function resetForm() {
-    setUnitId(''); setRegistrantType('owner'); setFirstName(''); setLastName('')
-    setPhone(''); setEmail(''); setReason('');
-    setEmergencyFirstName(''); setEmergencyLastName(''); setEmergencyPhone('')
-    setStartDatetime(''); setEndDatetime(''); setYear(''); setMake(''); setModel('')
-    setColor(''); setLicensePlate(''); setPlateState('')
-    setSuccess(false); setError(''); setFieldErrors({})
+  // ── Full reset ────────────────────────────────────────────────────────────
+  function resetAll() {
+    setUnitId('')
+    setFlowState('idle')
+    setEmailHints([])
+    setEmailInput('')
+    setVerifiedEmail('')
+    setVehicles([])
+    setOwner(null)
+    setSelectedVehicleIds([])
+    setEmergencyFirstName('')
+    setEmergencyLastName('')
+    setEmergencyPhone('')
+    setReason('')
+    setStartDatetime('')
+    setEndDatetime('')
+    setError('')
+    setFieldErrors({})
   }
 
-  const inputCls = 'w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500'
-  const labelCls = 'block text-sm font-medium text-gray-700 mb-1'
-  const sectionCls = 'text-lg font-semibold text-gray-800 mb-4 pb-2 border-b border-gray-200'
+  // ─── Success screen ───────────────────────────────────────────────────────
 
-  if (success) {
+  if (flowState === 'success') {
     return (
       <div className="min-h-screen bg-gray-50">
         <div className="max-w-2xl mx-auto px-4 py-8">
@@ -151,7 +301,7 @@ export default function VacationPage() {
             <h2 className="text-2xl font-bold text-gray-900 mb-2">{t('success_title')}</h2>
             <p className="text-gray-500 mb-6">{t('success_desc')}</p>
             <button
-              onClick={resetForm}
+              onClick={resetAll}
               className="w-full bg-blue-600 text-white py-3 rounded-lg font-semibold hover:bg-blue-700 transition-colors"
             >
               {t('submit_another')}
@@ -165,12 +315,15 @@ export default function VacationPage() {
     )
   }
 
+  // ─── Main page ────────────────────────────────────────────────────────────
+
   return (
     <div className="min-h-screen bg-gray-50">
       <div className="max-w-2xl mx-auto px-4 py-8">
         <Link href="/" className="text-sm text-blue-600 hover:underline mb-6 inline-block">
           ← Back
         </Link>
+
         {/* Eligibility Notice */}
         <div className="bg-amber-50 border border-amber-300 rounded-xl p-5 mb-6">
           <h2 className="text-base font-bold text-amber-900 mb-2">⚠️ {t('eligibility_notice_title')}</h2>
@@ -186,58 +339,167 @@ export default function VacationPage() {
           <h1 className="text-2xl font-bold text-gray-900 mb-1">{t('title')}</h1>
           <p className="text-gray-500 text-sm mb-6">{t('subtitle')}</p>
 
-          <form onSubmit={handleSubmit} className="space-y-8">
-            {/* Unit & Registrant */}
-            <div>
-              <h2 className={sectionCls}>{t('section_unit')}</h2>
-              <div className="space-y-4">
+          {/* ── Step 1: Unit selection ───────────────────────────────────── */}
+          <div className="mb-6">
+            <label className={labelCls}>{t('unit_number')} *</label>
+            <select
+              value={unitId}
+              onChange={(e) => handleUnitChange(e.target.value)}
+              className={inputCls}
+            >
+              <option value="">{t('unit_placeholder')}</option>
+              {units.map((u) => (
+                <option key={u.id} value={u.id}>
+                  {u.address}
+                </option>
+              ))}
+            </select>
+          </div>
+
+          {/* ── Step 2: Unit check feedback ──────────────────────────────── */}
+          {unitId && flowState === 'checking' && (
+            <p className="text-sm text-gray-400 text-center py-4">Checking unit eligibility…</p>
+          )}
+
+          {flowState === 'no_vehicles' && (
+            <div className="bg-amber-50 border border-amber-300 rounded-lg px-4 py-3 text-sm text-amber-800">
+              🚫 This unit has no registered vehicles. Please register your vehicle(s) first before applying.
+            </div>
+          )}
+
+          {flowState === 'overdue' && (
+            <div className="bg-red-50 border border-red-300 rounded-lg px-4 py-3 text-sm text-red-800">
+              ⚠️ One or more vehicles registered to this unit have overdue registration. Please renew your vehicle registration before applying.
+            </div>
+          )}
+
+          {flowState === 'not_eligible' && (
+            <div className="bg-amber-50 border border-amber-300 rounded-lg px-4 py-3 text-sm text-amber-800">
+              ⚠️ Your unit does not meet the eligibility requirements. At least 3 registered vehicles or 1 oversized vehicle is required to apply for vacation extended parking.
+            </div>
+          )}
+
+          {/* ── Step 3: Email verification ───────────────────────────────── */}
+          {(flowState === 'awaiting_email' || flowState === 'verifying_email' || flowState === 'email_mismatch') && (
+            <div className="border border-blue-200 bg-blue-50 rounded-lg px-4 py-4 space-y-3">
+              <p className="text-sm font-semibold text-blue-900">{t('verify_email_title')}</p>
+              <p className="text-xs text-blue-700">{t('verify_email_desc')}</p>
+              {emailHints.length > 0 && (
                 <div>
-                  <label className={labelCls}>{t('unit_number')} *</label>
-                  <select value={unitId} onChange={(e) => setUnitId(e.target.value)} className={inputCls}>
-                    <option value="">{t('unit_placeholder')}</option>
-                    {units.map((u) => (
-                      <option key={u.id} value={u.id}>{u.address}</option>
+                  <p className="text-xs text-gray-500 mb-1">{t('email_hint_prefix')}</p>
+                  <div className="flex flex-wrap gap-2">
+                    {emailHints.map((hint, i) => (
+                      <span
+                        key={i}
+                        className="font-mono text-sm bg-white border border-blue-200 rounded px-2 py-0.5 text-blue-800"
+                      >
+                        {hint}
+                      </span>
                     ))}
-                  </select>
-                  {fieldErrors.unit_id && <p className="text-red-500 text-xs mt-1">{fieldErrors.unit_id}</p>}
+                  </div>
                 </div>
-                <div>
-                  <label className={labelCls}>{t('registrant_type')} *</label>
-                  <select value={registrantType} onChange={(e) => setRegistrantType(e.target.value as 'owner' | 'tenant')} className={inputCls}>
-                    <option value="owner">{t('registrant_type_owner')}</option>
-                    <option value="tenant">{t('registrant_type_tenant')}</option>
-                  </select>
+              )}
+              <div className="flex gap-2">
+                <input
+                  type="email"
+                  value={emailInput}
+                  onChange={(e) => setEmailInput(e.target.value)}
+                  onKeyDown={(e) => e.key === 'Enter' && handleVerifyEmail()}
+                  placeholder={t('host_email')}
+                  className="flex-1 border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                />
+                <button
+                  type="button"
+                  onClick={handleVerifyEmail}
+                  disabled={!emailInput.trim() || flowState === 'verifying_email'}
+                  className="bg-blue-600 text-white px-4 py-2 rounded-lg text-sm font-semibold hover:bg-blue-700 transition-colors disabled:opacity-50"
+                >
+                  {flowState === 'verifying_email' ? t('verifying') : t('verify')}
+                </button>
+              </div>
+              {flowState === 'email_mismatch' && (
+                <p className="text-red-600 text-xs">{t('email_mismatch')}</p>
+              )}
+            </div>
+          )}
+
+          {flowState === 'loading_vehicles' && (
+            <p className="text-sm text-gray-400 text-center py-4">Loading your registered vehicles…</p>
+          )}
+
+          {/* ── Steps 4–9: Full form (only when flow === 'form' or 'submitting') */}
+          {(flowState === 'form' || flowState === 'submitting') && owner && (
+            <form onSubmit={handleSubmit} className="space-y-8">
+
+              {/* ── Owner info panel ───────────────────────────────────── */}
+              <div className="bg-gray-50 border border-gray-200 rounded-xl p-5 space-y-3">
+                <div className="flex items-center gap-2 mb-1">
+                  <span className="text-green-600 text-xs font-semibold">✓ {t('email_verified')}</span>
+                </div>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-sm">
+                  <div>
+                    <span className="text-gray-500 text-xs uppercase tracking-wide">Name</span>
+                    <p className="font-medium text-gray-900 mt-0.5">{owner.name}</p>
+                  </div>
+                  <div>
+                    <span className="text-gray-500 text-xs uppercase tracking-wide">Phone</span>
+                    <p className="font-medium text-gray-900 mt-0.5">{owner.phone}</p>
+                  </div>
+                  <div className="sm:col-span-2">
+                    <span className="text-gray-500 text-xs uppercase tracking-wide">Email</span>
+                    <p className="font-medium text-gray-900 mt-0.5">{owner.email}</p>
+                  </div>
+                </div>
+                <div className="bg-blue-50 border border-blue-200 rounded-lg px-4 py-3 mt-2">
+                  <p className="text-sm font-bold text-blue-900">
+                    📧 Please confirm this email is correct — your approval decision and parking access code will be sent to this address.
+                  </p>
                 </div>
               </div>
-            </div>
 
-            {/* Applicant Info */}
-            <div>
-              <h2 className={sectionCls}>{t('section_applicant')}</h2>
-              <div className="space-y-4">
-                <div className="grid grid-cols-2 gap-4">
-                  <div>
-                    <label className={labelCls}>{t('first_name')} *</label>
-                    <input type="text" value={firstName} onChange={(e) => setFirstName(e.target.value)} className={inputCls} />
-                    {fieldErrors.first_name && <p className="text-red-500 text-xs mt-1">{fieldErrors.first_name}</p>}
+              {/* ── Emergency Contact ──────────────────────────────────── */}
+              <div>
+                <h2 className={sectionCls}>{t('section_emergency')}</h2>
+                <div className="space-y-4">
+                  <div className="grid grid-cols-2 gap-4">
+                    <div>
+                      <label className={labelCls}>{t('emergency_first_name')} *</label>
+                      <input
+                        type="text"
+                        value={emergencyFirstName}
+                        onChange={(e) => setEmergencyFirstName(e.target.value)}
+                        className={inputCls}
+                      />
+                      {fieldErrors.emergency_first_name && (
+                        <p className="text-red-500 text-xs mt-1">{fieldErrors.emergency_first_name}</p>
+                      )}
+                    </div>
+                    <div>
+                      <label className={labelCls}>{t('emergency_last_name')} *</label>
+                      <input
+                        type="text"
+                        value={emergencyLastName}
+                        onChange={(e) => setEmergencyLastName(e.target.value)}
+                        className={inputCls}
+                      />
+                      {fieldErrors.emergency_last_name && (
+                        <p className="text-red-500 text-xs mt-1">{fieldErrors.emergency_last_name}</p>
+                      )}
+                    </div>
                   </div>
                   <div>
-                    <label className={labelCls}>{t('last_name')} *</label>
-                    <input type="text" value={lastName} onChange={(e) => setLastName(e.target.value)} className={inputCls} />
-                    {fieldErrors.last_name && <p className="text-red-500 text-xs mt-1">{fieldErrors.last_name}</p>}
+                    <label className={labelCls}>{t('emergency_phone')} *</label>
+                    <PhoneInput value={emergencyPhone} onChange={setEmergencyPhone} />
+                    {fieldErrors.emergency_phone && (
+                      <p className="text-red-500 text-xs mt-1">{fieldErrors.emergency_phone}</p>
+                    )}
                   </div>
                 </div>
-                <div>
-                  <label className={labelCls}>{t('phone')} *</label>
-                  <PhoneInput value={phone} onChange={setPhone} />
-                  {fieldErrors.phone && <p className="text-red-500 text-xs mt-1">{fieldErrors.phone}</p>}
-                </div>
-                <div>
-                  <label className={labelCls}>{t('email')} *</label>
-                  <input type="email" value={email} onChange={(e) => setEmail(e.target.value)} className={inputCls} />
-                  <p className="text-xs text-gray-400 mt-1">{t('email_hint')}</p>
-                  {fieldErrors.email && <p className="text-red-500 text-xs mt-1">{fieldErrors.email}</p>}
-                </div>
+              </div>
+
+              {/* ── Reason ────────────────────────────────────────────── */}
+              <div>
+                <h2 className={sectionCls}>{t('section_applicant')}</h2>
                 <div>
                   <label className={labelCls}>{t('reason')}</label>
                   <textarea
@@ -249,126 +511,109 @@ export default function VacationPage() {
                   />
                 </div>
               </div>
-            </div>
 
-            {/* Emergency Contact */}
-            <div>
-              <h2 className={sectionCls}>{t('section_emergency')}</h2>
-              <div className="space-y-4">
-                <div className="grid grid-cols-2 gap-4">
+              {/* ── Parking Period ────────────────────────────────────── */}
+              <div>
+                <h2 className={sectionCls}>{t('section_period')}</h2>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   <div>
-                    <label className={labelCls}>{t('emergency_first_name')} *</label>
-                    <input type="text" value={emergencyFirstName} onChange={(e) => setEmergencyFirstName(e.target.value)} className={inputCls} />
-                    {fieldErrors.emergency_first_name && <p className="text-red-500 text-xs mt-1">{fieldErrors.emergency_first_name}</p>}
-                  </div>
-                  <div>
-                    <label className={labelCls}>{t('emergency_last_name')} *</label>
-                    <input type="text" value={emergencyLastName} onChange={(e) => setEmergencyLastName(e.target.value)} className={inputCls} />
-                    {fieldErrors.emergency_last_name && <p className="text-red-500 text-xs mt-1">{fieldErrors.emergency_last_name}</p>}
-                  </div>
-                </div>
-                <div>
-                  <label className={labelCls}>{t('emergency_phone')} *</label>
-                  <PhoneInput value={emergencyPhone} onChange={setEmergencyPhone} />
-                  {fieldErrors.emergency_phone && <p className="text-red-500 text-xs mt-1">{fieldErrors.emergency_phone}</p>}
-                </div>
-              </div>
-            </div>
-
-            {/* Parking Period */}
-            <div>
-              <h2 className={sectionCls}>{t('section_period')}</h2>
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <label className={labelCls}>{t('start_datetime')} *</label>
-                  <input type="datetime-local" value={startDatetime} onChange={(e) => setStartDatetime(e.target.value)} className={inputCls} />
-                  {fieldErrors.start_datetime && <p className="text-red-500 text-xs mt-1">{fieldErrors.start_datetime}</p>}
-                </div>
-                <div>
-                  <label className={labelCls}>{t('end_datetime')} *</label>
-                  <input type="datetime-local" value={endDatetime} onChange={(e) => setEndDatetime(e.target.value)} className={inputCls} />
-                  {fieldErrors.end_datetime && <p className="text-red-500 text-xs mt-1">{fieldErrors.end_datetime}</p>}
-                </div>
-              </div>
-            </div>
-
-            {/* Vehicle Info */}
-            <div>
-              <h2 className={sectionCls}>{t('section_vehicle')}</h2>
-              <div className="space-y-4">
-                <div className="grid grid-cols-2 gap-4">
-                  <div>
-                    <label className={labelCls}>{t('year')} *</label>
-                    <input type="number" min={1990} max={2030} value={year} onChange={(e) => setYear(e.target.value)} className={inputCls} />
-                    {fieldErrors.year && <p className="text-red-500 text-xs mt-1">{fieldErrors.year}</p>}
-                  </div>
-                  <div>
-                    <label className={labelCls}>{t('color')} *</label>
-                    <select value={color} onChange={(e) => setColor(e.target.value)} className={inputCls}>
-                      <option value=""></option>
-                      {CAR_COLORS.map((c) => <option key={c} value={c}>{c}</option>)}
-                    </select>
-                    {fieldErrors.color && <p className="text-red-500 text-xs mt-1">{fieldErrors.color}</p>}
-                  </div>
-                </div>
-                <div className="grid grid-cols-2 gap-4">
-                  <div>
-                    <label className={labelCls}>{t('make')} *</label>
-                    <select value={make} onChange={(e) => setMake(e.target.value)} className={inputCls}>
-                      <option value=""></option>
-                      {CAR_MAKES.map((m) => <option key={m} value={m}>{m}</option>)}
-                    </select>
-                    {fieldErrors.make && <p className="text-red-500 text-xs mt-1">{fieldErrors.make}</p>}
-                  </div>
-                  <div>
-                    <label className={labelCls}>{t('model')} *</label>
-                    <input type="text" value={model} onChange={(e) => setModel(e.target.value)} className={inputCls} />
-                    {fieldErrors.model && <p className="text-red-500 text-xs mt-1">{fieldErrors.model}</p>}
-                  </div>
-                </div>
-                <div className="grid grid-cols-2 gap-4">
-                  <div>
-                    <label className={labelCls}>{t('license_plate')} *</label>
+                    <label className={labelCls}>{t('start_datetime')} *</label>
                     <input
-                      type="text"
-                      value={licensePlate}
-                      onChange={(e) => setLicensePlate(e.target.value.replace(/\s/g, '').toUpperCase())}
-                      placeholder="ABC1234"
+                      type="datetime-local"
+                      value={startDatetime}
+                      onChange={(e) => setStartDatetime(e.target.value)}
                       className={inputCls}
                     />
-                    {fieldErrors.license_plate && <p className="text-red-500 text-xs mt-1">{fieldErrors.license_plate}</p>}
+                    {fieldErrors.start_datetime && (
+                      <p className="text-red-500 text-xs mt-1">{fieldErrors.start_datetime}</p>
+                    )}
                   </div>
                   <div>
-                    <label className={labelCls}>{t('plate_state')} *</label>
-                    <select value={plateState} onChange={(e) => setPlateState(e.target.value)} className={inputCls}>
-                      <option value=""></option>
-                      {US_STATES.map((s) => <option key={s} value={s}>{s}</option>)}
-                    </select>
-                    {fieldErrors.plate_state && <p className="text-red-500 text-xs mt-1">{fieldErrors.plate_state}</p>}
+                    <label className={labelCls}>{t('end_datetime')} *</label>
+                    <input
+                      type="datetime-local"
+                      value={endDatetime}
+                      onChange={(e) => setEndDatetime(e.target.value)}
+                      className={inputCls}
+                    />
+                    {fieldErrors.end_datetime && (
+                      <p className="text-red-500 text-xs mt-1">{fieldErrors.end_datetime}</p>
+                    )}
                   </div>
                 </div>
               </div>
-            </div>
 
-            {/* Consent notice */}
-            <p className="text-xs text-gray-500 bg-blue-50 border border-blue-100 rounded-lg px-3 py-2">
-              {t('contact_consent')}
-            </p>
-
-            {error && (
-              <div className="bg-red-50 border border-red-200 text-red-700 rounded-lg px-4 py-3 text-sm">
-                {error}
+              {/* ── Vehicle Selection ─────────────────────────────────── */}
+              <div>
+                <h2 className={sectionCls}>{t('section_vehicle')}</h2>
+                <p className="text-sm text-gray-500 mb-3">
+                  Select vehicle(s) for this request (max 2).
+                </p>
+                <div className="space-y-3">
+                  {vehicles.map((vehicle) => {
+                    const isSelected = selectedVehicleIds.includes(vehicle.id)
+                    const isDisabled = !isSelected && selectedVehicleIds.length >= 2
+                    return (
+                      <label
+                        key={vehicle.id}
+                        className={[
+                          'flex items-start gap-3 border rounded-xl p-4 cursor-pointer transition-colors',
+                          isSelected
+                            ? 'border-blue-500 bg-blue-50'
+                            : isDisabled
+                            ? 'border-gray-200 bg-gray-50 opacity-50 cursor-not-allowed'
+                            : 'border-gray-200 bg-white hover:border-blue-300 hover:bg-blue-50/30',
+                        ].join(' ')}
+                      >
+                        <input
+                          type="checkbox"
+                          checked={isSelected}
+                          disabled={isDisabled}
+                          onChange={() => !isDisabled && toggleVehicle(vehicle.id)}
+                          className="mt-0.5 h-4 w-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500 flex-shrink-0"
+                        />
+                        <div className="flex-1 min-w-0">
+                          <p className="font-semibold text-gray-900 text-sm">
+                            {vehicle.year} {vehicle.color} {vehicle.make} {vehicle.model}
+                          </p>
+                          <p className="text-xs font-mono text-gray-500 mt-0.5">
+                            {vehicle.license_plate} · {vehicle.plate_state}
+                          </p>
+                          {vehicle.is_oversized && (
+                            <span className="text-xs bg-amber-100 text-amber-800 px-2 py-0.5 rounded-full mt-1 inline-block">
+                              Oversized
+                            </span>
+                          )}
+                        </div>
+                      </label>
+                    )
+                  })}
+                </div>
+                {fieldErrors.vehicles && (
+                  <p className="text-red-500 text-xs mt-2">{fieldErrors.vehicles}</p>
+                )}
               </div>
-            )}
 
-            <button
-              type="submit"
-              disabled={submitting}
-              className="w-full bg-blue-600 text-white py-3 rounded-lg font-semibold hover:bg-blue-700 transition-colors disabled:opacity-50"
-            >
-              {submitting ? t('submitting') : t('submit')}
-            </button>
-          </form>
+              {/* ── Consent ───────────────────────────────────────────── */}
+              <p className="text-xs text-gray-500 bg-blue-50 border border-blue-100 rounded-lg px-3 py-2">
+                {t('contact_consent')}
+              </p>
+
+              {error && (
+                <div className="bg-red-50 border border-red-200 text-red-700 rounded-lg px-4 py-3 text-sm">
+                  {error}
+                </div>
+              )}
+
+              <button
+                type="submit"
+                disabled={flowState === 'submitting'}
+                className="w-full bg-blue-600 text-white py-3 rounded-lg font-semibold hover:bg-blue-700 transition-colors disabled:opacity-50"
+              >
+                {flowState === 'submitting' ? t('submitting') : t('submit')}
+              </button>
+            </form>
+          )}
         </div>
       </div>
     </div>

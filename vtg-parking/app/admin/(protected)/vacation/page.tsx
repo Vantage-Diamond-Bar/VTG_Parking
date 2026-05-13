@@ -3,8 +3,20 @@
 import { useState, useEffect, useCallback } from 'react'
 import { useTranslations } from 'next-intl'
 
+interface UnitVehicle {
+  id: string
+  year: number
+  make: string
+  model: string
+  color: string
+  license_plate: string
+  plate_state: string
+  is_oversized: boolean
+}
+
 interface VacationRequest {
   id: string
+  unit_id: string
   submitted_at: string
   status: 'pending' | 'approved' | 'rejected'
   registrant_type: string
@@ -49,6 +61,8 @@ export default function AdminVacationPage() {
   const [rejectionReason, setRejectionReason] = useState('')
   const [submittingDecision, setSubmittingDecision] = useState(false)
   const [decisionError, setDecisionError] = useState('')
+  const [unitVehicles, setUnitVehicles] = useState<UnitVehicle[]>([])
+  const [unitVehiclesLoading, setUnitVehiclesLoading] = useState(false)
 
   const fetchRequests = useCallback(async () => {
     setLoading(true)
@@ -66,6 +80,16 @@ export default function AdminVacationPage() {
   }, [statusFilter])
 
   useEffect(() => { fetchRequests() }, [fetchRequests])
+
+  useEffect(() => {
+    if (!selected?.unit_id) { setUnitVehicles([]); return }
+    setUnitVehiclesLoading(true)
+    fetch(`/api/residents?unit_id=${selected.unit_id}&limit=50`)
+      .then(r => r.json())
+      .then(d => setUnitVehicles(Array.isArray(d) ? d : d.data ?? []))
+      .catch(() => {})
+      .finally(() => setUnitVehiclesLoading(false))
+  }, [selected])
 
   async function handleDecision() {
     if (!selected) return
@@ -276,6 +300,28 @@ export default function AdminVacationPage() {
                   <p className="text-red-700">{selected.rejection_reason}</p>
                 </div>
               )}
+
+              {/* All registered vehicles for this unit */}
+              <div className="border-t border-gray-100 pt-4">
+                <p className="text-xs text-gray-400 uppercase mb-2">All Registered Vehicles for This Unit</p>
+                {unitVehiclesLoading ? (
+                  <p className="text-xs text-gray-400">Loading…</p>
+                ) : unitVehicles.length === 0 ? (
+                  <p className="text-xs text-gray-400 italic">No registered vehicles found.</p>
+                ) : (
+                  <div className="space-y-1.5">
+                    {unitVehicles.map((v) => (
+                      <div key={v.id} className={`flex items-center gap-2 text-xs px-3 py-1.5 rounded-lg ${v.license_plate === selected?.license_plate ? 'bg-blue-50 border border-blue-200' : 'bg-gray-50'}`}>
+                        <span className={`w-1.5 h-1.5 rounded-full flex-shrink-0 ${v.is_oversized ? 'bg-amber-500' : 'bg-gray-400'}`} />
+                        <span className="font-mono font-semibold">{v.license_plate}{v.plate_state ? ` / ${v.plate_state}` : ''}</span>
+                        <span className="text-gray-500">{v.year} {v.make} {v.model} · {v.color}</span>
+                        {v.is_oversized && <span className="ml-auto text-amber-600 font-medium">Oversized</span>}
+                        {v.license_plate === selected?.license_plate && <span className="ml-auto text-blue-600 font-medium">This vehicle</span>}
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
 
               {/* Decision panel */}
               <div className="border-t border-gray-100 pt-4 space-y-3">
