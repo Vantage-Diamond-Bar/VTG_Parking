@@ -148,3 +148,15 @@ export function sortAddresses<T extends { address: string }>(items: T[]): T[] {
     return pa.unit - pb.unit
   })
 }
+
+export function generateMonthOptions(): { value: string; label: string }[] {
+  const options: { value: string; label: string }[] = []
+  const now = new Date()
+  for (let i = 0; i < 12; i++) {
+    const d = new Date(now.getFullYear(), now.getMonth() - i, 1)
+    const value = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`
+    const label = d.toLocaleString('en-US', { year: 'numeric', month: 'long' })
+    options.push({ value, label })
+  }
+  return options
+}

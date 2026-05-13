@@ -3,7 +3,7 @@
 import { useState, useEffect } from 'react'
 import Link from 'next/link'
 import { useTranslations } from 'next-intl'
-import { US_STATES, CAR_COLORS, CAR_MAKES, VISITOR_QUOTA_LIMIT } from '@/lib/utils'
+import { US_STATES, CAR_COLORS, CAR_MAKES, VISITOR_QUOTA_LIMIT, getYearMonth, generateMonthOptions } from '@/lib/utils'
 import PhoneInput from '@/components/PhoneInput'
 
 type VerifyState = 'idle' | 'loading' | 'no_vehicles' | 'awaiting_email' | 'verifying' | 'mismatch' | 'overdue' | 'verified'
@@ -29,6 +29,9 @@ export default function VisitorPage() {
   const [emailHints, setEmailHints] = useState<string[]>([])
   const [hostEmail, setHostEmail] = useState('')
   const [quota, setQuota] = useState<QuotaData | null>(null)
+  const MONTH_OPTIONS = generateMonthOptions()
+  const [selectedMonth, setSelectedMonth] = useState(MONTH_OPTIONS[0].value)
+  const [displayQuota, setDisplayQuota] = useState<QuotaData | null>(null)
 
   const [visitorName, setVisitorName] = useState('')
   const [visitorPhone, setVisitorPhone] = useState('')
@@ -74,6 +77,18 @@ export default function VisitorPage() {
       })
       .catch(() => setVerifyState('idle'))
   }, [unitId])
+
+  useEffect(() => {
+    if (!unitId || verifyState !== 'verified') return
+    fetch(`/api/visitors/quota?unit_id=${unitId}&year_month=${selectedMonth}`)
+      .then(r => r.json())
+      .then(d => {
+        if (d.nights_used !== undefined) {
+          setDisplayQuota({ used: d.nights_used, limit: d.quota_limit ?? VISITOR_QUOTA_LIMIT })
+        }
+      })
+      .catch(() => {})
+  }, [unitId, selectedMonth, verifyState])
 
   async function handleVerify() {
     setVerifyState('verifying')
@@ -350,28 +365,44 @@ export default function VisitorPage() {
                       <div className="flex items-center gap-2 mb-3">
                         <span className="text-green-600 text-xs font-semibold">✓ {t('email_verified')}</span>
                       </div>
-                      <p className="text-sm font-medium text-gray-700 mb-2">
-                        {t('quota_remaining_label')}
-                        <span className={`ml-1 font-bold ${quotaExceeded ? 'text-red-600' : 'text-green-600'}`}>
-                          {quota.limit - quota.used}/{quota.limit}
-                        </span>
-                      </p>
-                      <div className="w-full flex rounded-full h-5 overflow-hidden">
-                        {quota.used > 0 && (
-                          <div
-                            className="bg-red-400 transition-all"
-                            style={{ width: `${Math.min((quota.used / quota.limit) * 100, 100)}%` }}
-                          />
-                        )}
-                        {!quotaExceeded && (
-                          <div className="bg-green-400 flex-1 transition-all" />
-                        )}
+                      <div className="flex items-center justify-between mb-2">
+                        <p className="text-sm font-medium text-gray-700">
+                          {t('quota_remaining_label')}
+                          {selectedMonth === getYearMonth() && (
+                            <span className={`ml-1 font-bold ${quotaExceeded ? 'text-red-600' : 'text-green-600'}`}>
+                              {quota.limit - quota.used}/{quota.limit}
+                            </span>
+                          )}
+                        </p>
+                        <select
+                          value={selectedMonth}
+                          onChange={e => setSelectedMonth(e.target.value)}
+                          className="text-xs border border-gray-300 rounded-lg px-2 py-1 focus:outline-none focus:ring-1 focus:ring-blue-500 text-gray-600"
+                        >
+                          {MONTH_OPTIONS.map(o => <option key={o.value} value={o.value}>{o.label}</option>)}
+                        </select>
                       </div>
-                      <div className="flex justify-between text-xs text-gray-500 mt-1">
-                        <span className="text-red-500">{quota.used} {t('nights_used')}</span>
-                        <span className="text-green-600">{quota.limit - quota.used} {t('nights_remaining')}</span>
-                      </div>
-                      {quotaExceeded && (
+                      {(() => {
+                        const dq = displayQuota ?? quota
+                        const dUsed = dq.used
+                        const dLimit = dq.limit
+                        const dRemaining = Math.max(0, dLimit - dUsed)
+                        const dPct = Math.min((dUsed / dLimit) * 100, 100)
+                        return (
+                          <>
+                            <div className="w-full flex rounded-full h-5 overflow-hidden">
+                              {dUsed > 0 && <div className="bg-red-400 transition-all" style={{ width: `${dPct}%` }} />}
+                              {dRemaining > 0 && <div className="bg-green-400 flex-1 transition-all" />}
+                              {dRemaining === 0 && dUsed > 0 && <div className="bg-red-400 flex-1" />}
+                            </div>
+                            <div className="flex justify-between text-xs text-gray-500 mt-1">
+                              <span className="text-red-500">{dUsed} {t('nights_used')}</span>
+                              <span className="text-green-600">{dRemaining} {t('nights_remaining')}</span>
+                            </div>
+                          </>
+                        )
+                      })()}
+                      {quotaExceeded && selectedMonth === getYearMonth() && (
                         <p className="text-red-600 text-sm mt-2 font-medium">{t('quota_exceeded')}</p>
                       )}
                     </div>

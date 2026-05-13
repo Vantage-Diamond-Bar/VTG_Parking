@@ -3,7 +3,7 @@
 import { useState, useEffect, useCallback } from 'react'
 import Link from 'next/link'
 import { useTranslations } from 'next-intl'
-import { US_STATES, CAR_COLORS, CAR_MAKES, VISITOR_QUOTA_LIMIT, getYearMonth } from '@/lib/utils'
+import { US_STATES, CAR_COLORS, CAR_MAKES, VISITOR_QUOTA_LIMIT, getYearMonth, generateMonthOptions } from '@/lib/utils'
 import PhoneInput from '@/components/PhoneInput'
 
 // ─── Types ─────────────────────────────────────────────────────────────────
@@ -556,6 +556,21 @@ function ManageView({ t, unitId, confirmedEmail, unitData, units, toast, showToa
   const [addVehicleErrors, setAddVehicleErrors] = useState<Record<string, string>>({})
   const [addingVehicle, setAddingVehicle] = useState(false)
 
+  // Quota by selected month
+  const MONTH_OPTIONS = generateMonthOptions()
+  const [selectedMonth, setSelectedMonth] = useState(MONTH_OPTIONS[0].value)
+  const [displayQuota, setDisplayQuota] = useState({ nights_used: unitData.quota.nights_used ?? 0, quota_limit: unitData.quota.quota_limit ?? VISITOR_QUOTA_LIMIT })
+  const [quotaLoading, setQuotaLoading] = useState(false)
+
+  useEffect(() => {
+    setQuotaLoading(true)
+    fetch(`/api/visitors/quota?unit_id=${unitId}&year_month=${selectedMonth}`)
+      .then(r => r.json())
+      .then(d => { if (d.nights_used !== undefined) setDisplayQuota({ nights_used: d.nights_used, quota_limit: d.quota_limit ?? VISITOR_QUOTA_LIMIT }) })
+      .catch(() => {})
+      .finally(() => setQuotaLoading(false))
+  }, [unitId, selectedMonth])
+
   async function saveOwner() {
     setOwnerSaving(true)
     try {
@@ -645,9 +660,8 @@ function ManageView({ t, unitId, confirmedEmail, unitData, units, toast, showToa
     } finally { setAddingVehicle(false) }
   }
 
-  const quota = unitData.quota
-  const quotaLimit = quota.quota_limit ?? VISITOR_QUOTA_LIMIT
-  const nightsUsed = quota.nights_used ?? 0
+  const quotaLimit = displayQuota.quota_limit ?? VISITOR_QUOTA_LIMIT
+  const nightsUsed = displayQuota.nights_used ?? 0
   const nightsRemaining = Math.max(0, quotaLimit - nightsUsed)
   const usedPct = Math.min(100, (nightsUsed / quotaLimit) * 100)
 
@@ -835,18 +849,27 @@ function ManageView({ t, unitId, confirmedEmail, unitData, units, toast, showToa
 
         {/* ── Visitor Quota ──────────────────────────────────── */}
         <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-6 mb-5">
-          <h2 className={sectionCls}>{t('section_quota')}</h2>
+          <div className="flex items-center justify-between mb-4 pb-2 border-b border-gray-200">
+            <h2 className="text-lg font-semibold text-gray-800">{t('section_quota')}</h2>
+            <select
+              value={selectedMonth}
+              onChange={e => setSelectedMonth(e.target.value)}
+              className="text-sm border border-gray-300 rounded-lg px-2 py-1 focus:outline-none focus:ring-2 focus:ring-blue-500 text-gray-700"
+            >
+              {MONTH_OPTIONS.map(o => <option key={o.value} value={o.value}>{o.label}</option>)}
+            </select>
+          </div>
           <div className="space-y-2">
-            <div className="flex justify-between text-sm text-gray-600">
-              <span>{nightsUsed} {t('nights_used') ?? 'nights used'}</span>
-              <span>{nightsRemaining} {t('nights_remaining') ?? 'nights remaining'}</span>
+            <div className="flex justify-between text-sm font-medium">
+              <span className="text-red-600">{nightsUsed} {t('nights_used')}</span>
+              <span className="text-green-600">{nightsRemaining} {t('nights_remaining')}</span>
             </div>
-            <div className="h-4 rounded-full bg-gray-100 overflow-hidden flex">
-              <div className="h-full bg-red-500 transition-all" style={{ width: `${usedPct}%` }} />
+            <div className="h-5 rounded-full overflow-hidden flex">
+              {nightsUsed > 0 && <div className="h-full bg-red-400 transition-all" style={{ width: `${usedPct}%` }} />}
               <div className="h-full bg-green-400 flex-1" />
             </div>
             <p className="text-xs text-gray-400 text-center">
-              {nightsUsed} / {quotaLimit} nights used this month ({getYearMonth()})
+              {quotaLoading ? '…' : `${nightsUsed} / ${quotaLimit} nights used (${selectedMonth})`}
             </p>
           </div>
         </div>

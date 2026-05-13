@@ -87,12 +87,12 @@ export async function GET(req: NextRequest) {
     const { start, end } = monthBounds(yearMonth);
     const { data: visitorRegs } = await supabaseAdmin
       .from('visitor_registrations')
-      .select('start_date, end_date')
+      .select('start_datetime, end_datetime')
       .eq('unit_id', unit_id)
-      .gte('start_date', start)
-      .lte('start_date', end);
+      .gte('start_datetime', start)
+      .lt('start_datetime', end);
     nights_used = (visitorRegs ?? []).reduce(
-      (total, reg) => total + countNights(reg.start_date, reg.end_date),
+      (total, reg) => total + countNights(reg.start_datetime, reg.end_datetime),
       0
     );
   } catch {
