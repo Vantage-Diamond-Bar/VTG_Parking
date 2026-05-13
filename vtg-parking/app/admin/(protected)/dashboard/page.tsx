@@ -251,21 +251,30 @@ export default async function AdminDashboardPage() {
               const diffMin = Math.floor(diffMs / 60000)
               const diffHr = Math.floor(diffMin / 60)
               const diffDay = Math.floor(diffHr / 24)
-              const ago = diffDay > 0
-                ? `${diffDay}d ${diffHr % 24}h ago`
-                : diffHr > 0
-                  ? `${diffHr}h ${diffMin % 60}m ago`
-                  : `${diffMin}m ago`
+              let agoParts: string[] = []
+              if (diffDay > 0) agoParts.push(`${diffDay}d`)
+              if (diffHr % 24 > 0 || diffDay > 0) agoParts.push(`${diffHr % 24}h`)
+              agoParts.push(`${diffMin % 60}m`)
+              const ago = agoParts.join(' ') + ' ago'
+              const isRecent = diffHr < 24
               return (
-                <li key={v.id} className="px-6 py-4 flex items-center justify-between text-sm">
-                  <div>
-                    {v.plate && <span className="font-mono font-semibold text-gray-900 mr-3">{v.plate}</span>}
-                    <span className="text-gray-600 mr-3">{v.location}</span>
-                    <span className="inline-block bg-orange-100 text-orange-700 text-xs px-2 py-0.5 rounded-full">{v.type}</span>
+                <li key={v.id} className="px-6 py-4 flex items-start justify-between gap-4 text-sm">
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center flex-wrap gap-2 mb-1">
+                      {v.plate && <span className="font-mono font-bold text-gray-900">{v.plate}</span>}
+                      <span className="inline-block bg-orange-100 text-orange-700 text-xs px-2 py-0.5 rounded-full">{v.type}</span>
+                    </div>
+                    <div className="text-gray-500 text-xs">{v.location}</div>
+                    <div className="text-gray-400 text-xs mt-0.5">{submittedAt.toLocaleString()}</div>
                   </div>
-                  <div className="text-right shrink-0 ml-4">
-                    <div className="text-gray-500 text-xs">{submittedAt.toLocaleString()}</div>
-                    <div className="text-gray-400 text-xs">{ago}</div>
+                  <div className="shrink-0">
+                    <span className={`inline-block px-3 py-1.5 rounded-lg font-bold text-sm tracking-wide ${
+                      isRecent
+                        ? 'bg-red-100 text-red-700'
+                        : 'bg-amber-100 text-amber-800'
+                    }`}>
+                      {ago}
+                    </span>
                   </div>
                 </li>
               )

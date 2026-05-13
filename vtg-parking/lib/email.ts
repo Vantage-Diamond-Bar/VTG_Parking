@@ -90,12 +90,14 @@ export async function sendViolationHearing({
     <p style="color:#666;font-size:12px;margin-top:16px;">A hearing has been requested for this violation via the VTG Community Parking Management System.</p>
   `
 
+  const subject = `[Hearing Arrangement Request] ${violation_type} — ${location}${unit_address ? ` (${unit_address})` : ''}`
+
   await Promise.allSettled(
     recipients.map((to) =>
       resend.emails.send({
         from: EMAIL_FROM,
         to,
-        subject: `[Parking Violation Hearing] ${violation_type} — ${unit_address || license_plate || violation_id}`,
+        subject,
         html,
       })
     )

@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useMemo } from 'react';
 import { useTranslations } from 'next-intl';
 import { VIOLATION_TYPES, VIOLATION_LOCATIONS } from '@/lib/utils';
 
@@ -42,13 +42,18 @@ const STATUS_COLORS: Record<string, string> = {
   resolved: 'bg-green-100 text-green-800',
 };
 
-const RESOLUTION_OPTIONS = [
-  'warning_issued',
-  'fine_issued',
-  'towed',
-  'vehicle_moved',
-  'owner_notified',
-  'other',
+const NO_ACTION_OPTIONS = [
+  'no_action_unknown_gone',
+  'no_action_verified_ok',
+  'no_action_other',
+];
+
+const RESOLVED_OPTIONS = [
+  'res_courtesy_notice',
+  'res_citation_warning',
+  'res_tow_3rd_offense',
+  'res_immediate_tow',
+  'res_other',
 ];
 
 export default function AdminViolationsPage() {
@@ -56,6 +61,7 @@ export default function AdminViolationsPage() {
   const [tab, setTab] = useState<Tab>('pending');
   const [violations, setViolations] = useState<Violation[]>([]);
   const [loading, setLoading] = useState(false);
+  const [search, setSearch] = useState('');
   const [photoModal, setPhotoModal] = useState<string[] | null>(null);
   const [viewViolation, setViewViolation] = useState<Violation | null>(null);
 
@@ -86,6 +92,23 @@ export default function AdminViolationsPage() {
   }, [tab]);
 
   useEffect(() => { fetchViolations(); }, [fetchViolations]);
+
+  // Client-side search filtering
+  const filteredViolations = useMemo(() => {
+    if (!search.trim()) return violations;
+    const q = search.trim().toLowerCase();
+    return violations.filter((v) => {
+      return (
+        (v.unit_address ?? '').toLowerCase().includes(q) ||
+        (v.license_plate ?? '').toLowerCase().includes(q) ||
+        (v.final_license_plate ?? '').toLowerCase().includes(q) ||
+        (v.location ?? '').toLowerCase().includes(q) ||
+        (v.final_location ?? '').toLowerCase().includes(q) ||
+        (v.violation_type ?? '').toLowerCase().includes(q) ||
+        (v.final_violation_type ?? '').toLowerCase().includes(q)
+      );
+    });
+  }, [violations, search]);
 
   function openModal(v: Violation) {
     setViewViolation(v);
@@ -149,23 +172,44 @@ export default function AdminViolationsPage() {
     { key: 'all', label: t('vio_tab_all') },
   ];
 
+  const resolutionOptions = resolution === 'no_action' ? NO_ACTION_OPTIONS : RESOLVED_OPTIONS;
+
   return (
     <div className="p-8">
       <h1 className="text-2xl font-bold text-gray-900 mb-6">{t('violations')}</h1>
 
-      {/* Tabs */}
-      <div className="flex gap-1 mb-5 bg-gray-100 rounded-xl p-1 w-fit">
-        {tabs.map((tb) => (
-          <button
-            key={tb.key}
-            onClick={() => setTab(tb.key)}
-            className={`px-5 py-2 rounded-lg text-sm font-medium transition-colors ${
-              tab === tb.key ? 'bg-white text-gray-900 shadow-sm' : 'text-gray-500 hover:text-gray-700'
-            }`}
-          >
-            {tb.label}
-          </button>
-        ))}
+      {/* Tabs + Search */}
+      <div className="flex flex-wrap items-center gap-3 mb-5">
+        <div className="flex gap-1 bg-gray-100 rounded-xl p-1">
+          {tabs.map((tb) => (
+            <button
+              key={tb.key}
+              onClick={() => setTab(tb.key)}
+              className={`px-5 py-2 rounded-lg text-sm font-medium transition-colors ${
+                tab === tb.key ? 'bg-white text-gray-900 shadow-sm' : 'text-gray-500 hover:text-gray-700'
+              }`}
+            >
+              {tb.label}
+            </button>
+          ))}
+        </div>
+        <div className="flex items-center gap-2 ml-auto">
+          <input
+            type="text"
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            placeholder={t('vio_search_placeholder')}
+            className="border border-gray-300 rounded-lg px-3 py-2 text-sm w-64 focus:outline-none focus:ring-2 focus:ring-blue-500"
+          />
+          {search && (
+            <button
+              onClick={() => setSearch('')}
+              className="text-sm text-gray-500 hover:text-gray-700 border border-gray-300 px-3 py-2 rounded-lg hover:bg-gray-50 transition-colors whitespace-nowrap"
+            >
+              {t('vio_reset_search')}
+            </button>
+          )}
+        </div>
       </div>
 
       {/* Table */}
@@ -181,7 +225,7 @@ export default function AdminViolationsPage() {
                 <th className="px-4 py-3 text-left">{t('photos')}</th>
                 <th className="px-4 py-3 text-left">{t('reporter_email')}</th>
                 <th className="px-4 py-3 text-left">{t('vio_unit_owner')}</th>
-                <th className="px-4 py-3 text-left">{t('vio_history')}</th>
+                <th className="px-4 py-3 text-left" style={{ minWidth: 220 }}>{t('vio_history')}</th>
                 <th className="px-4 py-3 text-left">{t('status')}</th>
                 <th className="px-4 py-3 text-left"></th>
               </tr>
@@ -189,10 +233,10 @@ export default function AdminViolationsPage() {
             <tbody className="divide-y divide-gray-100">
               {loading ? (
                 <tr><td colSpan={10} className="px-4 py-8 text-center text-gray-400">{t('loading')}</td></tr>
-              ) : violations.length === 0 ? (
+              ) : filteredViolations.length === 0 ? (
                 <tr><td colSpan={10} className="px-4 py-8 text-center text-gray-400">{t('no_results')}</td></tr>
-              ) : violations.map((v) => (
-                <tr key={v.id} className="hover:bg-gray-50">
+              ) : filteredViolations.map((v) => (
+                <tr key={v.id} className="hover:bg-gray-50 align-top">
                   <td className="px-4 py-3 text-gray-600 whitespace-nowrap text-xs">
                     {new Date(v.submitted_at).toLocaleString()}
                   </td>
@@ -223,11 +267,29 @@ export default function AdminViolationsPage() {
                       <span className="bg-blue-50 text-blue-700 px-2 py-0.5 rounded">{v.unit_address}</span>
                     ) : '—'}
                   </td>
+                  {/* Violation History — inline detail list */}
                   <td className="px-4 py-3 text-xs">
                     {v.violation_history && v.violation_history.length > 0 ? (
-                      <span className={`font-medium ${v.violation_history.length > 1 ? 'text-red-600' : 'text-gray-600'}`}>
-                        {v.violation_history.length} {t('vio_history_count')}
-                      </span>
+                      <div className="space-y-1.5">
+                        {v.violation_history.slice(0, 4).map((h) => (
+                          <div key={h.id} className="flex flex-col gap-0.5">
+                            <div className="flex items-center gap-1.5 flex-wrap">
+                              <span className="text-gray-400 whitespace-nowrap font-mono">
+                                {new Date(h.submitted_at).toLocaleDateString('en-US', { month: 'numeric', day: 'numeric', year: '2-digit' })}
+                              </span>
+                              <span className={`px-1.5 py-0.5 rounded text-xs font-medium ${STATUS_COLORS[h.status] ?? 'bg-gray-100 text-gray-600'}`}>
+                                {h.status}
+                              </span>
+                            </div>
+                            <span className="text-gray-600 leading-snug" style={{ maxWidth: 200 }}>
+                              {h.violation_type}
+                            </span>
+                          </div>
+                        ))}
+                        {v.violation_history.length > 4 && (
+                          <div className="text-gray-400 italic">+{v.violation_history.length - 4} more</div>
+                        )}
+                      </div>
                     ) : <span className="text-gray-400">—</span>}
                   </td>
                   <td className="px-4 py-3">
@@ -306,19 +368,30 @@ export default function AdminViolationsPage() {
                 </div>
               )}
 
-              {/* Violation History */}
+              {/* Violation History in modal — full detail */}
               {viewViolation.violation_history && viewViolation.violation_history.length > 0 && (
                 <div>
                   <div className="text-sm font-medium text-gray-700 mb-2">
-                    {t('vio_history')} — {viewViolation.unit_address || '—'}
+                    {t('vio_history')}
+                    {viewViolation.unit_address && <span className="text-gray-400 font-normal ml-2">— {viewViolation.unit_address}</span>}
+                    <span className="ml-2 text-xs text-gray-400">({viewViolation.violation_history.length} {t('vio_history_count')})</span>
                   </div>
-                  <div className="border border-gray-200 rounded-lg divide-y divide-gray-100 text-xs">
-                    {viewViolation.violation_history.slice(0, 8).map((h) => (
-                      <div key={h.id} className="px-3 py-2 flex justify-between items-center">
-                        <span className="text-gray-700">{h.violation_type}</span>
-                        <div className="flex items-center gap-2">
-                          <span className={`px-1.5 py-0.5 rounded text-xs ${STATUS_COLORS[h.status] ?? 'bg-gray-100 text-gray-600'}`}>{h.status}</span>
-                          <span className="text-gray-400">{new Date(h.submitted_at).toLocaleDateString()}</span>
+                  <div className="border border-gray-200 rounded-lg divide-y divide-gray-100 text-xs max-h-48 overflow-y-auto">
+                    {viewViolation.violation_history.map((h) => (
+                      <div key={h.id} className="px-3 py-2.5 flex items-start justify-between gap-3">
+                        <div className="flex-1 min-w-0">
+                          <div className="text-gray-700 leading-snug">{h.violation_type}</div>
+                          {(h.final_license_plate || h.license_plate) && (
+                            <div className="text-gray-400 font-mono mt-0.5">{h.final_license_plate ?? h.license_plate}</div>
+                          )}
+                        </div>
+                        <div className="flex flex-col items-end gap-1 shrink-0">
+                          <span className={`px-1.5 py-0.5 rounded font-medium ${STATUS_COLORS[h.status] ?? 'bg-gray-100 text-gray-600'}`}>
+                            {h.status}
+                          </span>
+                          <span className="text-gray-400 whitespace-nowrap">
+                            {new Date(h.submitted_at).toLocaleString('en-US', { month: 'short', day: 'numeric', year: 'numeric', hour: '2-digit', minute: '2-digit' })}
+                          </span>
                         </div>
                       </div>
                     ))}
@@ -394,16 +467,31 @@ export default function AdminViolationsPage() {
                 <div className="text-sm font-semibold text-gray-800">{t('vio_resolution')}</div>
                 <div className="flex gap-4">
                   <label className="flex items-center gap-2 cursor-pointer">
-                    <input type="radio" name="resolution" value="no_action" checked={resolution === 'no_action'} onChange={() => setResolution('no_action')} className="text-blue-600" />
+                    <input
+                      type="radio"
+                      name="resolution"
+                      value="no_action"
+                      checked={resolution === 'no_action'}
+                      onChange={() => { setResolution('no_action'); setResolutionType(''); }}
+                      className="text-blue-600"
+                    />
                     <span className="text-sm">{t('vio_tab_no_action')}</span>
                   </label>
                   <label className="flex items-center gap-2 cursor-pointer">
-                    <input type="radio" name="resolution" value="resolved" checked={resolution === 'resolved'} onChange={() => setResolution('resolved')} className="text-blue-600" />
+                    <input
+                      type="radio"
+                      name="resolution"
+                      value="resolved"
+                      checked={resolution === 'resolved'}
+                      onChange={() => { setResolution('resolved'); setResolutionType(''); }}
+                      className="text-blue-600"
+                    />
                     <span className="text-sm">{t('vio_tab_resolved')}</span>
                   </label>
                 </div>
 
-                {resolution === 'resolved' && (
+                {/* Resolution sub-type dropdown — shown for both no_action and resolved */}
+                {resolution !== '' && (
                   <div>
                     <label className="block text-xs text-gray-600 mb-1">{t('vio_resolution_type')}</label>
                     <select
@@ -412,7 +500,7 @@ export default function AdminViolationsPage() {
                       className="border border-gray-300 rounded-lg px-3 py-2 text-sm w-full focus:outline-none focus:ring-2 focus:ring-blue-500"
                     >
                       <option value="">— {t('vio_select_resolution')} —</option>
-                      {RESOLUTION_OPTIONS.map((r) => (
+                      {resolutionOptions.map((r) => (
                         <option key={r} value={r}>{t(`vio_res_${r}`)}</option>
                       ))}
                     </select>
