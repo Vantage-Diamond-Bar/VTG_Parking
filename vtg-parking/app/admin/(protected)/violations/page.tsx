@@ -9,6 +9,7 @@ interface HistoryItem {
   submitted_at: string;
   violation_type: string;
   status: string;
+  resolution_type?: string;
   final_license_plate?: string;
   license_plate?: string;
 }
@@ -270,9 +271,9 @@ export default function AdminViolationsPage() {
                   {/* Violation History — inline detail list */}
                   <td className="px-4 py-3 text-xs">
                     {v.violation_history && v.violation_history.length > 0 ? (
-                      <div className="space-y-1.5">
+                      <div className="space-y-2">
                         {v.violation_history.slice(0, 4).map((h) => (
-                          <div key={h.id} className="flex flex-col gap-0.5">
+                          <div key={h.id} className="flex flex-col gap-0.5 border-l-2 border-gray-200 pl-2">
                             <div className="flex items-center gap-1.5 flex-wrap">
                               <span className="text-gray-400 whitespace-nowrap font-mono">
                                 {new Date(h.submitted_at).toLocaleDateString('en-US', { month: 'numeric', day: 'numeric', year: '2-digit' })}
@@ -281,9 +282,10 @@ export default function AdminViolationsPage() {
                                 {h.status}
                               </span>
                             </div>
-                            <span className="text-gray-600 leading-snug" style={{ maxWidth: 200 }}>
-                              {h.violation_type}
-                            </span>
+                            <span className="text-gray-700 leading-snug" style={{ maxWidth: 200 }}>{h.violation_type}</span>
+                            {h.resolution_type && (
+                              <span className="text-gray-400 italic leading-snug">{h.resolution_type.replace(/_/g, ' ')}</span>
+                            )}
                           </div>
                         ))}
                         {v.violation_history.length > 4 && (
@@ -381,6 +383,9 @@ export default function AdminViolationsPage() {
                       <div key={h.id} className="px-3 py-2.5 flex items-start justify-between gap-3">
                         <div className="flex-1 min-w-0">
                           <div className="text-gray-700 leading-snug">{h.violation_type}</div>
+                          {h.resolution_type && (
+                            <div className="text-green-700 mt-0.5 italic">{h.resolution_type.replace(/_/g, ' ')}</div>
+                          )}
                           {(h.final_license_plate || h.license_plate) && (
                             <div className="text-gray-400 font-mono mt-0.5">{h.final_license_plate ?? h.license_plate}</div>
                           )}

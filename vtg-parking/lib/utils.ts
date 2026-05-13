@@ -55,7 +55,7 @@ export const VIOLATION_LOCATIONS = [
 
 export const VIOLATION_TYPES = [
   'Parking in Yellow-Curb Trash Bin Area on Sundays',
-  'Vehicle Parked for Over 72 Hours Without Movement',
+  'Vehicle Parked for Over 96 Hours Without Movement',
   'Opposite Direction of Traffic',
   'Parking Outside Designated Spaces',
   'Parking in Red-Curb Zone',
@@ -91,6 +91,24 @@ export function countNights(startStr: string, endStr: string): number {
   const start = Date.UTC(+sd.slice(0, 4), +sd.slice(5, 7) - 1, +sd.slice(8, 10))
   const end   = Date.UTC(+ed.slice(0, 4), +ed.slice(5, 7) - 1, +ed.slice(8, 10))
   return Math.max(0, Math.round((end - start) / 86_400_000))
+}
+
+export function maskPhone(phone: string): string {
+  if (!phone) return ''
+  const m = phone.match(/^(\+\d{1,3})\s*(.+)$/)
+  if (!m) {
+    const digits = phone.replace(/\D/g, '')
+    if (digits.length <= 4) return phone
+    return digits.slice(0, 2) + '*'.repeat(digits.length - 4) + digits.slice(-2)
+  }
+  const cc = m[1]
+  const local = m[2].replace(/\D/g, '')
+  if (local.length <= 4) return `${cc} ${local}`
+  const showStart = Math.min(3, Math.floor(local.length / 3))
+  const showEnd = 2
+  const maskLen = local.length - showStart - showEnd
+  if (maskLen <= 0) return `${cc} ${local}`
+  return `${cc} ${local.slice(0, showStart)}${'*'.repeat(maskLen)}${local.slice(-showEnd)}`
 }
 
 export function maskEmail(email: string): string {

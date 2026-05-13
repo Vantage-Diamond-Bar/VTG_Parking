@@ -39,7 +39,7 @@ export async function GET(req: NextRequest) {
     twoYearsAgo.setFullYear(twoYearsAgo.getFullYear() - 2)
     const { data: hist } = await supabaseAdmin
       .from('violation_reports')
-      .select('id, unit_address, submitted_at, violation_type, status, final_license_plate, license_plate')
+      .select('id, unit_address, submitted_at, violation_type, status, resolution_type, final_license_plate, license_plate')
       .in('unit_address', addresses)
       .gte('submitted_at', twoYearsAgo.toISOString())
       .order('submitted_at', { ascending: false })
