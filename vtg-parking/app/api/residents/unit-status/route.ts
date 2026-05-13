@@ -1,6 +1,8 @@
+export const dynamic = 'force-dynamic';
+
 import { NextRequest, NextResponse } from 'next/server';
 import { supabaseAdmin } from '@/lib/supabase';
-import { maskEmail, maskPhone } from '@/lib/utils';
+import { maskEmail } from '@/lib/utils';
 
 export async function GET(req: NextRequest) {
   const { searchParams } = new URL(req.url);
@@ -12,7 +14,7 @@ export async function GET(req: NextRequest) {
 
   const { data: vehicles, error } = await supabaseAdmin
     .from('resident_vehicles')
-    .select('owner_email, owner_phone, owner_name')
+    .select('owner_email')
     .eq('unit_id', unit_id);
 
   if (error) {
@@ -24,10 +26,7 @@ export async function GET(req: NextRequest) {
   }
 
   const uniqueEmails = [...new Set(vehicles.map((v) => v.owner_email).filter(Boolean))];
-  const uniquePhones = [...new Set(vehicles.map((v) => v.owner_phone).filter(Boolean))];
-
   const email_hints = uniqueEmails.map((email) => maskEmail(email));
-  const phone_hints = uniquePhones.map((phone) => maskPhone(phone));
 
-  return NextResponse.json({ has_vehicles: true, email_hints, phone_hints });
+  return NextResponse.json({ has_vehicles: true, email_hints });
 }

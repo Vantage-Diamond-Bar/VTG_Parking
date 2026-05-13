@@ -8,10 +8,9 @@ export async function GET(req: NextRequest) {
   const { searchParams } = new URL(req.url);
   const unit_id = searchParams.get('unit_id');
   const email = searchParams.get('email');
-  const phone = searchParams.get('phone');
 
-  if (!unit_id || (!email && !phone)) {
-    return NextResponse.json({ error: 'unit_id and email (or phone) are required' }, { status: 400 });
+  if (!unit_id || !email) {
+    return NextResponse.json({ error: 'unit_id and email are required' }, { status: 400 });
   }
 
   // Step 1: Fetch all resident_vehicles for unit_id
@@ -21,92 +20,89 @@ export async function GET(req: NextRequest) {
     .eq('unit_id', unit_id);
 
   if (vehiclesError) {
-    return NextResponse.json({ error: 'Failed to fetch vehicles' }, { status: 500 });
+    console.error('[unit-data] vehicles error:', vehiclesError);
+    return NextResponse.json({ error: 'Failed to fetch vehicles', detail: vehiclesError.message }, { status: 500 });
   }
 
   if (!vehicles || vehicles.length === 0) {
     return NextResponse.json({ error: 'no_vehicles' }, { status: 404 });
   }
 
-  // Step 2: Verify identity — email OR phone
-  let verified = false;
+  // Step 2: Verify email matches at least one vehicle's owner_email (case-insensitive)
+  const normalizedEmail = email.trim().toLowerCase();
+  const emailMatches = vehicles.some(
+    (v) => v.owner_email?.trim().toLowerCase() === normalizedEmail
+  );
 
-  if (email) {
-    const normalizedEmail = email.trim().toLowerCase();
-    verified = vehicles.some(
-      (v) => v.owner_email?.trim().toLowerCase() === normalizedEmail
-    );
-  }
-
-  if (!verified && phone) {
-    const normalizedPhone = phone.trim().replace(/\D/g, '');
-    if (normalizedPhone.length >= 7) {
-      verified = vehicles.some((v) => {
-        const stored = (v.owner_phone ?? '').replace(/\D/g, '');
-        return stored.length >= 7 && (
-          stored === normalizedPhone ||
-          stored.endsWith(normalizedPhone) ||
-          normalizedPhone.endsWith(stored)
-        );
-      });
-    }
-  }
-
-  if (!verified) {
+  if (!emailMatches) {
     return NextResponse.json({ error: 'email_mismatch' }, { status: 403 });
   }
 
-  // Step 3: Fetch unit address
-  const { data: unit, error: unitError } = await supabaseAdmin
-    .from('units')
-    .select('address')
-    .eq('id', unit_id)
-    .single();
-
-  if (unitError || !unit) {
-    return NextResponse.json({ error: 'Failed to fetch unit' }, { status: 500 });
+  // Step 3: Get unit address — prefer resident_vehicles unit_id join, fallback to direct query
+  let unit_address: string | null = null;
+  try {
+    const { data: unit } = await supabaseAdmin
+      .from('units')
+      .select('address')
+      .eq('id', unit_id)
+      .maybeSingle();
+    unit_address = unit?.address ?? null;
+  } catch {
+    // non-fatal: proceed without unit_address
   }
 
-  // Step 4: Fetch violations (last 2 years)
-  const twoYearsAgo = new Date();
-  twoYearsAgo.setFullYear(twoYearsAgo.getFullYear() - 2);
+  // If units table lookup failed, try to get address from existing vehicles
+  if (!unit_address) {
+    const { data: vehicleWithUnit } = await supabaseAdmin
+      .from('resident_vehicles')
+      .select('units(address)')
+      .eq('unit_id', unit_id)
+      .limit(1)
+      .maybeSingle();
+    unit_address = (vehicleWithUnit?.units as any)?.address ?? null;
+  }
 
-  const { data: violations, error: violationsError } = await supabaseAdmin
-    .from('violation_reports')
-    .select(
-      'id, submitted_at, location, violation_type, status, resolution_type, final_license_plate, license_plate, final_violation_type, final_location'
-    )
-    .eq('unit_address', unit.address)
-    .gte('submitted_at', twoYearsAgo.toISOString())
-    .order('submitted_at', { ascending: false });
-
-  if (violationsError) {
-    return NextResponse.json({ error: 'Failed to fetch violations' }, { status: 500 });
+  // Step 4: Fetch violations (last 2 years) — only if we have unit_address
+  let violations: any[] = [];
+  if (unit_address) {
+    try {
+      const twoYearsAgo = new Date();
+      twoYearsAgo.setFullYear(twoYearsAgo.getFullYear() - 2);
+      const { data: vData } = await supabaseAdmin
+        .from('violation_reports')
+        .select('id, submitted_at, location, violation_type, status, resolution_type, final_license_plate, license_plate, final_violation_type, final_location')
+        .eq('unit_address', unit_address)
+        .gte('submitted_at', twoYearsAgo.toISOString())
+        .order('submitted_at', { ascending: false });
+      violations = vData ?? [];
+    } catch {
+      // non-fatal
+    }
   }
 
   // Step 5: Fetch visitor quota for current month
-  const yearMonth = getYearMonth();
-  const { start, end } = monthBounds(yearMonth);
-
-  const { data: visitorRegs, error: quotaError } = await supabaseAdmin
-    .from('visitor_registrations')
-    .select('*')
-    .eq('unit_id', unit_id)
-    .gte('start_date', start)
-    .lte('start_date', end);
-
-  if (quotaError) {
-    return NextResponse.json({ error: 'Failed to fetch visitor quota' }, { status: 500 });
+  let nights_used = 0;
+  try {
+    const yearMonth = getYearMonth();
+    const { start, end } = monthBounds(yearMonth);
+    const { data: visitorRegs } = await supabaseAdmin
+      .from('visitor_registrations')
+      .select('start_date, end_date')
+      .eq('unit_id', unit_id)
+      .gte('start_date', start)
+      .lte('start_date', end);
+    nights_used = (visitorRegs ?? []).reduce(
+      (total, reg) => total + countNights(reg.start_date, reg.end_date),
+      0
+    );
+  } catch {
+    // non-fatal
   }
 
-  const nights_used = (visitorRegs ?? []).reduce((total, reg) => {
-    return total + countNights(reg.start_date, reg.end_date);
-  }, 0);
-
   return NextResponse.json({
-    vehicles: vehicles ?? [],
-    unit_address: unit.address,
-    violations: violations ?? [],
+    vehicles,
+    unit_address,
+    violations,
     quota: {
       nights_used,
       quota_limit: VISITOR_QUOTA_LIMIT,
