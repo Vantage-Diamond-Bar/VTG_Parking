@@ -1,6 +1,6 @@
 'use client'
 
-import { useTransition } from 'react'
+import { useState, useEffect, useTransition } from 'react'
 
 const LANGUAGES = [
   { code: 'en', label: 'EN', full: 'English' },
@@ -8,10 +8,18 @@ const LANGUAGES = [
   { code: 'ko', label: '한국어', full: '한국어' },
 ]
 
-export default function LanguageSwitcher({ current }: { current: string }) {
+export default function LanguageSwitcher({ current: initialCurrent }: { current?: string }) {
+  const [current, setCurrent] = useState(initialCurrent ?? 'en')
   const [, startTransition] = useTransition()
 
+  useEffect(() => {
+    const match = document.cookie.match(/(?:^|;\s*)locale=([^;]*)/)
+    if (match) setCurrent(decodeURIComponent(match[1]))
+    else if (!initialCurrent) setCurrent('en')
+  }, [initialCurrent])
+
   function switchLocale(locale: string) {
+    setCurrent(locale)
     startTransition(async () => {
       await fetch('/api/locale', {
         method: 'POST',
