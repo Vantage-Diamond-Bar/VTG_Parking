@@ -64,7 +64,7 @@ export default async function AdminProtectedLayout({
             className="flex items-center gap-3 px-3 py-2 rounded-lg text-sm text-gray-400 hover:bg-gray-700 hover:text-white transition-colors w-full"
           >
             <span>🚔</span>
-            <span>Patrol Interface</span>
+            <span>Patrol Portal</span>
           </Link>
           <Link
             href="/api/auth/logout?role=admin"

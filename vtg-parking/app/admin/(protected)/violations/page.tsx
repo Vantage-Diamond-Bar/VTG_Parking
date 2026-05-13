@@ -284,7 +284,7 @@ export default function AdminViolationsPage() {
                             </div>
                             <span className="text-gray-700 leading-snug" style={{ maxWidth: 200 }}>{h.violation_type}</span>
                             {h.resolution_type && (
-                              <span className="text-gray-400 italic leading-snug">{h.resolution_type.replace(/_/g, ' ')}</span>
+                              <span className="text-gray-400 italic leading-snug">{t(`vio_res_${h.resolution_type}`)}</span>
                             )}
                           </div>
                         ))}
@@ -384,7 +384,7 @@ export default function AdminViolationsPage() {
                         <div className="flex-1 min-w-0">
                           <div className="text-gray-700 leading-snug">{h.violation_type}</div>
                           {h.resolution_type && (
-                            <div className="text-green-700 mt-0.5 italic">{h.resolution_type.replace(/_/g, ' ')}</div>
+                            <div className="text-green-700 mt-0.5 italic">{t(`vio_res_${h.resolution_type}`)}</div>
                           )}
                           {(h.final_license_plate || h.license_plate) && (
                             <div className="text-gray-400 font-mono mt-0.5">{h.final_license_plate ?? h.license_plate}</div>

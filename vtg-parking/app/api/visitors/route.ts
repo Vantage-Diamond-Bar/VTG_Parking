@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { supabaseAdmin } from '@/lib/supabase';
 import { generateAccessCode, getYearMonth, normalizedPlate, VISITOR_QUOTA_LIMIT, countNights, monthBounds } from '@/lib/utils';
 import { getSessionFromRequest } from '@/lib/auth';
+import { sendVisitorBookingEmail } from '@/lib/email';
 
 export async function POST(req: NextRequest) {
   const body = await req.json();
@@ -93,7 +94,38 @@ export async function POST(req: NextRequest) {
       { onConflict: 'unit_id,year_month' }
     );
 
-  // 7. Check for abuse: same plate used by 2+ units this month
+  // 7. Send booking confirmation email to host unit's registered email
+  try {
+    const { data: hostVehicle } = await supabaseAdmin
+      .from('resident_vehicles')
+      .select('owner_email, owner_name')
+      .eq('unit_id', unit_id)
+      .maybeSingle()
+
+    const { data: unitRow } = await supabaseAdmin
+      .from('units')
+      .select('address')
+      .eq('id', unit_id)
+      .maybeSingle()
+
+    if (hostVehicle?.owner_email) {
+      await sendVisitorBookingEmail({
+        hostEmail: hostVehicle.owner_email,
+        hostName: hostVehicle.owner_name ?? '',
+        unitAddress: unitRow?.address ?? '',
+        accessCode: access_code,
+        visitorName: visitor_name,
+        licensePlate: plate,
+        make,
+        model,
+        color,
+        startDatetime: start_datetime,
+        endDatetime: end_datetime,
+      })
+    }
+  } catch {}
+
+  // 8. Check for abuse: same plate used by 2+ units this month
   const abuseMonthStart = `${year_month}-01`;
   const { data: sameplateLogs } = await supabaseAdmin
     .from('visitor_registrations')

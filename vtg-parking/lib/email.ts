@@ -186,6 +186,77 @@ export async function sendVacationDecision({
   })
 }
 
+export async function sendVisitorBookingEmail({
+  hostEmail,
+  hostName,
+  unitAddress,
+  accessCode,
+  visitorName,
+  licensePlate,
+  make,
+  model,
+  color,
+  startDatetime,
+  endDatetime,
+}: {
+  hostEmail: string
+  hostName: string
+  unitAddress: string
+  accessCode: string
+  visitorName?: string | null
+  licensePlate: string
+  make?: string | null
+  model?: string | null
+  color?: string | null
+  startDatetime: string
+  endDatetime: string
+}) {
+  if (!hostEmail) return
+
+  const start = new Date(startDatetime).toLocaleString('en-US', { dateStyle: 'medium', timeStyle: 'short' })
+  const end = new Date(endDatetime).toLocaleString('en-US', { dateStyle: 'medium', timeStyle: 'short' })
+  const vehicleDesc = [color, make, model].filter(Boolean).join(' ') || 'Unknown vehicle'
+
+  const html = `
+    <div style="font-family:sans-serif;max-width:600px;margin:0 auto;">
+      <div style="background:#059669;color:white;padding:24px;border-radius:8px 8px 0 0;">
+        <h1 style="margin:0;font-size:18px;">Vantage Community Parking</h1>
+        <p style="margin:6px 0 0;opacity:0.9;font-size:14px;">Visitor Parking Registration Confirmation</p>
+      </div>
+      <div style="background:white;padding:24px;border:1px solid #e5e7eb;border-top:none;border-radius:0 0 8px 8px;">
+        <p>Dear <strong>${hostName}</strong>,</p>
+        <p>A visitor parking registration has been submitted for your unit at <strong>${unitAddress}</strong>.</p>
+
+        <div style="background:#eff6ff;border:2px solid #3b82f6;border-radius:8px;padding:20px;margin:20px 0;text-align:center;">
+          <p style="margin:0 0 8px;font-size:13px;color:#1e40af;font-weight:bold;text-transform:uppercase;letter-spacing:0.05em;">Parking Access Code</p>
+          <p style="margin:0;font-size:40px;font-family:monospace;font-weight:bold;color:#1e3a8a;letter-spacing:0.25em;">${accessCode}</p>
+          <p style="margin:12px 0 0;font-size:12px;color:#3b82f6;">Place this code visibly on the guest vehicle's dashboard.</p>
+        </div>
+
+        <table style="border-collapse:collapse;width:100%;margin:16px 0;">
+          ${visitorName ? `<tr><td style="padding:8px;background:#f9fafb;font-weight:bold;font-size:13px;width:140px;">Guest Name</td><td style="padding:8px;">${visitorName}</td></tr>` : ''}
+          <tr><td style="padding:8px;background:#f9fafb;font-weight:bold;font-size:13px;">Vehicle</td><td style="padding:8px;">${vehicleDesc} — <span style="font-family:monospace;font-weight:bold;">${licensePlate}</span></td></tr>
+          <tr><td style="padding:8px;background:#f9fafb;font-weight:bold;font-size:13px;">Check-in</td><td style="padding:8px;">${start}</td></tr>
+          <tr><td style="padding:8px;background:#f9fafb;font-weight:bold;font-size:13px;">Check-out</td><td style="padding:8px;">${end}</td></tr>
+        </table>
+
+        <p style="font-size:13px;color:#6b7280;">If you did not submit this registration, please contact the management office.</p>
+        <hr style="border:none;border-top:1px solid #e5e7eb;margin:20px 0;">
+        <p style="font-size:11px;color:#9ca3af;margin:0;">Vantage Community Parking Management System</p>
+      </div>
+    </div>
+  `
+
+  try {
+    await resend.emails.send({
+      from: EMAIL_FROM,
+      to: hostEmail,
+      subject: `[Visitor Parking] Access Code ${accessCode} — ${unitAddress}`,
+      html,
+    })
+  } catch {}
+}
+
 export async function sendRegistrationReminder({
   ownerName,
   ownerEmail,

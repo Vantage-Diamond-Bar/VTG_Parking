@@ -526,13 +526,15 @@ function ManageView({ t, unitId, confirmedEmail, unitData, units, toast, showToa
   units: Unit[]; toast: string; showToast: (m: string) => void; onReload: () => void
   inputCls: string; labelCls: string; sectionCls: string
 }) {
+  const tAdmin = useTranslations('admin')
   const unitAddress = unitData.unit_address
   const vehicles = unitData.vehicles
   const firstVehicle = vehicles[0]
 
   // Owner edit state
   const [editingOwner, setEditingOwner] = useState(false)
-  const [ownerName, setOwnerName] = useState(firstVehicle?.owner_name ?? '')
+  const [ownerFirstName, setOwnerFirstName] = useState('')
+  const [ownerLastName, setOwnerLastName] = useState('')
   const [ownerPhone, setOwnerPhone] = useState(firstVehicle?.owner_phone ?? '')
   const [ownerEmail, setOwnerEmail] = useState(firstVehicle?.owner_email ?? '')
   const [ownerType, setOwnerType] = useState(firstVehicle?.registrant_type ?? 'owner')
@@ -574,10 +576,11 @@ function ManageView({ t, unitId, confirmedEmail, unitData, units, toast, showToa
   async function saveOwner() {
     setOwnerSaving(true)
     try {
+      const fullName = `${ownerFirstName} ${ownerLastName}`.trim()
       const res = await fetch('/api/residents/manage', {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ action: 'update_owner', unit_id: unitId, email: confirmedEmail, owner_name: ownerName, owner_phone: ownerPhone, new_email: ownerEmail, registrant_type: ownerType }),
+        body: JSON.stringify({ action: 'update_owner', unit_id: unitId, email: confirmedEmail, owner_name: fullName, owner_phone: ownerPhone, new_email: ownerEmail, registrant_type: ownerType }),
       })
       if (res.ok) { setEditingOwner(false); showToast(t('owner_updated')); await onReload() }
     } finally { setOwnerSaving(false) }
@@ -678,8 +681,9 @@ function ManageView({ t, unitId, confirmedEmail, unitData, units, toast, showToa
         <Link href="/" className="text-sm text-blue-600 hover:underline mb-6 inline-block">← Back</Link>
 
         <div className="mb-6">
-          <h1 className="text-2xl font-bold text-gray-900">{t('manage_title')}</h1>
-          <p className="text-gray-500 text-sm mt-1">{unitAddress}</p>
+          <h1 className="text-2xl font-bold text-gray-900">{t('title_manage')}</h1>
+          <p className="text-gray-500 text-sm mt-0.5">{t('subtitle_manage')}</p>
+          <p className="text-gray-400 text-xs mt-1">{unitAddress}</p>
         </div>
 
         {/* ── Contact Info ──────────────────────────────────── */}
@@ -687,7 +691,15 @@ function ManageView({ t, unitId, confirmedEmail, unitData, units, toast, showToa
           <div className="flex items-center justify-between mb-4">
             <h2 className={sectionCls.replace('mb-4', 'mb-0')}>{t('section_owner')}</h2>
             {!editingOwner && (
-              <button onClick={() => { setEditingOwner(true); setOwnerName(firstVehicle?.owner_name ?? ''); setOwnerPhone(firstVehicle?.owner_phone ?? ''); setOwnerEmail(firstVehicle?.owner_email ?? ''); setOwnerType(firstVehicle?.registrant_type ?? 'owner') }}
+              <button onClick={() => {
+                const parts = (firstVehicle?.owner_name ?? '').split(' ')
+                setOwnerFirstName(parts[0] ?? '')
+                setOwnerLastName(parts.slice(1).join(' '))
+                setOwnerPhone(firstVehicle?.owner_phone ?? '')
+                setOwnerEmail(firstVehicle?.owner_email ?? '')
+                setOwnerType(firstVehicle?.registrant_type ?? 'owner')
+                setEditingOwner(true)
+              }}
                 className="text-sm text-blue-600 hover:underline">{t('edit')}</button>
             )}
           </div>
@@ -700,9 +712,15 @@ function ManageView({ t, unitId, confirmedEmail, unitData, units, toast, showToa
             </div>
           ) : (
             <div className="space-y-3">
-              <div>
-                <label className={labelCls}>{t('owner_name')}</label>
-                <input type="text" value={ownerName} onChange={e => setOwnerName(e.target.value)} className={inputCls} />
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className={labelCls}>{t('first_name')}</label>
+                  <input type="text" value={ownerFirstName} onChange={e => setOwnerFirstName(e.target.value)} className={inputCls} />
+                </div>
+                <div>
+                  <label className={labelCls}>{t('last_name')}</label>
+                  <input type="text" value={ownerLastName} onChange={e => setOwnerLastName(e.target.value)} className={inputCls} />
+                </div>
               </div>
               <div>
                 <label className={labelCls}>{t('registrant_type')}</label>
@@ -772,10 +790,24 @@ function ManageView({ t, unitId, confirmedEmail, unitData, units, toast, showToa
                         </select>
                       </div>
                     </div>
-                    <label className="flex items-center gap-2 text-sm cursor-pointer">
-                      <input type="checkbox" checked={vehicleEdits.is_oversized ?? false} onChange={e => setVehicleEdits(p => ({ ...p, is_oversized: e.target.checked }))} className="h-4 w-4 rounded border-gray-300" />
-                      {t('is_oversized_label')}
-                    </label>
+                    <div className="space-y-2">
+                      <label className="flex items-start gap-3 cursor-pointer">
+                        <input type="checkbox" checked={vehicleEdits.is_oversized ?? false} onChange={e => setVehicleEdits(p => ({ ...p, is_oversized: e.target.checked }))}
+                          className="mt-0.5 h-4 w-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500 flex-shrink-0" />
+                        <span className="text-sm font-medium text-gray-700">{t('is_oversized_label')}</span>
+                      </label>
+                      {vehicleEdits.is_oversized && (
+                        <div className="ml-7 bg-amber-50 border border-amber-300 rounded-lg px-4 py-3 text-sm text-amber-900 space-y-2">
+                          <p className="font-semibold">{t('oversized_notice_title')}</p>
+                          <ul className="list-disc list-inside space-y-1 text-sm">
+                            <li>{t('oversized_notice_item1')}</li>
+                            <li>{t('oversized_notice_item2')}</li>
+                            <li>{t('oversized_notice_item3')}</li>
+                          </ul>
+                          <p className="text-xs text-amber-700 pt-1">{t('oversized_notice_footer')}</p>
+                        </div>
+                      )}
+                    </div>
                     <div className="flex gap-3">
                       <button onClick={() => saveVehicle(v.id)} disabled={vehicleSaving}
                         className="bg-blue-600 text-white text-sm px-4 py-2 rounded-lg hover:bg-blue-700 disabled:opacity-50">{vehicleSaving ? '...' : t('save')}</button>
@@ -907,7 +939,7 @@ function ManageView({ t, unitId, confirmedEmail, unitData, units, toast, showToa
                         </span>
                       </td>
                       <td className="py-2 text-gray-500 text-xs">
-                        {vio.resolution_type ? vio.resolution_type.replace(/_/g, ' ') : '—'}
+                        {vio.resolution_type ? tAdmin(`vio_res_${vio.resolution_type}`) : '—'}
                       </td>
                     </tr>
                   ))}
@@ -915,6 +947,11 @@ function ManageView({ t, unitId, confirmedEmail, unitData, units, toast, showToa
               </table>
             </div>
           )}
+        </div>
+
+        {/* ── Consent notice ─────────────────────────────── */}
+        <div className="bg-blue-50 border border-blue-100 rounded-xl px-5 py-4 mb-5">
+          <p className="text-xs text-gray-500 leading-relaxed">{t('contact_consent')}</p>
         </div>
       </div>
 

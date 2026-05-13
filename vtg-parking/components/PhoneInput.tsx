@@ -1,7 +1,6 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-import { formatPhone } from '@/lib/utils'
 
 export const COUNTRY_CODES = [
   { code: '+1', country: 'US', label: '+1 (US)' },
@@ -34,10 +33,6 @@ export function dialCode(code: string) {
   return code.startsWith('+1') ? '+1' : code
 }
 
-function isUS(code: string) {
-  return code === '+1' || code === '+1-CA'
-}
-
 interface PhoneInputProps {
   value: string
   onChange: (value: string) => void
@@ -46,9 +41,7 @@ interface PhoneInputProps {
   required?: boolean
 }
 
-/**
- * Stores value as "{dialCode} {localNumber}", e.g. "+1 (626)555-1234" or "+86 13912345678"
- */
+/** Stores value as "{dialCode} {digits}", e.g. "+1 6265551234" or "+86 13912345678" */
 export default function PhoneInput({ value, onChange, className, required }: PhoneInputProps) {
   const [countryCode, setCountryCode] = useState('+1')
   const [localNumber, setLocalNumber] = useState('')
@@ -68,17 +61,15 @@ export default function PhoneInput({ value, onChange, className, required }: Pho
 
   function handleCountryChange(code: string) {
     setCountryCode(code)
-    // Re-format local number if switching between US and non-US
-    const num = localNumber.replace(/\D/g, '')
-    const formatted = isUS(code) ? formatPhone(num) : num
-    setLocalNumber(formatted)
-    onChange(`${dialCode(code)} ${formatted}`)
+    const cleaned = localNumber.replace(/\D/g, '')
+    setLocalNumber(cleaned)
+    onChange(`${dialCode(code)} ${cleaned}`)
   }
 
   function handleLocalChange(raw: string) {
-    const formatted = isUS(countryCode) ? formatPhone(raw) : raw.replace(/[^\d\s\-+().]/g, '')
-    setLocalNumber(formatted)
-    onChange(`${dialCode(countryCode)} ${formatted}`)
+    const cleaned = raw.replace(/\D/g, '')
+    setLocalNumber(cleaned)
+    onChange(`${dialCode(countryCode)} ${cleaned}`)
   }
 
   const inputCls = className ?? 'w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500'
@@ -98,7 +89,7 @@ export default function PhoneInput({ value, onChange, className, required }: Pho
         type="tel"
         value={localNumber}
         onChange={(e) => handleLocalChange(e.target.value)}
-        placeholder={isUS(countryCode) ? '(626)555-1234' : 'Phone number'}
+        placeholder="Phone number"
         className={inputCls}
         required={required}
       />

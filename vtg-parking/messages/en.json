@@ -8,11 +8,11 @@
     "patrol": "Patrol Portal"
   },
   "home": {
-    "title": "VTG Community Parking",
+    "title": "Vantage Community Parking",
     "subtitle": "Parking Management System",
     "description": "Select a service below to get started.",
-    "card_register_title": "Resident Vehicle Registration",
-    "card_register_desc": "Register your vehicle(s) with the community.",
+    "card_register_title": "Resident Vehicle Registration & Management",
+    "card_register_desc": "Register new vehicles or manage your existing registration.",
     "card_visitor_title": "Visitor Parking",
     "card_visitor_desc": "Register a guest vehicle for your unit.",
     "card_report_title": "Report a Violation",
@@ -20,7 +20,7 @@
     "staff_portal": "Staff Portals",
     "admin_portal": "Admin Portal",
     "patrol_portal": "Patrol Portal",
-    "vacation_portal": "Vacation Extended Parking Request"
+    "vacation_portal": "Resident Vacation Parking"
   },
   "register": {
     "title": "Resident Vehicle Registration",
@@ -80,7 +80,7 @@
     "manage_title": "Your Registration Summary",
     "section_owner": "Contact Information",
     "section_vehicles": "Registered Vehicles",
-    "section_violations": "Violation History (2 Years)",
+    "section_violations": "Violation History (Last 24 Months)",
     "section_quota": "Remaining Monthly Visitor Nights",
     "nights_used": "nights used",
     "nights_remaining": "nights remaining",
@@ -356,7 +356,7 @@
     "violations": "Violation Reports",
     "units": "Unit Management",
     "emails": "Notification Emails",
-    "alerts": "Abuse Alerts",
+    "alerts": "Visitor Parking Abuse Alerts",
     "vacation": "Vacation Parking",
     "username": "Username",
     "password": "Password",

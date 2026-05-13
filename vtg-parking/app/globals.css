@@ -24,3 +24,10 @@ body {
   color: var(--foreground);
   font-family: Arial, Helvetica, sans-serif;
 }
+
+/* Prevent iOS system dark mode from making input text invisible */
+input, textarea, select {
+  color-scheme: light;
+  background-color: white;
+  color: #111827;
+}

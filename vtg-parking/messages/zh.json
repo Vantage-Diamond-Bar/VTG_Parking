@@ -11,8 +11,8 @@
     "title": "VTG 社区停车管理",
     "subtitle": "停车管理系统",
     "description": "请选择以下服务开始操作。",
-    "card_register_title": "住户车辆登记",
-    "card_register_desc": "为您的车辆在社区停车系统中登记注册。",
+    "card_register_title": "住户车辆注册管理",
+    "card_register_desc": "登记新车辆，或管理您已有的注册信息。",
     "card_visitor_title": "访客停车登记",
     "card_visitor_desc": "为来访客人的车辆登记停车许可。",
     "card_report_title": "违章停车举报",
@@ -20,7 +20,7 @@
     "staff_portal": "工作人员入口",
     "admin_portal": "管理员后台",
     "patrol_portal": "巡逻员系统",
-    "vacation_portal": "度假延长停车申请"
+    "vacation_portal": "住户度假停车"
   },
   "register": {
     "title": "住户车辆登记",
@@ -80,7 +80,7 @@
     "manage_title": "您的注册信息总览",
     "section_owner": "联系信息",
     "section_vehicles": "已登记车辆",
-    "section_violations": "违规历史（近两年）",
+    "section_violations": "违规历史（最近的24个月）",
     "section_quota": "访客停车剩余夜数",
     "nights_used": "晚已使用",
     "nights_remaining": "晚剩余",
@@ -356,7 +356,7 @@
     "violations": "违章举报",
     "units": "门牌号管理",
     "emails": "通知邮箱",
-    "alerts": "滥用警示",
+    "alerts": "疑似滥用访客停车提醒",
     "vacation": "度假停车",
     "username": "用户名",
     "password": "密码",

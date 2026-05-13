@@ -11,7 +11,7 @@ function HomeCard({
   href: string; icon: string; title: string; desc: string; color: string
 }) {
   return (
-    <Link href={href} className={`block rounded-2xl p-8 shadow-md hover:shadow-xl transition-all hover:-translate-y-1 ${color} text-white`}>
+    <Link href={href} className={`flex flex-col h-full rounded-2xl p-8 shadow-md hover:shadow-xl transition-all hover:-translate-y-1 ${color} text-white`}>
       <div className="text-5xl mb-4">{icon}</div>
       <h2 className="text-2xl font-bold mb-2">{title}</h2>
       <p className="opacity-90 text-sm leading-relaxed">{desc}</p>
@@ -71,22 +71,23 @@ export default function HomePage() {
           <p className={`mt-2 ${subtext}`}>{t('description')}</p>
         </div>
 
-        {/* Main 3 cards — Report · Visitor · Register */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-6">
-          <HomeCard href="/report"    icon="📸" title={t('card_report_title')}   desc={t('card_report_desc')}   color="bg-orange-500" />
-          <HomeCard href="/visitor"   icon="🎫" title={t('card_visitor_title')}  desc={t('card_visitor_desc')}  color="bg-emerald-600" />
-          <HomeCard href="/register"  icon="🚗" title={t('card_register_title')} desc={t('card_register_desc')} color="bg-blue-600" />
-        </div>
-
-        {/* Vacation tile — smaller, right-aligned */}
-        <div className="flex justify-end mb-10">
-          <Link
-            href="/vacation"
-            className="inline-flex items-center gap-2 px-5 py-3 rounded-xl bg-teal-500 hover:bg-teal-600 text-white text-sm font-semibold shadow-md hover:shadow-lg hover:-translate-y-0.5 transition-all"
-          >
-            <span className="text-lg">🏖️</span>
-            {t('vacation_portal')}
-          </Link>
+        {/* Main 3-col layout: Report | Visitor | Register+Vacation stacked */}
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-10 items-stretch">
+          <HomeCard href="/report"   icon="📸" title={t('card_report_title')}   desc={t('card_report_desc')}   color="bg-orange-500" />
+          <HomeCard href="/visitor"  icon="🎫" title={t('card_visitor_title')}  desc={t('card_visitor_desc')}  color="bg-emerald-600" />
+          <div className="flex flex-col gap-6">
+            <HomeCard href="/register" icon="🚗" title={t('card_register_title')} desc={t('card_register_desc')} color="bg-blue-600" />
+            <Link
+              href="/vacation"
+              className="flex items-center gap-3 rounded-2xl px-6 py-5 shadow-md hover:shadow-xl transition-all hover:-translate-y-1 bg-teal-500 text-white"
+            >
+              <span className="text-3xl">🏖️</span>
+              <div>
+                <div className="font-bold text-base">{t('vacation_portal')}</div>
+                <div className="text-xs opacity-80 mt-0.5">Extended stay request for residents</div>
+              </div>
+            </Link>
+          </div>
         </div>
 
         {/* Staff portal */}
@@ -110,7 +111,7 @@ export default function HomePage() {
       </main>
 
       <footer className={`text-center py-6 text-xs border-t ${footerText}`}>
-        VTG Community Parking Management System
+        Vantage Community Parking Management System
       </footer>
     </div>
   )
