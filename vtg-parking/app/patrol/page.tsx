@@ -273,12 +273,26 @@ export default function PatrolPage() {
           <span className="text-2xl">🅿️</span>
           <span className="text-lg font-bold text-gray-900">VTG Parking — {t('patrol_lookup')}</span>
         </div>
-        <button
-          onClick={handleLogout}
-          className="text-sm text-gray-500 hover:text-gray-800 border border-gray-300 px-3 py-1.5 rounded-lg hover:bg-gray-50 transition-colors"
-        >
-          {t('logout')}
-        </button>
+        <div className="flex items-center gap-2">
+          <a
+            href="/"
+            className="text-sm text-gray-500 hover:text-gray-800 border border-gray-300 px-3 py-1.5 rounded-lg hover:bg-gray-50 transition-colors"
+          >
+            🏠 Home
+          </a>
+          <a
+            href="/admin/dashboard"
+            className="text-sm text-gray-500 hover:text-gray-800 border border-gray-300 px-3 py-1.5 rounded-lg hover:bg-gray-50 transition-colors"
+          >
+            🔐 Admin
+          </a>
+          <button
+            onClick={handleLogout}
+            className="text-sm text-gray-500 hover:text-gray-800 border border-gray-300 px-3 py-1.5 rounded-lg hover:bg-gray-50 transition-colors"
+          >
+            {t('logout')}
+          </button>
+        </div>
       </header>
 
       <main className="max-w-xl mx-auto px-4 py-10">

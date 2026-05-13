@@ -4,8 +4,8 @@ import { useTransition } from 'react'
 
 const LANGUAGES = [
   { code: 'en', label: 'EN', full: 'English' },
-  { code: 'zh', label: '中', full: '中文' },
-  { code: 'ko', label: '한', full: '한국어' },
+  { code: 'zh', label: '中文', full: '中文' },
+  { code: 'ko', label: '한국어', full: '한국어' },
 ]
 
 export default function LanguageSwitcher({ current }: { current: string }) {
@@ -23,16 +23,16 @@ export default function LanguageSwitcher({ current }: { current: string }) {
   }
 
   return (
-    <div className="flex items-center gap-1">
+    <div className="flex items-center gap-1 bg-gray-100 rounded-full p-1">
       {LANGUAGES.map((lang) => (
         <button
           key={lang.code}
           onClick={() => switchLocale(lang.code)}
           title={lang.full}
-          className={`px-2 py-1 rounded text-sm font-medium transition-colors ${
+          className={`px-3 py-1 rounded-full text-sm font-semibold transition-all ${
             current === lang.code
-              ? 'bg-blue-600 text-white'
-              : 'text-gray-600 hover:bg-gray-100'
+              ? 'bg-blue-600 text-white shadow-sm'
+              : 'text-gray-500 hover:text-gray-800 hover:bg-gray-200'
           }`}
         >
           {lang.label}

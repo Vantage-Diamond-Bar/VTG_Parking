@@ -73,6 +73,8 @@ export default function RegisterPage() {
   const [emailHints, setEmailHints] = useState<string[]>([])
   const [phoneHints, setPhoneHints] = useState<string[]>([])
   const [verifyEmail, setVerifyEmail] = useState('')
+  const [verifyPhone, setVerifyPhone] = useState('')
+  const [verifyMode, setVerifyMode] = useState<'email' | 'phone'>('email')
   const [verifyError, setVerifyError] = useState('')
   const [verifying, setVerifying] = useState(false)
 
@@ -107,7 +109,9 @@ export default function RegisterPage() {
     setUnitId(id)
     setPageState('idle')
     setVerifyEmail('')
+    setVerifyPhone('')
     setVerifyError('')
+    setVerifyMode('email')
     setUnitData(null)
     if (!id) return
     setPageState('checking')
@@ -129,21 +133,33 @@ export default function RegisterPage() {
   // ── Verify existing owner ──────────────────────────────────────────────
 
   async function handleVerify() {
-    if (!verifyEmail.trim()) return
+    const emailVal = verifyEmail.trim()
+    const phoneVal = verifyPhone.trim()
+    if (verifyMode === 'email' && !emailVal) return
+    if (verifyMode === 'phone' && !phoneVal) return
     setVerifying(true)
     setVerifyError('')
     try {
-      const res = await fetch(`/api/residents/unit-data?unit_id=${unitId}&email=${encodeURIComponent(verifyEmail.trim())}`)
+      const params = new URLSearchParams({ unit_id: unitId })
+      if (verifyMode === 'email') params.set('email', emailVal)
+      else params.set('phone', phoneVal)
+      const res = await fetch(`/api/residents/unit-data?${params}`)
       const json = await res.json()
       if (!res.ok) {
-        setVerifyError(t('email_mismatch'))
+        if (json?.error === 'no_vehicles') {
+          setVerifyError('No registrations found for this unit. Please register your vehicle.')
+        } else if (res.status >= 500) {
+          setVerifyError('Server error. Please try again.')
+        } else {
+          setVerifyError(t('email_mismatch'))
+        }
         return
       }
       setUnitData(json)
-      setConfirmedEmail(verifyEmail.trim())
+      setConfirmedEmail(verifyMode === 'email' ? emailVal : phoneVal)
       setPageState('manage')
     } catch {
-      setVerifyError(t('email_mismatch'))
+      setVerifyError('Network error. Please try again.')
     } finally {
       setVerifying(false)
     }
@@ -311,22 +327,58 @@ export default function RegisterPage() {
                   {t('phone_hint_prefix')} <span className="font-mono">{phoneHints.join(', ')}</span>
                 </p>
               )}
-              <div>
-                <label className={labelCls}>{t('your_email')}</label>
-                <input
-                  type="email"
-                  value={verifyEmail}
-                  onChange={e => { setVerifyEmail(e.target.value); setVerifyError('') }}
-                  onKeyDown={e => e.key === 'Enter' && handleVerify()}
-                  className={inputCls}
-                  placeholder="your@email.com"
-                  autoFocus
-                />
-                {verifyError && <p className="text-red-500 text-xs mt-1">{verifyError}</p>}
+
+              {/* Mode toggle */}
+              <div className="flex gap-1 bg-blue-100 rounded-lg p-1 text-xs">
+                <button
+                  type="button"
+                  onClick={() => { setVerifyMode('email'); setVerifyError('') }}
+                  className={`flex-1 py-1.5 rounded-md font-medium transition-colors ${verifyMode === 'email' ? 'bg-white text-blue-900 shadow-sm' : 'text-blue-600 hover:text-blue-800'}`}
+                >
+                  Verify by Email
+                </button>
+                <button
+                  type="button"
+                  onClick={() => { setVerifyMode('phone'); setVerifyError('') }}
+                  className={`flex-1 py-1.5 rounded-md font-medium transition-colors ${verifyMode === 'phone' ? 'bg-white text-blue-900 shadow-sm' : 'text-blue-600 hover:text-blue-800'}`}
+                >
+                  Verify by Phone
+                </button>
               </div>
+
+              {verifyMode === 'email' ? (
+                <div>
+                  <label className={labelCls}>{t('your_email')}</label>
+                  <input
+                    type="email"
+                    value={verifyEmail}
+                    onChange={e => { setVerifyEmail(e.target.value); setVerifyError('') }}
+                    onKeyDown={e => e.key === 'Enter' && handleVerify()}
+                    className={inputCls}
+                    placeholder="your@email.com"
+                    autoFocus
+                  />
+                </div>
+              ) : (
+                <div>
+                  <label className={labelCls}>Your Phone Number</label>
+                  <input
+                    type="tel"
+                    value={verifyPhone}
+                    onChange={e => { setVerifyPhone(e.target.value); setVerifyError('') }}
+                    onKeyDown={e => e.key === 'Enter' && handleVerify()}
+                    className={inputCls}
+                    placeholder="+1 555 123 4567"
+                    autoFocus
+                  />
+                </div>
+              )}
+
+              {verifyError && <p className="text-red-500 text-xs">{verifyError}</p>}
+
               <button
                 onClick={handleVerify}
-                disabled={verifying || !verifyEmail.trim()}
+                disabled={verifying || (verifyMode === 'email' ? !verifyEmail.trim() : !verifyPhone.trim())}
                 className="w-full bg-blue-600 text-white py-2.5 rounded-lg font-semibold hover:bg-blue-700 disabled:opacity-50 transition-colors"
               >
                 {verifying ? t('verifying') : t('verify')}

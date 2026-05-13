@@ -1,3 +1,5 @@
+export const dynamic = 'force-dynamic';
+
 import { NextRequest, NextResponse } from 'next/server';
 import { supabaseAdmin } from '@/lib/supabase';
 import { getYearMonth, monthBounds, countNights, VISITOR_QUOTA_LIMIT } from '@/lib/utils';
@@ -6,9 +8,10 @@ export async function GET(req: NextRequest) {
   const { searchParams } = new URL(req.url);
   const unit_id = searchParams.get('unit_id');
   const email = searchParams.get('email');
+  const phone = searchParams.get('phone');
 
-  if (!unit_id || !email) {
-    return NextResponse.json({ error: 'unit_id and email are required' }, { status: 400 });
+  if (!unit_id || (!email && !phone)) {
+    return NextResponse.json({ error: 'unit_id and email (or phone) are required' }, { status: 400 });
   }
 
   // Step 1: Fetch all resident_vehicles for unit_id
@@ -21,13 +24,35 @@ export async function GET(req: NextRequest) {
     return NextResponse.json({ error: 'Failed to fetch vehicles' }, { status: 500 });
   }
 
-  // Step 2: Verify email matches at least one vehicle's owner_email (case-insensitive)
-  const normalizedEmail = email.trim().toLowerCase();
-  const emailMatches = (vehicles ?? []).some(
-    (v) => v.owner_email?.trim().toLowerCase() === normalizedEmail
-  );
+  if (!vehicles || vehicles.length === 0) {
+    return NextResponse.json({ error: 'no_vehicles' }, { status: 404 });
+  }
 
-  if (!emailMatches) {
+  // Step 2: Verify identity — email OR phone
+  let verified = false;
+
+  if (email) {
+    const normalizedEmail = email.trim().toLowerCase();
+    verified = vehicles.some(
+      (v) => v.owner_email?.trim().toLowerCase() === normalizedEmail
+    );
+  }
+
+  if (!verified && phone) {
+    const normalizedPhone = phone.trim().replace(/\D/g, '');
+    if (normalizedPhone.length >= 7) {
+      verified = vehicles.some((v) => {
+        const stored = (v.owner_phone ?? '').replace(/\D/g, '');
+        return stored.length >= 7 && (
+          stored === normalizedPhone ||
+          stored.endsWith(normalizedPhone) ||
+          normalizedPhone.endsWith(stored)
+        );
+      });
+    }
+  }
+
+  if (!verified) {
     return NextResponse.json({ error: 'email_mismatch' }, { status: 403 });
   }
 

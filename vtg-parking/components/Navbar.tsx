@@ -1,10 +1,8 @@
-import { getTranslations } from 'next-intl/server'
 import { cookies } from 'next/headers'
 import Link from 'next/link'
 import LanguageSwitcher from './LanguageSwitcher'
 
 export default async function Navbar() {
-  const t = await getTranslations('nav')
   const cookieStore = await cookies()
   const locale = cookieStore.get('locale')?.value ?? 'en'
 
@@ -16,15 +14,7 @@ export default async function Navbar() {
             <span className="text-2xl">🅿️</span>
             <span className="font-bold text-gray-900 text-lg hidden sm:block">VTG Parking</span>
           </Link>
-          <div className="flex items-center gap-4">
-            <div className="hidden md:flex items-center gap-4 text-sm">
-              <Link href="/" className="text-gray-600 hover:text-blue-600 transition-colors">{t('home')}</Link>
-              <Link href="/register" className="text-gray-600 hover:text-blue-600 transition-colors">{t('register')}</Link>
-              <Link href="/visitor" className="text-gray-600 hover:text-blue-600 transition-colors">{t('visitor')}</Link>
-              <Link href="/report" className="text-gray-600 hover:text-blue-600 transition-colors">{t('report')}</Link>
-            </div>
-            <LanguageSwitcher current={locale} />
-          </div>
+          <LanguageSwitcher current={locale} />
         </div>
       </div>
     </nav>
