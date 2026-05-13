@@ -4,6 +4,14 @@ import { useState, useEffect, useCallback, useMemo } from 'react';
 import { useTranslations } from 'next-intl';
 import { VIOLATION_TYPES, VIOLATION_LOCATIONS } from '@/lib/utils';
 
+// Safe translation for vio_res_* keys — falls back to humanized key for unknown historical values
+function safeVioRes(t: ReturnType<typeof useTranslations>, key: string): string {
+  const result = t(`vio_res_${key}` as Parameters<typeof t>[0])
+  // next-intl returns "namespace.key" when the key is missing
+  if (String(result).includes('.vio_res_')) return key.replace(/_/g, ' ')
+  return String(result)
+}
+
 interface HistoryItem {
   id: string;
   submitted_at: string;
@@ -284,7 +292,7 @@ export default function AdminViolationsPage() {
                             </div>
                             <span className="text-gray-700 leading-snug" style={{ maxWidth: 200 }}>{h.violation_type}</span>
                             {h.resolution_type && (
-                              <span className="text-gray-400 italic leading-snug">{t(`vio_res_${h.resolution_type}`)}</span>
+                              <span className="text-gray-400 italic leading-snug">{safeVioRes(t, h.resolution_type)}</span>
                             )}
                           </div>
                         ))}
@@ -384,7 +392,7 @@ export default function AdminViolationsPage() {
                         <div className="flex-1 min-w-0">
                           <div className="text-gray-700 leading-snug">{h.violation_type}</div>
                           {h.resolution_type && (
-                            <div className="text-green-700 mt-0.5 italic">{t(`vio_res_${h.resolution_type}`)}</div>
+                            <div className="text-green-700 mt-0.5 italic">{safeVioRes(t, h.resolution_type)}</div>
                           )}
                           {(h.final_license_plate || h.license_plate) && (
                             <div className="text-gray-400 font-mono mt-0.5">{h.final_license_plate ?? h.license_plate}</div>

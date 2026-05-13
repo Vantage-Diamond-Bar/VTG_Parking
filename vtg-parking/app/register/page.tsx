@@ -939,7 +939,7 @@ function ManageView({ t, unitId, confirmedEmail, unitData, units, toast, showToa
                         </span>
                       </td>
                       <td className="py-2 text-gray-500 text-xs">
-                        {vio.resolution_type ? tAdmin(`vio_res_${vio.resolution_type}`) : '—'}
+                        {vio.resolution_type ? (() => { const r = tAdmin(`vio_res_${vio.resolution_type}` as any); return String(r).includes('.vio_res_') ? vio.resolution_type.replace(/_/g, ' ') : String(r) })() : '—'}
                       </td>
                     </tr>
                   ))}
