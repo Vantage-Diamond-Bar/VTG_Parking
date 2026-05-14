@@ -6,11 +6,13 @@ import { useTranslations } from 'next-intl';
 interface Alert {
   id: string;
   license_plate: string;
+  plate_state: string;
   month: string;
   units_involved: string[];
   count: number;
   created_at: string;
   resolved: boolean;
+  resolved_at?: string;
 }
 
 type Tab = 'unresolved' | 'all';
@@ -104,7 +106,10 @@ export default function AdminAlertsPage() {
               ) : (
                 alerts.map((alert) => (
                   <tr key={alert.id} className="hover:bg-gray-50">
-                    <td className="px-6 py-4 font-mono font-bold">{alert.license_plate}</td>
+                    <td className="px-6 py-4 font-mono font-bold">
+                      {alert.license_plate}
+                      {alert.plate_state && <span className="ml-1 text-xs text-gray-400 font-normal">({alert.plate_state})</span>}
+                    </td>
                     <td className="px-6 py-4">{alert.month}</td>
                     <td className="px-6 py-4 text-gray-600">
                       {alert.units_involved?.join(', ')}

@@ -26,13 +26,27 @@ export async function GET(req: NextRequest) {
     return NextResponse.json({ error: error.message }, { status: 500 });
   }
 
+  // Resolve unit UUIDs → readable addresses
+  const allUnitIds = [...new Set((data ?? []).flatMap((row: any) => row.unit_ids ?? []))];
+  let unitMap: Record<string, string> = {};
+  if (allUnitIds.length > 0) {
+    const { data: units } = await supabaseAdmin
+      .from('units')
+      .select('id, address')
+      .in('id', allUnitIds);
+    unitMap = Object.fromEntries((units ?? []).map((u: any) => [u.id, u.address]));
+  }
+
   const mapped = (data ?? []).map((row: any) => ({
     id: row.id,
     license_plate: row.license_plate,
+    plate_state: row.plate_state,
     month: row.year_month,
-    units_involved: row.unit_ids ?? [],
+    units_involved: (row.unit_ids ?? []).map((uid: string) => unitMap[uid] ?? uid),
     count: (row.unit_ids ?? []).length,
     resolved: row.is_resolved,
+    resolved_at: row.resolved_at,
+    resolved_note: row.resolved_note,
     created_at: row.created_at,
   }));
 

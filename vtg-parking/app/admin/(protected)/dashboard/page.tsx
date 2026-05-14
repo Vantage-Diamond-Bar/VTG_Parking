@@ -1,5 +1,6 @@
 import { getTranslations } from 'next-intl/server';
 import { supabaseAdmin } from '@/lib/supabase';
+import ResolveAlertButton from './ResolveAlertButton';
 
 interface Stats {
   total_residents: number;
@@ -11,6 +12,7 @@ interface Stats {
 interface Alert {
   id: string;
   license_plate: string;
+  plate_state: string;
   month: string;
   units_involved: string[];
   count: number;
@@ -60,11 +62,20 @@ async function getAlerts(): Promise<Alert[]> {
     .select('*')
     .eq('is_resolved', false)
     .order('created_at', { ascending: false });
+
+  const allUnitIds = [...new Set((data ?? []).flatMap((row: any) => row.unit_ids ?? []))];
+  let unitMap: Record<string, string> = {};
+  if (allUnitIds.length > 0) {
+    const { data: units } = await supabaseAdmin.from('units').select('id, address').in('id', allUnitIds);
+    unitMap = Object.fromEntries((units ?? []).map((u: any) => [u.id, u.address]));
+  }
+
   return (data ?? []).map((row: any) => ({
     id: row.id,
     license_plate: row.license_plate,
+    plate_state: row.plate_state,
     month: row.year_month,
-    units_involved: row.unit_ids ?? [],
+    units_involved: (row.unit_ids ?? []).map((uid: string) => unitMap[uid] ?? uid),
     count: (row.unit_ids ?? []).length,
   }));
 }
@@ -223,19 +234,15 @@ export default async function AdminDashboardPage() {
               <tbody className="divide-y divide-gray-100">
                 {alerts.map((alert) => (
                   <tr key={alert.id}>
-                    <td className="px-6 py-4 font-mono font-semibold">{alert.license_plate}</td>
+                    <td className="px-6 py-4 font-mono font-semibold">
+                      {alert.license_plate}
+                      {alert.plate_state && <span className="ml-1 text-xs text-gray-400 font-normal">({alert.plate_state})</span>}
+                    </td>
                     <td className="px-6 py-4">{alert.month}</td>
-                    <td className="px-6 py-4">{alert.units_involved?.join(', ')}</td>
+                    <td className="px-6 py-4 text-xs text-gray-600">{alert.units_involved?.join(', ')}</td>
                     <td className="px-6 py-4">{alert.count}</td>
                     <td className="px-6 py-4">
-                      <form action={`/api/admin/alerts/${alert.id}`} method="PATCH">
-                        <button
-                          type="submit"
-                          className="text-xs bg-green-600 hover:bg-green-700 text-white px-3 py-1.5 rounded-lg transition-colors"
-                        >
-                          {t('mark_resolved')}
-                        </button>
-                      </form>
+                      <ResolveAlertButton alertId={alert.id} label={t('mark_resolved')} />
                     </td>
                   </tr>
                 ))}

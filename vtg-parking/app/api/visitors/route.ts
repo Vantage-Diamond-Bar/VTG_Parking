@@ -141,8 +141,10 @@ export async function POST(req: NextRequest) {
         .upsert(
           {
             license_plate: plate,
+            plate_state: plate_state ?? '',
             year_month,
             unit_ids: Array.from(uniqueUnits),
+            registration_count: sameplateLogs.length,
             is_resolved: false,
           },
           { onConflict: 'license_plate,year_month' }
