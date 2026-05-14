@@ -1,19 +1,21 @@
 'use client';
 
 import { useState } from 'react';
+import { useRouter } from 'next/navigation';
 
 export default function ResolveAlertButton({ alertId, label }: { alertId: string; label: string }) {
   const [resolving, setResolving] = useState(false);
+  const router = useRouter();
 
   async function handleResolve() {
     setResolving(true);
     try {
-      await fetch(`/api/admin/alerts/${alertId}`, {
+      const res = await fetch(`/api/admin/alerts/${alertId}`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ note: '' }),
       });
-      window.location.reload();
+      if (res.ok) router.refresh();
     } finally {
       setResolving(false);
     }

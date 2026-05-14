@@ -46,7 +46,7 @@ export default function AdminAlertsPage() {
     const res = await fetch(`/api/admin/alerts/${id}`, {
       method: 'PATCH',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ resolved: true }),
+      body: JSON.stringify({ note: '' }),
     });
     if (res.ok) fetchAlerts();
   };
