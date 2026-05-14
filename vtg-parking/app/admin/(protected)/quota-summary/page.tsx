@@ -83,45 +83,55 @@ function MonthBar({ month }: { month: MonthEntry }) {
 }
 
 function MonthlyBarChart({ months }: { months: VehicleMonthEntry[] }) {
-  if (months.length === 0) {
-    return <p className="text-xs text-gray-400 italic">No monthly data.</p>
+  // Always show last 12 months regardless of data
+  const slots: string[] = []
+  const now = new Date()
+  for (let i = 11; i >= 0; i--) {
+    const d = new Date(now.getFullYear(), now.getMonth() - i, 1)
+    slots.push(`${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`)
   }
-  const CHART_H = 100 // px
-  const max = Math.max(...months.map((m) => m.nights_used), 1)
+  const monthMap = Object.fromEntries(months.map((m) => [m.year_month, m]))
+
+  const CHART_H = 96
+  const BAR_W = 20
+  const GAP = 6
+
   return (
-    <div>
-      <div className="flex items-end gap-1.5" style={{ height: CHART_H }}>
-        {months.map((m) => {
-          const pct = m.nights_used / max
-          const barH = Math.max(6, Math.round(pct * CHART_H))
-          const barColor = pct >= 0.85 ? '#f87171' : pct >= 0.5 ? '#fbbf24' : '#60a5fa'
+    <div style={{ overflowX: 'auto' }}>
+      <div style={{ display: 'inline-flex', alignItems: 'flex-end', gap: GAP, minWidth: slots.length * (BAR_W + GAP) }}>
+        {slots.map((ym, i) => {
+          const entry = monthMap[ym]
+          const nights = entry?.nights_used ?? 0
+          const max = Math.max(...months.map((m) => m.nights_used), 1)
+          const barH = nights === 0 ? 3 : Math.max(8, Math.round((nights / max) * CHART_H))
+          // Color by absolute nights value, not relative
+          const barColor =
+            nights === 0 ? '#e5e7eb' :
+            nights >= 10 ? '#f87171' :
+            nights >= 5  ? '#fbbf24' :
+                           '#60a5fa'
+          const showYear = i === 0 || ym.slice(0, 4) !== slots[i - 1].slice(0, 4)
           return (
             <div
-              key={m.year_month}
-              className="flex-1 flex flex-col items-center justify-end min-w-0"
-              style={{ height: CHART_H }}
+              key={ym}
+              style={{
+                width: BAR_W,
+                flexShrink: 0,
+                display: 'flex',
+                flexDirection: 'column',
+                alignItems: 'center',
+                justifyContent: 'flex-end',
+                height: CHART_H + 28,
+              }}
             >
-              <span style={{ fontSize: 9, color: '#6b7280', marginBottom: 2, lineHeight: 1 }}>
-                {m.nights_used}
+              <span style={{ fontSize: 9, color: nights > 0 ? '#6b7280' : 'transparent', marginBottom: 2, lineHeight: 1 }}>
+                {nights > 0 ? nights : '0'}
               </span>
-              <div
-                className="w-full rounded-t-sm"
-                style={{ height: barH, backgroundColor: barColor, flexShrink: 0 }}
-              />
-            </div>
-          )
-        })}
-      </div>
-      {/* X-axis labels */}
-      <div className="flex gap-1.5 mt-1">
-        {months.map((m, i) => {
-          const showYear = i === 0 || m.year_month.slice(0, 4) !== months[i - 1].year_month.slice(0, 4)
-          return (
-            <div key={m.year_month} className="flex-1 flex flex-col items-center min-w-0">
-              <span style={{ fontSize: 9, color: '#9ca3af', lineHeight: 1 }}>{m.year_month.slice(5)}</span>
-              {showYear && (
-                <span style={{ fontSize: 8, color: '#d1d5db', lineHeight: 1 }}>{m.year_month.slice(2, 4)}</span>
-              )}
+              <div style={{ width: BAR_W, height: barH, backgroundColor: barColor, borderRadius: '2px 2px 0 0' }} />
+              <span style={{ fontSize: 9, color: '#9ca3af', marginTop: 3, lineHeight: 1 }}>{ym.slice(5)}</span>
+              <span style={{ fontSize: 8, color: showYear ? '#d1d5db' : 'transparent', lineHeight: 1 }}>
+                {ym.slice(2, 4)}
+              </span>
             </div>
           )
         })}

@@ -88,26 +88,35 @@ async function getRecentViolations(): Promise<Violation[]> {
   }));
 }
 
-async function getOverdueVehicles(): Promise<OverdueVehicle[]> {
+async function getOverdueVehicles(): Promise<{ vehicles: OverdueVehicle[]; total: number }> {
   const oneYearAgo = new Date();
   oneYearAgo.setFullYear(oneYearAgo.getFullYear() - 1);
-  const { data } = await supabaseAdmin
-    .from('resident_vehicles')
-    .select('id, owner_name, owner_email, make, model, color, license_plate, created_at, units(address)')
-    .lt('created_at', oneYearAgo.toISOString())
-    .order('created_at', { ascending: true })
-    .limit(20);
-  return (data ?? []) as unknown as OverdueVehicle[];
+  const cutoff = oneYearAgo.toISOString();
+  const [{ count }, { data }] = await Promise.all([
+    supabaseAdmin
+      .from('resident_vehicles')
+      .select('id', { count: 'exact', head: true })
+      .lt('created_at', cutoff),
+    supabaseAdmin
+      .from('resident_vehicles')
+      .select('id, owner_name, owner_email, make, model, color, license_plate, created_at, units(address)')
+      .lt('created_at', cutoff)
+      .order('created_at', { ascending: true })
+      .limit(20),
+  ]);
+  return { vehicles: (data ?? []) as unknown as OverdueVehicle[], total: count ?? 0 };
 }
 
 export default async function AdminDashboardPage() {
   const t = await getTranslations('admin');
-  const [stats, alerts, violations, overdueVehicles] = await Promise.all([
+  const [stats, alerts, violations, overdueResult] = await Promise.all([
     getStats(),
     getAlerts(),
     getRecentViolations(),
     getOverdueVehicles(),
   ]);
+  const overdueVehicles = overdueResult.vehicles;
+  const overdueTotal = overdueResult.total;
 
   return (
     <div className="p-8">
@@ -133,12 +142,12 @@ export default async function AdminDashboardPage() {
             {stats?.violations_this_month ?? '—'}
           </p>
         </div>
-        <div className={`rounded-xl shadow-sm p-6 border ${overdueVehicles.length > 0 ? 'bg-amber-50 border-amber-200' : 'bg-white border-gray-100'}`}>
-          <p className={`text-sm ${overdueVehicles.length > 0 ? 'text-amber-700' : 'text-gray-500'}`}>
+        <div className={`rounded-xl shadow-sm p-6 border ${overdueTotal > 0 ? 'bg-amber-50 border-amber-200' : 'bg-white border-gray-100'}`}>
+          <p className={`text-sm ${overdueTotal > 0 ? 'text-amber-700' : 'text-gray-500'}`}>
             {t('overdue_vehicles')}
           </p>
-          <p className={`text-3xl font-bold mt-1 ${overdueVehicles.length > 0 ? 'text-amber-800' : 'text-gray-900'}`}>
-            {overdueVehicles.length}
+          <p className={`text-3xl font-bold mt-1 ${overdueTotal > 0 ? 'text-amber-800' : 'text-gray-900'}`}>
+            {overdueTotal}
           </p>
         </div>
         <div className={`rounded-xl shadow-sm p-6 border ${(stats?.pending_vacation ?? 0) > 0 ? 'bg-purple-50 border-purple-200' : 'bg-white border-gray-100'}`}>
