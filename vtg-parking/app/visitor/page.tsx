@@ -115,7 +115,8 @@ export default function VisitorPage() {
     }
   }
 
-  const quotaExceeded = quota !== null && quota.used >= quota.limit
+  const effectiveQuota = displayQuota ?? quota
+  const quotaExceeded = effectiveQuota !== null && effectiveQuota.used >= effectiveQuota.limit
 
   function validate(): boolean {
     const errors: Record<string, string> = {}
@@ -376,9 +377,9 @@ export default function VisitorPage() {
                       <div className="flex items-center justify-between mb-2">
                         <p className="text-sm font-medium text-gray-700">
                           {t('quota_remaining_label')}
-                          {selectedMonth === getYearMonth() && (
+                          {effectiveQuota && (
                             <span className={`ml-1 font-bold ${quotaExceeded ? 'text-red-600' : 'text-green-600'}`}>
-                              {quota.limit - quota.used}/{quota.limit}
+                              {effectiveQuota.limit - effectiveQuota.used}/{effectiveQuota.limit}
                             </span>
                           )}
                         </p>
@@ -410,7 +411,7 @@ export default function VisitorPage() {
                           </>
                         )
                       })()}
-                      {quotaExceeded && selectedMonth === getYearMonth() && (
+                      {quotaExceeded && (
                         <p className="text-red-600 text-sm mt-2 font-medium">{t('quota_exceeded')}</p>
                       )}
                     </div>

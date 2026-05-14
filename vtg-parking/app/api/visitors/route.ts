@@ -22,8 +22,8 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: 'plate_conflict' }, { status: 409 });
   }
 
-  // 3. Check quota — compute live from visitor_registrations (never trust cached table)
-  const year_month = getYearMonth();
+  // 3. Check quota — use month of start_datetime so future-month bookings work correctly
+  const year_month = start_datetime ? start_datetime.slice(0, 7) : getYearMonth();
   const { start: monthStart, end: monthEnd } = monthBounds(year_month);
 
   const { data: existingRegs } = await supabaseAdmin
