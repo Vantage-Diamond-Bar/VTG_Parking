@@ -12,7 +12,6 @@ export async function GET(req: NextRequest) {
 
   const search = new URL(req.url).searchParams.get('search') || ''
 
-  // Fetch all visitor registrations (no pagination — aggregate in JS)
   const { data: regs, error: regsError } = await supabaseAdmin
     .from('visitor_registrations')
     .select('id, unit_id, start_datetime, end_datetime, license_plate, plate_state, visitor_name, make, model, color, visitor_phone, access_code')
@@ -20,7 +19,6 @@ export async function GET(req: NextRequest) {
 
   if (regsError) return NextResponse.json({ error: regsError.message }, { status: 500 })
 
-  // Fetch all units
   const { data: units } = await supabaseAdmin
     .from('units')
     .select('id, address')
@@ -28,7 +26,7 @@ export async function GET(req: NextRequest) {
   const unitAddressMap: Record<string, string> = {}
   for (const u of units ?? []) unitAddressMap[u.id] = u.address
 
-  // Group registrations by unit_id
+  // ── Group by unit ────────────────────────────────────────────────────────────
   type MonthEntry = { year_month: string; nights_used: number; count: number; limit: number }
   type UnitEntry = {
     unit_id: string
@@ -85,13 +83,11 @@ export async function GET(req: NextRequest) {
     })
   }
 
-  // Convert to sorted array
   let result = Object.values(unitMap).map((u) => ({
     ...u,
     months: Object.values(u.months).sort((a, b) => b.year_month.localeCompare(a.year_month)),
   })).sort((a, b) => b.total_nights - a.total_nights)
 
-  // Also include units with zero registrations when no search
   if (!search) {
     for (const u of units ?? []) {
       if (!unitMap[u.id]) {
@@ -100,7 +96,6 @@ export async function GET(req: NextRequest) {
     }
   }
 
-  // Filter by search
   if (search) {
     const q = search.toLowerCase()
     result = result.filter((u) =>
@@ -115,5 +110,84 @@ export async function GET(req: NextRequest) {
     )
   }
 
-  return NextResponse.json({ data: result, total: result.length })
+  // ── Group by vehicle (license_plate + plate_state) ───────────────────────────
+  type VehicleMonthEntry = { year_month: string; nights_used: number; count: number }
+  type VehicleEntry = {
+    license_plate: string
+    plate_state: string
+    make: string
+    model: string
+    color: string
+    total_nights: number
+    monthsMap: Record<string, VehicleMonthEntry>
+    registrations: Array<{
+      unit_id: string
+      address: string
+      start_datetime: string
+      end_datetime: string
+      nights: number
+      visitor_name: string
+    }>
+  }
+
+  const vehicleMap: Record<string, VehicleEntry> = {}
+
+  for (const reg of regs ?? []) {
+    const key = `${reg.license_plate ?? ''}|${reg.plate_state ?? ''}`
+    if (!vehicleMap[key]) {
+      vehicleMap[key] = {
+        license_plate: reg.license_plate ?? '',
+        plate_state: reg.plate_state ?? '',
+        make: reg.make ?? '',
+        model: reg.model ?? '',
+        color: reg.color ?? '',
+        total_nights: 0,
+        monthsMap: {},
+        registrations: [],
+      }
+    }
+    const ve = vehicleMap[key]
+    const nights = countNights(reg.start_datetime, reg.end_datetime)
+    const ym = (reg.start_datetime ?? '').slice(0, 7)
+    if (ym) {
+      if (!ve.monthsMap[ym]) ve.monthsMap[ym] = { year_month: ym, nights_used: 0, count: 0 }
+      ve.monthsMap[ym].nights_used += nights
+      ve.monthsMap[ym].count++
+    }
+    ve.total_nights += nights
+    ve.registrations.push({
+      unit_id: reg.unit_id,
+      address: unitAddressMap[reg.unit_id] ?? 'Unknown',
+      start_datetime: reg.start_datetime,
+      end_datetime: reg.end_datetime,
+      nights,
+      visitor_name: reg.visitor_name ?? '',
+    })
+  }
+
+  let vehicles = Object.values(vehicleMap).map((ve) => ({
+    license_plate: ve.license_plate,
+    plate_state: ve.plate_state,
+    make: ve.make,
+    model: ve.model,
+    color: ve.color,
+    total_nights: ve.total_nights,
+    months: Object.values(ve.monthsMap).sort((a, b) => a.year_month.localeCompare(b.year_month)),
+    registrations: ve.registrations.sort((a, b) => b.start_datetime.localeCompare(a.start_datetime)),
+  })).sort((a, b) => b.total_nights - a.total_nights)
+
+  if (search) {
+    const q = search.toLowerCase()
+    vehicles = vehicles.filter((v) =>
+      v.license_plate.toLowerCase().includes(q) ||
+      v.make.toLowerCase().includes(q) ||
+      v.model.toLowerCase().includes(q) ||
+      v.color.toLowerCase().includes(q) ||
+      v.registrations.some(
+        (r) => r.address.toLowerCase().includes(q) || r.visitor_name.toLowerCase().includes(q)
+      )
+    )
+  }
+
+  return NextResponse.json({ data: result, vehicles, total: result.length })
 }
