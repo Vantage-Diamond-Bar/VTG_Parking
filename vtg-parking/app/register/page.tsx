@@ -982,13 +982,36 @@ function ManageView({ t, unitId, confirmedEmail, unitData, units, toast, showToa
         <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-6 mb-5">
           <div className="flex items-center justify-between mb-4 pb-2 border-b border-gray-200">
             <h2 className="text-lg font-semibold text-gray-800">{t('section_quota')}</h2>
-            <select
-              value={selectedMonth}
-              onChange={e => setSelectedMonth(e.target.value)}
-              className="text-sm border border-gray-300 rounded-lg px-2 py-1 focus:outline-none focus:ring-2 focus:ring-blue-500 text-gray-700"
-            >
-              {MONTH_OPTIONS.map(o => <option key={o.value} value={o.value}>{o.label}</option>)}
-            </select>
+            <div className="flex gap-2 items-center">
+              <select
+                value={selectedMonth.slice(0, 4)}
+                onChange={e => {
+                  const yr = e.target.value
+                  const monthsForYr = MONTH_OPTIONS.filter(o => o.value.startsWith(yr)).map(o => o.value.slice(5, 7))
+                  const mm = monthsForYr.includes(selectedMonth.slice(5, 7)) ? selectedMonth.slice(5, 7) : monthsForYr[0]
+                  setSelectedMonth(`${yr}-${mm}`)
+                }}
+                className="text-sm border border-gray-300 rounded-lg px-2 py-1 focus:outline-none focus:ring-2 focus:ring-blue-500 text-gray-700"
+              >
+                {[...new Set(MONTH_OPTIONS.map(o => o.value.slice(0, 4)))].map(yr => (
+                  <option key={yr} value={yr}>{yr}</option>
+                ))}
+              </select>
+              <select
+                value={selectedMonth.slice(5, 7)}
+                onChange={e => setSelectedMonth(`${selectedMonth.slice(0, 4)}-${e.target.value}`)}
+                className="text-sm border border-gray-300 rounded-lg px-2 py-1 focus:outline-none focus:ring-2 focus:ring-blue-500 text-gray-700"
+              >
+                {MONTH_OPTIONS
+                  .filter(o => o.value.startsWith(selectedMonth.slice(0, 4)))
+                  .map(o => (
+                    <option key={o.value} value={o.value.slice(5, 7)}>
+                      {new Date(+o.value.slice(0, 4), +o.value.slice(5, 7) - 1, 1).toLocaleString('en-US', { month: 'long' })}
+                    </option>
+                  ))
+                }
+              </select>
+            </div>
           </div>
           <div className="space-y-2">
             <div className="flex justify-between text-sm font-medium">

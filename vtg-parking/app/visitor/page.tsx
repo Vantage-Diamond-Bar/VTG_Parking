@@ -383,13 +383,36 @@ export default function VisitorPage() {
                             </span>
                           )}
                         </p>
-                        <select
-                          value={selectedMonth}
-                          onChange={e => setSelectedMonth(e.target.value)}
-                          className="text-xs border border-gray-300 rounded-lg px-2 py-1 focus:outline-none focus:ring-1 focus:ring-blue-500 text-gray-600"
-                        >
-                          {MONTH_OPTIONS.map(o => <option key={o.value} value={o.value}>{o.label}</option>)}
-                        </select>
+                        <div className="flex gap-1.5 items-center">
+                          <select
+                            value={selectedMonth.slice(0, 4)}
+                            onChange={e => {
+                              const yr = e.target.value
+                              const monthsForYr = MONTH_OPTIONS.filter(o => o.value.startsWith(yr)).map(o => o.value.slice(5, 7))
+                              const mm = monthsForYr.includes(selectedMonth.slice(5, 7)) ? selectedMonth.slice(5, 7) : monthsForYr[0]
+                              setSelectedMonth(`${yr}-${mm}`)
+                            }}
+                            className="text-xs border border-gray-300 rounded-lg px-2 py-1 focus:outline-none focus:ring-1 focus:ring-blue-500 text-gray-600"
+                          >
+                            {[...new Set(MONTH_OPTIONS.map(o => o.value.slice(0, 4)))].map(yr => (
+                              <option key={yr} value={yr}>{yr}</option>
+                            ))}
+                          </select>
+                          <select
+                            value={selectedMonth.slice(5, 7)}
+                            onChange={e => setSelectedMonth(`${selectedMonth.slice(0, 4)}-${e.target.value}`)}
+                            className="text-xs border border-gray-300 rounded-lg px-2 py-1 focus:outline-none focus:ring-1 focus:ring-blue-500 text-gray-600"
+                          >
+                            {MONTH_OPTIONS
+                              .filter(o => o.value.startsWith(selectedMonth.slice(0, 4)))
+                              .map(o => (
+                                <option key={o.value} value={o.value.slice(5, 7)}>
+                                  {new Date(+o.value.slice(0, 4), +o.value.slice(5, 7) - 1, 1).toLocaleString('en-US', { month: 'long' })}
+                                </option>
+                              ))
+                            }
+                          </select>
+                        </div>
                       </div>
                       {(() => {
                         const dq = displayQuota ?? quota
