@@ -83,14 +83,28 @@ function MonthBar({ month }: { month: MonthEntry }) {
 }
 
 function MonthlyBarChart({ months }: { months: VehicleMonthEntry[] }) {
-  // Always show last 12 months regardless of data
-  const slots: string[] = []
   const now = new Date()
-  for (let i = 11; i >= 0; i--) {
-    const d = new Date(now.getFullYear(), now.getMonth() - i, 1)
-    slots.push(`${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`)
+  const toYm = (d: Date) => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`
+
+  // Window: from earliest data month (or 11 months ago) up to current month
+  const currentYm = toYm(now)
+  const twelveMonthsAgo = toYm(new Date(now.getFullYear(), now.getMonth() - 11, 1))
+  const earliestData = months.length > 0
+    ? [...months].sort((a, b) => a.year_month.localeCompare(b.year_month))[0].year_month
+    : twelveMonthsAgo
+  const startYm = earliestData < twelveMonthsAgo ? earliestData : twelveMonthsAgo
+
+  // Build ordered month slots from startYm to currentYm
+  const slots: string[] = []
+  const cursor = new Date(+startYm.slice(0, 4), +startYm.slice(5, 7) - 1, 1)
+  const end = new Date(+currentYm.slice(0, 4), +currentYm.slice(5, 7) - 1, 1)
+  while (cursor <= end) {
+    slots.push(toYm(cursor))
+    cursor.setMonth(cursor.getMonth() + 1)
   }
+
   const monthMap = Object.fromEntries(months.map((m) => [m.year_month, m]))
+  const max = Math.max(...months.map((m) => m.nights_used), 1)
 
   const CHART_H = 96
   const BAR_W = 20
@@ -102,14 +116,8 @@ function MonthlyBarChart({ months }: { months: VehicleMonthEntry[] }) {
         {slots.map((ym, i) => {
           const entry = monthMap[ym]
           const nights = entry?.nights_used ?? 0
-          const max = Math.max(...months.map((m) => m.nights_used), 1)
-          const barH = nights === 0 ? 3 : Math.max(8, Math.round((nights / max) * CHART_H))
-          // Color by absolute nights value, not relative
-          const barColor =
-            nights === 0 ? '#e5e7eb' :
-            nights >= 10 ? '#f87171' :
-            nights >= 5  ? '#fbbf24' :
-                           '#60a5fa'
+          const barH = nights === 0 ? 4 : Math.max(10, Math.round((nights / max) * CHART_H))
+          const barColor = nights === 0 ? '#e5e7eb' : '#60a5fa'
           const showYear = i === 0 || ym.slice(0, 4) !== slots[i - 1].slice(0, 4)
           return (
             <div
@@ -125,12 +133,12 @@ function MonthlyBarChart({ months }: { months: VehicleMonthEntry[] }) {
               }}
             >
               <span style={{ fontSize: 9, color: nights > 0 ? '#6b7280' : 'transparent', marginBottom: 2, lineHeight: 1 }}>
-                {nights > 0 ? nights : '0'}
+                {nights}
               </span>
               <div style={{ width: BAR_W, height: barH, backgroundColor: barColor, borderRadius: '2px 2px 0 0' }} />
               <span style={{ fontSize: 9, color: '#9ca3af', marginTop: 3, lineHeight: 1 }}>{ym.slice(5)}</span>
-              <span style={{ fontSize: 8, color: showYear ? '#d1d5db' : 'transparent', lineHeight: 1 }}>
-                {ym.slice(2, 4)}
+              <span style={{ fontSize: 8, color: showYear ? '#c4b5c8' : 'transparent', lineHeight: 1 }}>
+                {ym.slice(0, 4)}
               </span>
             </div>
           )
@@ -237,17 +245,6 @@ function VehicleRow({ vehicle }: { vehicle: VehicleSummary }) {
                 })}
               </div>
               <MonthlyBarChart months={vehicle.months} />
-              <div className="mt-3 flex gap-3 text-[11px] text-gray-400">
-                <span className="flex items-center gap-1">
-                  <span className="inline-block w-2.5 h-2.5 rounded-sm" style={{ backgroundColor: '#60a5fa' }} /> Low
-                </span>
-                <span className="flex items-center gap-1">
-                  <span className="inline-block w-2.5 h-2.5 rounded-sm" style={{ backgroundColor: '#fbbf24' }} /> Medium
-                </span>
-                <span className="flex items-center gap-1">
-                  <span className="inline-block w-2.5 h-2.5 rounded-sm" style={{ backgroundColor: '#f87171' }} /> High
-                </span>
-              </div>
             </div>
           )}
 
