@@ -92,14 +92,14 @@ function MonthlyBarChart({ months }: { months: VehicleMonthEntry[] }) {
       <div className="flex items-end gap-1.5 h-28">
         {months.map((m) => {
           const pct = m.nights_used / max
-          const color =
-            pct >= 0.85 ? 'bg-red-400' : pct >= 0.5 ? 'bg-amber-400' : 'bg-blue-400'
+          const barColor =
+            pct >= 0.85 ? '#f87171' : pct >= 0.5 ? '#fbbf24' : '#60a5fa'
           return (
             <div key={m.year_month} className="flex-1 flex flex-col items-center justify-end gap-0.5 min-w-0">
               <span className="text-[9px] text-gray-500 font-medium">{m.nights_used}</span>
               <div
-                className={`w-full rounded-t-sm ${color} transition-all`}
-                style={{ height: `${Math.max(6, Math.round(pct * 100))}%` }}
+                className="w-full rounded-t-sm transition-all"
+                style={{ height: `${Math.max(6, Math.round(pct * 100))}%`, backgroundColor: barColor }}
               />
             </div>
           )
@@ -222,13 +222,13 @@ function VehicleRow({ vehicle }: { vehicle: VehicleSummary }) {
               <MonthlyBarChart months={vehicle.months} />
               <div className="mt-3 flex gap-3 text-[11px] text-gray-400">
                 <span className="flex items-center gap-1">
-                  <span className="inline-block w-2.5 h-2.5 rounded-sm bg-blue-400" /> Low
+                  <span className="inline-block w-2.5 h-2.5 rounded-sm" style={{ backgroundColor: '#60a5fa' }} /> Low
                 </span>
                 <span className="flex items-center gap-1">
-                  <span className="inline-block w-2.5 h-2.5 rounded-sm bg-amber-400" /> Medium
+                  <span className="inline-block w-2.5 h-2.5 rounded-sm" style={{ backgroundColor: '#fbbf24' }} /> Medium
                 </span>
                 <span className="flex items-center gap-1">
-                  <span className="inline-block w-2.5 h-2.5 rounded-sm bg-red-400" /> High
+                  <span className="inline-block w-2.5 h-2.5 rounded-sm" style={{ backgroundColor: '#f87171' }} /> High
                 </span>
               </div>
             </div>
