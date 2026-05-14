@@ -210,7 +210,15 @@
     "back_home": "返回首页",
     "required": "此项为必填项。",
     "end_after_start": "结束时间必须晚于开始时间。",
-    "error_registration_overdue": "您的住户车辆注册信息已过期，请先更新注册信息，再提交度假延长停车申请。"
+    "error_registration_overdue": "您的住户车辆注册信息已过期，请先更新注册信息，再提交度假延长停车申请。",
+    "verify_email_title": "需要验证住户身份",
+    "verify_email_desc": "请输入您户籍登记的电子邮箱地址以继续操作。",
+    "email_hint_prefix": "已登记邮箱提示：",
+    "host_email": "您的电子邮箱",
+    "verify": "验证",
+    "verifying": "验证中...",
+    "email_mismatch": "邮箱地址与记录不符，请重试。",
+    "email_verified": "邮箱已验证"
   },
   "vacation_admin": {
     "title": "度假延长停车",
@@ -361,6 +369,7 @@
     "alerts": "疑似滥用访客停车提醒",
     "vacation": "度假停车",
     "oversized": "大型车辆申请",
+    "quota_summary": "访客额度汇总",
     "username": "用户名",
     "password": "密码",
     "sign_in": "登录",

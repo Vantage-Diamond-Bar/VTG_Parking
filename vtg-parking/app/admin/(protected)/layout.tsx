@@ -17,10 +17,11 @@ export default async function AdminProtectedLayout({
   const t = await getTranslations('admin');
 
   const navItems = [
+    { key: 'violations', href: '/admin/violations', icon: '⚠️' },
     { key: 'dashboard', href: '/admin/dashboard', icon: '📊' },
     { key: 'residents', href: '/admin/residents', icon: '🚗' },
     { key: 'visitors', href: '/admin/visitors', icon: '👤' },
-    { key: 'violations', href: '/admin/violations', icon: '⚠️' },
+    { key: 'quota_summary', href: '/admin/quota-summary', icon: '📅' },
     { key: 'units', href: '/admin/units', icon: '🏠' },
     { key: 'emails', href: '/admin/emails', icon: '📧' },
     { key: 'alerts', href: '/admin/alerts', icon: '🔔' },
@@ -33,7 +34,7 @@ export default async function AdminProtectedLayout({
       {/* Sidebar */}
       <aside className="w-64 bg-gray-900 text-white flex flex-col flex-shrink-0">
         <div className="px-6 py-5 border-b border-gray-700">
-          <span className="text-xl font-bold tracking-tight">🅿️ VTG Admin</span>
+          <span className="text-lg font-bold tracking-tight leading-tight">🅿️ Vantage Community Parking</span>
         </div>
 
         <nav className="flex-1 py-4 overflow-y-auto">

@@ -210,7 +210,15 @@
     "back_home": "Back to Home",
     "required": "This field is required.",
     "end_after_start": "End time must be after start time.",
-    "error_registration_overdue": "Your unit's vehicle registration is overdue. Please update your registration before submitting a vacation parking request."
+    "error_registration_overdue": "Your unit's vehicle registration is overdue. Please update your registration before submitting a vacation parking request.",
+    "verify_email_title": "Owner Verification Required",
+    "verify_email_desc": "Please enter the email address registered to your unit to continue.",
+    "email_hint_prefix": "Registered email hint:",
+    "host_email": "Your Email Address",
+    "verify": "Verify",
+    "verifying": "Verifying...",
+    "email_mismatch": "The email address does not match our records. Please try again.",
+    "email_verified": "Email Verified"
   },
   "vacation_admin": {
     "title": "Vacation Extended Parking",
@@ -361,6 +369,7 @@
     "alerts": "Visitor Parking Abuse Alerts",
     "vacation": "Vacation Parking",
     "oversized": "Oversized Applications",
+    "quota_summary": "Visitor Quota Summary",
     "username": "Username",
     "password": "Password",
     "sign_in": "Sign In",

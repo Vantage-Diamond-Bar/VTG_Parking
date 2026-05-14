@@ -210,7 +210,15 @@
     "back_home": "홈으로 돌아가기",
     "required": "필수 입력 항목입니다.",
     "end_after_start": "종료 시간은 시작 시간 이후여야 합니다.",
-    "error_registration_overdue": "세대 차량 등록 정보가 만료되었습니다. 등록을 갱신한 후 휴가 연장 주차 신청을 제출하세요."
+    "error_registration_overdue": "세대 차량 등록 정보가 만료되었습니다. 등록을 갱신한 후 휴가 연장 주차 신청을 제출하세요.",
+    "verify_email_title": "입주민 본인 확인 필요",
+    "verify_email_desc": "계속하려면 세대에 등록된 이메일 주소를 입력하세요.",
+    "email_hint_prefix": "등록된 이메일 힌트:",
+    "host_email": "이메일 주소",
+    "verify": "인증",
+    "verifying": "인증 중...",
+    "email_mismatch": "이메일 주소가 기록과 일치하지 않습니다. 다시 시도해 주세요.",
+    "email_verified": "이메일 인증 완료"
   },
   "vacation_admin": {
     "title": "휴가 연장 주차",
@@ -361,6 +369,7 @@
     "alerts": "방문객 주차 남용 경보",
     "vacation": "휴가 주차",
     "oversized": "대형 차량 신청",
+    "quota_summary": "방문객 할당량 요약",
     "username": "사용자명",
     "password": "비밀번호",
     "sign_in": "로그인",

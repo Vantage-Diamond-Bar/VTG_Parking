@@ -13,6 +13,8 @@ interface Resident {
   make: string;
   model: string;
   color: string;
+  vehicle_type?: string;
+  is_oversized?: boolean;
   license_plate: string;
   plate_state: string;
   owner_phone: string;
@@ -204,7 +206,13 @@ export default function AdminResidentsPage() {
                         {r.registrant_type === 'tenant' ? 'Tenant' : 'Owner'}
                       </span>
                     </td>
-                    <td className="px-4 py-3">{[r.year, r.make, r.model].filter(Boolean).join(' ')}</td>
+                    <td className="px-4 py-3">
+                      <div>{[r.year, r.make, r.model].filter(Boolean).join(' ')}</div>
+                      <div className="flex gap-1 mt-0.5 flex-wrap">
+                        {r.vehicle_type && <span className="text-xs text-gray-500">{r.vehicle_type}</span>}
+                        {r.is_oversized && <span className="text-xs bg-amber-100 text-amber-700 px-1.5 py-0.5 rounded-full">Oversized</span>}
+                      </div>
+                    </td>
                     <td className="px-4 py-3">{r.color}</td>
                     <td className="px-4 py-3 font-mono">{r.license_plate} / {r.plate_state}</td>
                     <td className="px-4 py-3">{r.owner_phone}</td>

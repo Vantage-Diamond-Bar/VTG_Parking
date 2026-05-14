@@ -99,8 +99,22 @@ export async function GET(req: NextRequest) {
     // non-fatal
   }
 
+  // Step 6: Fetch pending oversized applications for this unit
+  let oversized_pending: any[] = [];
+  try {
+    const { data: pendingApps } = await supabaseAdmin
+      .from('oversized_applications')
+      .select('id, year, make, model, color, license_plate, plate_state, vehicle_type, status, created_at')
+      .eq('unit_id', unit_id)
+      .eq('status', 'pending');
+    oversized_pending = pendingApps ?? [];
+  } catch {
+    // Table may not exist yet — non-fatal
+  }
+
   return NextResponse.json({
     vehicles,
+    oversized_pending,
     unit_address,
     violations,
     quota: {

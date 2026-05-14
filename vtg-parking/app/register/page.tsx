@@ -30,8 +30,14 @@ interface ViolationRecord {
   status: string; resolution_type?: string; final_violation_type?: string; final_location?: string
 }
 
+interface OversizedPending {
+  id: string; year: number; make: string; model: string; color: string
+  license_plate: string; plate_state: string; vehicle_type?: string; status: string; created_at: string
+}
+
 interface UnitData {
   vehicles: ResidentVehicle[]
+  oversized_pending: OversizedPending[]
   unit_address: string
   violations: ViolationRecord[]
   quota: { nights_used: number; quota_limit: number }
@@ -545,6 +551,7 @@ function ManageView({ t, unitId, confirmedEmail, unitData, units, toast, showToa
   const tAdmin = useTranslations('admin')
   const unitAddress = unitData.unit_address
   const vehicles = unitData.vehicles
+  const oversizedPending = unitData.oversized_pending ?? []
   const firstVehicle = vehicles[0]
 
   // Owner edit state
@@ -859,6 +866,20 @@ function ManageView({ t, unitId, confirmedEmail, unitData, units, toast, showToa
                     </div>
                   </div>
                 )}
+              </div>
+            ))}
+
+            {/* Pending oversized applications */}
+            {oversizedPending.map((p) => (
+              <div key={p.id} className="border border-amber-300 bg-amber-50 rounded-xl p-4">
+                <div className="flex items-start justify-between">
+                  <div>
+                    <div className="font-semibold text-amber-900">{p.year} {p.color} {p.make} {p.model}</div>
+                    <div className="text-sm font-mono text-amber-700">{p.license_plate}{p.plate_state ? ` · ${p.plate_state}` : ''}</div>
+                  </div>
+                  <span className="text-xs font-semibold bg-amber-200 text-amber-800 px-3 py-1 rounded-full whitespace-nowrap">⏳ Pending Garage Check</span>
+                </div>
+                <p className="text-xs text-amber-700 mt-2">This oversized vehicle is awaiting admin garage inspection approval. You will be notified once a decision is made.</p>
               </div>
             ))}
 

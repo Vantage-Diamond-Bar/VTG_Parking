@@ -161,7 +161,19 @@ export async function GET(req: NextRequest) {
   if (unitId) {
     query = query.eq('unit_id', unitId);
   } else if (search) {
-    query = query.or(`license_plate.ilike.%${search}%,owner_name.ilike.%${search}%,owner_phone.ilike.%${search}%,owner_email.ilike.%${search}%`);
+    // First find unit_ids where address matches (joined table can't be searched in .or())
+    const { data: matchingUnits } = await supabaseAdmin
+      .from('units')
+      .select('id')
+      .ilike('address', `%${search}%`);
+    const matchingUnitIds = (matchingUnits ?? []).map((u) => u.id);
+
+    const baseOr = `license_plate.ilike.%${search}%,owner_name.ilike.%${search}%,owner_phone.ilike.%${search}%,owner_email.ilike.%${search}%`;
+    if (matchingUnitIds.length > 0) {
+      query = query.or(`${baseOr},unit_id.in.(${matchingUnitIds.join(',')})`);
+    } else {
+      query = query.or(baseOr);
+    }
   }
 
   const { data, error, count } = await query;
