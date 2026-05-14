@@ -193,8 +193,11 @@ export default function AdminResidentsPage() {
                   </td>
                 </tr>
               ) : (
-                residents.map((r) => (
-                  <tr key={r.id} className="hover:bg-gray-50">
+                residents.map((r) => {
+                  const oneYearAgo = new Date(); oneYearAgo.setFullYear(oneYearAgo.getFullYear() - 1);
+                  const isExpired = new Date(r.created_at) < oneYearAgo;
+                  return (
+                  <tr key={r.id} className={isExpired ? 'bg-red-50 hover:bg-red-100' : 'hover:bg-gray-50'}>
                     <td className="px-4 py-3 font-medium">{r.units?.address ?? '—'}</td>
                     <td className="px-4 py-3">{r.owner_name}</td>
                     <td className="px-4 py-3">
@@ -227,7 +230,8 @@ export default function AdminResidentsPage() {
                         </button>
                       ) : '—'}
                     </td>
-                    <td className="px-4 py-3 text-gray-500">
+                    <td className={`px-4 py-3 ${isExpired ? 'text-red-600 font-semibold' : 'text-gray-500'}`}>
+                      {isExpired && <span className="mr-1">⚠️</span>}
                       {new Date(r.created_at).toLocaleDateString()}
                     </td>
                     <td className="px-4 py-3">
@@ -247,7 +251,7 @@ export default function AdminResidentsPage() {
                       </div>
                     </td>
                   </tr>
-                ))
+                )})
               )}
             </tbody>
           </table>

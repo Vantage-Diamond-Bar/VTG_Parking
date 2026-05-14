@@ -3,6 +3,11 @@ import { getSession } from '@/lib/auth';
 import { getTranslations } from 'next-intl/server';
 import Link from 'next/link';
 import { AdminFetchInterceptor } from '@/components/AdminFetchInterceptor';
+import type { Metadata } from 'next';
+
+export const metadata: Metadata = {
+  title: 'Vantage Parking – Admin Portal',
+};
 
 export default async function AdminProtectedLayout({
   children,
@@ -17,8 +22,8 @@ export default async function AdminProtectedLayout({
   const t = await getTranslations('admin');
 
   const navItems = [
-    { key: 'violations', href: '/admin/violations', icon: '⚠️' },
     { key: 'dashboard', href: '/admin/dashboard', icon: '📊' },
+    { key: 'violations', href: '/admin/violations', icon: '⚠️' },
     { key: 'residents', href: '/admin/residents', icon: '🚗' },
     { key: 'visitors', href: '/admin/visitors', icon: '👤' },
     { key: 'quota_summary', href: '/admin/quota-summary', icon: '📅' },
@@ -32,7 +37,7 @@ export default async function AdminProtectedLayout({
   return (
     <div className="flex min-h-screen">
       {/* Sidebar */}
-      <aside className="w-64 bg-gray-900 text-white flex flex-col flex-shrink-0">
+      <aside className="w-64 bg-gray-900 text-white flex flex-col flex-shrink-0 h-screen sticky top-0">
         <div className="px-6 py-5 border-b border-gray-700">
           <span className="text-lg font-bold tracking-tight leading-tight">🅿️ Vantage Community Parking</span>
         </div>

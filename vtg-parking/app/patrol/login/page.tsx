@@ -91,6 +91,12 @@ export default function PatrolLoginPage() {
             {loading ? tAdmin('signing_in') : tAdmin('sign_in')}
           </button>
         </form>
+
+        <div className="mt-5 text-center">
+          <a href="/" className="inline-flex items-center gap-1.5 text-sm text-gray-400 hover:text-gray-600 transition-colors">
+            <span>←</span> Return to Home
+          </a>
+        </div>
       </div>
     </div>
   );

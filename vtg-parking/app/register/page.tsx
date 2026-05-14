@@ -575,6 +575,9 @@ function ManageView({ t, unitId, confirmedEmail, unitData, units, toast, showToa
   const [deleteTarget, setDeleteTarget] = useState<string | null>(null)
   const [deleting, setDeleting] = useState(false)
 
+  // Doc preview lightbox
+  const [docPreviewUrl, setDocPreviewUrl] = useState<string | null>(null)
+
   // Add vehicle
   const [showAddVehicle, setShowAddVehicle] = useState(false)
   const [addVehicle, setAddVehicle] = useState<VehicleForm>(emptyVehicle())
@@ -773,8 +776,11 @@ function ManageView({ t, unitId, confirmedEmail, unitData, units, toast, showToa
         <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-6 mb-5">
           <h2 className={sectionCls}>{t('section_vehicles')}</h2>
           <div className="space-y-5">
-            {vehicles.map((v) => (
-              <div key={v.id} className="border border-gray-200 rounded-xl p-4">
+            {vehicles.map((v) => {
+              const oneYearAgo = new Date(); oneYearAgo.setFullYear(oneYearAgo.getFullYear() - 1);
+              const isExpired = new Date(v.created_at) < oneYearAgo;
+              return (
+              <div key={v.id} className={`border rounded-xl p-4 ${isExpired ? 'border-red-300 bg-red-50' : 'border-gray-200'}`}>
                 {editingVehicleId === v.id ? (
                   <div className="space-y-3">
                     <div className="grid grid-cols-2 gap-3">
@@ -851,23 +857,43 @@ function ManageView({ t, unitId, confirmedEmail, unitData, units, toast, showToa
                       </div>
                     </div>
                     {/* Doc section */}
-                    <div className="bg-gray-50 rounded-lg p-3 text-xs text-gray-600">
-                      <div className="flex items-center justify-between mb-2">
-                        <span>{t('doc_last_renewed')} <strong>{new Date(v.created_at).toLocaleDateString()}</strong></span>
-                        {v.registration_doc_url && (
-                          <a href={v.registration_doc_url} target="_blank" rel="noreferrer" className="text-blue-600 hover:underline">View doc</a>
-                        )}
+                    {isExpired ? (
+                      <div className="bg-red-100 border border-red-300 rounded-lg p-3 text-xs">
+                        <div className="flex items-center justify-between mb-2">
+                          <span className="text-red-700 font-semibold">
+                            ⚠️ {t('doc_last_renewed')} <span className="underline decoration-red-500">{new Date(v.created_at).toLocaleDateString()}</span> — Registration Expired
+                          </span>
+                          {v.registration_doc_url && (
+                            <button onClick={() => setDocPreviewUrl(v.registration_doc_url!)} className="text-blue-600 hover:underline ml-2 shrink-0">View doc</button>
+                          )}
+                        </div>
+                        <p className="text-red-700 mb-2">Your vehicle registration document has expired. Please upload your latest registration to keep your record current.</p>
+                        <label className="flex items-center gap-2 cursor-pointer text-red-700 font-semibold hover:text-red-900">
+                          <input type="file" accept=".jpg,.jpeg,.png,.pdf" className="hidden"
+                            onChange={async e => { const file = e.target.files?.[0]; if (file) await handleDocUpload(v.id, file) }} />
+                          {docUploading === v.id ? '...' : `↑ ${t('renew_doc')}`}
+                        </label>
                       </div>
-                      <label className="flex items-center gap-2 cursor-pointer text-blue-700 hover:text-blue-900">
-                        <input type="file" accept=".jpg,.jpeg,.png,.pdf" className="hidden"
-                          onChange={async e => { const file = e.target.files?.[0]; if (file) await handleDocUpload(v.id, file) }} />
-                        {docUploading === v.id ? '...' : `↑ ${t('renew_doc')}`}
-                      </label>
-                    </div>
+                    ) : (
+                      <div className="bg-gray-50 rounded-lg p-3 text-xs text-gray-600">
+                        <div className="flex items-center justify-between mb-2">
+                          <span>{t('doc_last_renewed')} <strong>{new Date(v.created_at).toLocaleDateString()}</strong></span>
+                          {v.registration_doc_url && (
+                            <button onClick={() => setDocPreviewUrl(v.registration_doc_url!)} className="text-blue-600 hover:underline">View doc</button>
+                          )}
+                        </div>
+                        <label className="flex items-center gap-2 cursor-pointer text-blue-700 hover:text-blue-900">
+                          <input type="file" accept=".jpg,.jpeg,.png,.pdf" className="hidden"
+                            onChange={async e => { const file = e.target.files?.[0]; if (file) await handleDocUpload(v.id, file) }} />
+                          {docUploading === v.id ? '...' : `↑ ${t('renew_doc')}`}
+                        </label>
+                      </div>
+                    )}
                   </div>
                 )}
               </div>
-            ))}
+              )
+            })}
 
             {/* Pending oversized applications */}
             {oversizedPending.map((p) => (
@@ -991,6 +1017,23 @@ function ManageView({ t, unitId, confirmedEmail, unitData, units, toast, showToa
           <p className="text-xs text-gray-500 leading-relaxed">{t('contact_consent')}</p>
         </div>
       </div>
+
+      {/* Doc preview lightbox */}
+      {docPreviewUrl && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 p-4" onClick={() => setDocPreviewUrl(null)}>
+          <div className="relative max-w-3xl w-full" onClick={e => e.stopPropagation()}>
+            <button onClick={() => setDocPreviewUrl(null)} className="absolute -top-9 right-0 text-white text-2xl font-bold hover:opacity-80">✕</button>
+            {docPreviewUrl.toLowerCase().includes('.pdf') ? (
+              <iframe src={docPreviewUrl} className="w-full rounded-lg" style={{ height: '80vh' }} />
+            ) : (
+              <img src={docPreviewUrl} alt="Registration document" className="max-w-full rounded-lg object-contain mx-auto block" style={{ maxHeight: '85vh' }} />
+            )}
+            <a href={docPreviewUrl} target="_blank" rel="noreferrer" className="block text-center text-white text-xs mt-2 opacity-60 hover:opacity-100">
+              Open in new tab ↗
+            </a>
+          </div>
+        </div>
+      )}
 
       {/* Delete confirm modal */}
       {deleteTarget && (
