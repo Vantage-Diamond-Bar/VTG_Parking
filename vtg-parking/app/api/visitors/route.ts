@@ -22,25 +22,54 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: 'plate_conflict' }, { status: 409 });
   }
 
-  // 3. Check quota — use month of start_datetime so future-month bookings work correctly
+  // 3. Check quota per month — cross-month bookings are split and checked against each month
+  function spannedMonths(start: string, end: string): string[] {
+    const months: string[] = [];
+    let y = parseInt(start.slice(0, 4)), m = parseInt(start.slice(5, 7));
+    const ey = parseInt(end.slice(0, 4)), em = parseInt(end.slice(5, 7));
+    while (y < ey || (y === ey && m <= em)) {
+      months.push(`${y}-${String(m).padStart(2, '0')}`);
+      if (++m > 12) { m = 1; y++; }
+    }
+    return months;
+  }
+
   const year_month = start_datetime ? start_datetime.slice(0, 7) : getYearMonth();
-  const { start: monthStart, end: monthEnd } = monthBounds(year_month);
-
-  const { data: existingRegs } = await supabaseAdmin
-    .from('visitor_registrations')
-    .select('start_datetime, end_datetime')
-    .eq('unit_id', unit_id)
-    .gte('start_datetime', monthStart)
-    .lt('start_datetime', monthEnd);
-
-  const currentNightsUsed = (existingRegs ?? []).reduce(
-    (sum, r) => sum + countNights(r.start_datetime, r.end_datetime),
-    0
+  const months = spannedMonths(
+    start_datetime ? start_datetime.slice(0, 7) : year_month,
+    end_datetime   ? end_datetime.slice(0, 7)   : year_month
   );
-  const newNights = countNights(start_datetime, end_datetime);
 
-  if (currentNightsUsed + newNights > VISITOR_QUOTA_LIMIT) {
-    return NextResponse.json({ error: 'quota_exceeded' }, { status: 429 });
+  let currentNightsUsed = 0;
+  let newNights = 0;
+
+  for (const month of months) {
+    const { start: mStart, end: mEnd } = monthBounds(month);
+    const { data: mRegs } = await supabaseAdmin
+      .from('visitor_registrations')
+      .select('start_datetime, end_datetime')
+      .eq('unit_id', unit_id)
+      .lt('start_datetime', mEnd)
+      .gt('end_datetime', mStart);
+
+    const usedInMonth = (mRegs ?? []).reduce((sum, r) => {
+      const cs = r.start_datetime > mStart ? r.start_datetime : mStart;
+      const ce = r.end_datetime   < mEnd   ? r.end_datetime   : mEnd;
+      return sum + countNights(cs, ce);
+    }, 0);
+
+    const cs = start_datetime > mStart ? start_datetime : mStart;
+    const ce = end_datetime   < mEnd   ? end_datetime   : mEnd;
+    const newInMonth = countNights(cs, ce);
+
+    if (usedInMonth + newInMonth > VISITOR_QUOTA_LIMIT) {
+      return NextResponse.json({ error: 'quota_exceeded' }, { status: 429 });
+    }
+
+    if (month === year_month) {
+      currentNightsUsed = usedInMonth;
+      newNights = newInMonth;
+    }
   }
 
   // 4. Generate unique access code
