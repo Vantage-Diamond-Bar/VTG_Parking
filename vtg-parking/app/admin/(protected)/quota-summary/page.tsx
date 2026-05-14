@@ -82,29 +82,33 @@ function MonthBar({ month }: { month: MonthEntry }) {
   )
 }
 
-function MonthlyBarChart({ months }: { months: VehicleMonthEntry[] }) {
+function MonthlyBarChart({ months, globalMax }: { months: VehicleMonthEntry[]; globalMax: number }) {
   const now = new Date()
   const toYm = (d: Date) => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`
 
-  // Window: from earliest data month (or 11 months ago) up to current month
   const currentYm = toYm(now)
   const twelveMonthsAgo = toYm(new Date(now.getFullYear(), now.getMonth() - 11, 1))
-  const earliestData = months.length > 0
-    ? [...months].sort((a, b) => a.year_month.localeCompare(b.year_month))[0].year_month
-    : twelveMonthsAgo
-  const startYm = earliestData < twelveMonthsAgo ? earliestData : twelveMonthsAgo
 
-  // Build ordered month slots from startYm to currentYm
+  // Window start: earliest data or 12 months ago, whichever is earlier
+  const sorted = [...months].sort((a, b) => a.year_month.localeCompare(b.year_month))
+  const earliestData = sorted.length > 0 ? sorted[0].year_month : twelveMonthsAgo
+  const latestData = sorted.length > 0 ? sorted[sorted.length - 1].year_month : currentYm
+  const startYm = earliestData < twelveMonthsAgo ? earliestData : twelveMonthsAgo
+  // Window end: extend to cover future data (e.g. registrations beyond current month)
+  const endYm = latestData > currentYm ? latestData : currentYm
+
+  // Build ordered month slots
   const slots: string[] = []
   const cursor = new Date(+startYm.slice(0, 4), +startYm.slice(5, 7) - 1, 1)
-  const end = new Date(+currentYm.slice(0, 4), +currentYm.slice(5, 7) - 1, 1)
+  const end = new Date(+endYm.slice(0, 4), +endYm.slice(5, 7) - 1, 1)
   while (cursor <= end) {
     slots.push(toYm(cursor))
     cursor.setMonth(cursor.getMonth() + 1)
   }
 
   const monthMap = Object.fromEntries(months.map((m) => [m.year_month, m]))
-  const max = Math.max(...months.map((m) => m.nights_used), 1)
+  // Use global max so bars are comparable across all vehicle charts
+  const max = globalMax
 
   const CHART_H = 96
   const BAR_W = 20
@@ -148,7 +152,7 @@ function MonthlyBarChart({ months }: { months: VehicleMonthEntry[] }) {
   )
 }
 
-function VehicleRow({ vehicle }: { vehicle: VehicleSummary }) {
+function VehicleRow({ vehicle, globalMax }: { vehicle: VehicleSummary; globalMax: number }) {
   const [expanded, setExpanded] = useState(false)
   const [tab, setTab] = useState<'chart' | 'history'>('chart')
 
@@ -244,7 +248,7 @@ function VehicleRow({ vehicle }: { vehicle: VehicleSummary }) {
                   )
                 })}
               </div>
-              <MonthlyBarChart months={vehicle.months} />
+              <MonthlyBarChart months={vehicle.months} globalMax={globalMax} />
             </div>
           )}
 
@@ -514,14 +518,16 @@ export default function QuotaSummaryPage() {
             <div className="space-y-3">
               {vehicles.length === 0 ? (
                 <div className="text-center text-gray-400 py-16">No vehicles found.</div>
-              ) : (
-                vehicles.map((v) => (
+              ) : (() => {
+                const globalMax = Math.max(...vehicles.flatMap(v => v.months.map(m => m.nights_used)), 1)
+                return vehicles.map((v) => (
                   <VehicleRow
                     key={`${v.license_plate}|${v.plate_state}`}
                     vehicle={v}
+                    globalMax={globalMax}
                   />
                 ))
-              )}
+              })()}
             </div>
           )}
         </>
