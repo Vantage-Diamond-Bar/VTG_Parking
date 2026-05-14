@@ -419,9 +419,9 @@ export default function VisitorPage() {
               )}
             </div>
 
-            {/* Vehicle Info — only shown after verified */}
-            {verifyState === 'verified' && (
-              <fieldset disabled={quotaExceeded}>
+            {/* Vehicle Info — only shown after verified and quota not exceeded */}
+            {verifyState === 'verified' && !quotaExceeded && (
+              <fieldset>
                 <div className="space-y-8">
                   <div>
                     <h2 className={sectionCls}>{t('section_vehicle')}</h2>
@@ -590,7 +590,7 @@ export default function VisitorPage() {
 
                 <button
                   type="submit"
-                  disabled={submitting || quotaExceeded}
+                  disabled={submitting}
                   className="w-full bg-blue-600 text-white py-3 rounded-lg font-semibold hover:bg-blue-700 transition-colors disabled:opacity-50 mt-6"
                 >
                   {submitting ? t('submitting') : t('submit')}
