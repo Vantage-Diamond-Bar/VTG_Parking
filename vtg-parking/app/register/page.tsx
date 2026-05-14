@@ -586,7 +586,7 @@ function ManageView({ t, unitId, confirmedEmail, unitData, units, toast, showToa
 
   // Quota by selected month
   const MONTH_OPTIONS = generateMonthOptions()
-  const [selectedMonth, setSelectedMonth] = useState(MONTH_OPTIONS[0].value)
+  const [selectedMonth, setSelectedMonth] = useState(getYearMonth())
   const [displayQuota, setDisplayQuota] = useState({ nights_used: unitData.quota.nights_used ?? 0, quota_limit: unitData.quota.quota_limit ?? VISITOR_QUOTA_LIMIT })
   const [quotaLoading, setQuotaLoading] = useState(false)
 

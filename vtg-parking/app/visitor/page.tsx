@@ -30,7 +30,7 @@ export default function VisitorPage() {
   const [hostEmail, setHostEmail] = useState('')
   const [quota, setQuota] = useState<QuotaData | null>(null)
   const MONTH_OPTIONS = generateMonthOptions()
-  const [selectedMonth, setSelectedMonth] = useState(MONTH_OPTIONS[0].value)
+  const [selectedMonth, setSelectedMonth] = useState(getYearMonth())
   const [displayQuota, setDisplayQuota] = useState<QuotaData | null>(null)
 
   const [visitorName, setVisitorName] = useState('')
