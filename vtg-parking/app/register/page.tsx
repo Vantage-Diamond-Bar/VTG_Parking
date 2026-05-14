@@ -868,10 +868,17 @@ function ManageView({ t, unitId, confirmedEmail, unitData, units, toast, showToa
                           )}
                         </div>
                         <p className="text-red-700 mb-2">Your vehicle registration document has expired. Please upload your latest registration to keep your record current.</p>
-                        <label className="flex items-center gap-2 cursor-pointer text-red-700 font-semibold hover:text-red-900">
+                        <label className="inline-flex items-center gap-1.5 cursor-pointer text-sm font-semibold text-white bg-blue-600 hover:bg-blue-700 px-3 py-1.5 rounded-lg transition-colors">
                           <input type="file" accept=".jpg,.jpeg,.png,.pdf" className="hidden"
                             onChange={async e => { const file = e.target.files?.[0]; if (file) await handleDocUpload(v.id, file) }} />
-                          {docUploading === v.id ? '...' : `↑ ${t('renew_doc')}`}
+                          {docUploading === v.id ? '…' : (
+                            <>
+                              <svg className="w-4 h-4 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12" />
+                              </svg>
+                              {t('renew_doc')}
+                            </>
+                          )}
                         </label>
                       </div>
                     ) : (
@@ -882,10 +889,17 @@ function ManageView({ t, unitId, confirmedEmail, unitData, units, toast, showToa
                             <button onClick={() => setDocPreviewUrl(v.registration_doc_url!)} className="text-blue-600 hover:underline">View doc</button>
                           )}
                         </div>
-                        <label className="flex items-center gap-2 cursor-pointer text-blue-700 hover:text-blue-900">
+                        <label className="inline-flex items-center gap-1.5 cursor-pointer text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 px-3 py-1.5 rounded-lg transition-colors">
                           <input type="file" accept=".jpg,.jpeg,.png,.pdf" className="hidden"
                             onChange={async e => { const file = e.target.files?.[0]; if (file) await handleDocUpload(v.id, file) }} />
-                          {docUploading === v.id ? '...' : `↑ ${t('renew_doc')}`}
+                          {docUploading === v.id ? '…' : (
+                            <>
+                              <svg className="w-4 h-4 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12" />
+                              </svg>
+                              {t('renew_doc')}
+                            </>
+                          )}
                         </label>
                       </div>
                     )}
