@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { supabaseAdmin } from '@/lib/supabase'
+import { maskEmail } from '@/lib/utils'
 
 export const dynamic = 'force-dynamic'
 
@@ -10,7 +11,7 @@ export async function GET(req: NextRequest) {
   // Get all vehicles for this unit
   const { data: vehicles } = await supabaseAdmin
     .from('resident_vehicles')
-    .select('id, year, make, model, color, license_plate, plate_state, is_oversized, registration_doc_url, created_at')
+    .select('id, year, make, model, color, license_plate, plate_state, is_oversized, registration_doc_url, created_at, owner_email')
     .eq('unit_id', unit_id)
 
   if (!vehicles || vehicles.length === 0) {
@@ -26,24 +27,11 @@ export async function GET(req: NextRequest) {
   const hasOversized = vehicles.some(v => v.is_oversized)
   const isEligible = vehicles.length >= 3 || hasOversized
 
-  // Get email hints
-  const { data: emailRow } = await supabaseAdmin
-    .from('resident_vehicles')
-    .select('owner_email')
-    .eq('unit_id', unit_id)
-    .maybeSingle()
-
-  let emailHints: string[] = []
-  if (emailRow?.owner_email) {
-    const e = emailRow.owner_email
-    const [local, domain] = e.split('@')
-    if (local && domain) {
-      const maskedLocal = local[0] + '*'.repeat(Math.max(1, local.length - 2)) + (local.length > 1 ? local[local.length - 1] : '')
-      const dotIdx = domain.lastIndexOf('.')
-      const maskedDomain = domain[0] + '*'.repeat(Math.max(1, dotIdx - 1)) + domain.slice(dotIdx)
-      emailHints = [`${maskedLocal}@${maskedDomain}`]
-    }
-  }
+  // Get email hints — use all rows and deduplicate (maybeSingle fails when unit has 3+ vehicles)
+  const uniqueEmails = [...new Set(
+    vehicles.map((v: any) => v.owner_email).filter((e: any): e is string => !!e)
+  )]
+  const emailHints = uniqueEmails.map(maskEmail)
 
   return NextResponse.json({
     has_vehicles: true,
