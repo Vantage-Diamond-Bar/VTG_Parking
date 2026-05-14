@@ -14,6 +14,7 @@ interface VehicleForm {
   year: string; make: string; model: string; color: string
   license_plate: string; plate_state: string
   registration_doc_base64: string; registration_doc_filename: string
+  registration_doc_url: string
   is_oversized: boolean; vehicle_type: string
 }
 
@@ -48,7 +49,7 @@ type PageState = 'idle' | 'checking' | 'new' | 'verify' | 'manage' | 'new_succes
 // ─── Helpers ───────────────────────────────────────────────────────────────
 
 function emptyVehicle(): VehicleForm {
-  return { year: '', make: '', model: '', color: '', license_plate: '', plate_state: '', registration_doc_base64: '', registration_doc_filename: '', is_oversized: false, vehicle_type: '' }
+  return { year: '', make: '', model: '', color: '', license_plate: '', plate_state: '', registration_doc_base64: '', registration_doc_filename: '', registration_doc_url: '', is_oversized: false, vehicle_type: '' }
 }
 
 async function fileToBase64(file: File): Promise<string> {
@@ -93,6 +94,7 @@ export default function RegisterPage() {
   const [ownerPhone, setOwnerPhone] = useState('')
   const [ownerEmail, setOwnerEmail] = useState('')
   const [newVehicles, setNewVehicles] = useState<VehicleForm[]>([emptyVehicle()])
+  const [docUploading, setDocUploading] = useState<Record<number, boolean>>({})
   const [submitting, setSubmitting] = useState(false)
   const [submitError, setSubmitError] = useState('')
   const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({})
@@ -191,7 +193,7 @@ export default function RegisterPage() {
       if (!v.color) errors[`color_${i}`] = t('required')
       if (!v.license_plate.trim()) errors[`plate_${i}`] = t('required')
       if (!v.plate_state) errors[`state_${i}`] = t('required')
-      if (!v.registration_doc_base64) errors[`doc_${i}`] = t('required')
+      if (!v.registration_doc_url) errors[`doc_${i}`] = t('required')
     })
     setFieldErrors(errors)
     return Object.keys(errors).length === 0
@@ -218,8 +220,7 @@ export default function RegisterPage() {
             year: Number(v.year), make: v.make, model: v.model, color: v.color,
             license_plate: v.license_plate.replace(/\s/g, '').toUpperCase(),
             plate_state: v.plate_state,
-            registration_doc_base64: v.registration_doc_base64,
-            registration_doc_filename: v.registration_doc_filename,
+            registration_doc_url: v.registration_doc_url,
             is_oversized: v.is_oversized,
             vehicle_type: v.vehicle_type || null,
           })),
@@ -412,12 +413,24 @@ export default function RegisterPage() {
                         setNewVehicles(prev => { const n = [...prev]; n[index] = { ...n[index], [field]: val }; return n })
                       }}
                       onRemove={() => setNewVehicles(prev => prev.filter((_, i) => i !== index))}
+                      isUploadingDoc={!!docUploading[index]}
                       onFileChange={async (file) => {
                         if (!file) return
                         if (file.size > 5 * 1024 * 1024) { setFieldErrors(p => ({ ...p, [`doc_${index}`]: 'File exceeds 5MB' })); return }
                         setFieldErrors(p => { const n = { ...p }; delete n[`doc_${index}`]; return n })
-                        const b64 = await fileToBase64(file)
-                        setNewVehicles(prev => { const n = [...prev]; n[index] = { ...n[index], registration_doc_base64: b64, registration_doc_filename: file.name }; return n })
+                        setDocUploading(p => ({ ...p, [index]: true }))
+                        try {
+                          const b64 = await fileToBase64(file)
+                          const res = await fetch('/api/residents/upload-doc', {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({ doc_base64: b64, doc_filename: file.name, unit_id: unitId }),
+                          })
+                          const data = await res.json()
+                          if (!res.ok) { setFieldErrors(p => ({ ...p, [`doc_${index}`]: data.error ?? 'Upload failed' })); return }
+                          setNewVehicles(prev => { const n = [...prev]; n[index] = { ...n[index], registration_doc_url: data.url, registration_doc_filename: file.name }; return n })
+                        } catch { setFieldErrors(p => ({ ...p, [`doc_${index}`]: 'Upload failed. Please try again.' })) }
+                        finally { setDocUploading(p => ({ ...p, [index]: false })) }
                       }}
                     />
                   ))}
@@ -442,11 +455,12 @@ export default function RegisterPage() {
 
 // ─── Vehicle Form Card (shared between new + add) ─────────────────────────
 
-function VehicleFormCard({ vehicle, index, showRemove, fieldErrors, t, inputCls, labelCls, onChange, onRemove, onFileChange }: {
+function VehicleFormCard({ vehicle, index, showRemove, fieldErrors, t, inputCls, labelCls, onChange, onRemove, onFileChange, isUploadingDoc }: {
   vehicle: VehicleForm; index: number; showRemove: boolean
   fieldErrors: Record<string, string>; t: any; inputCls: string; labelCls: string
   onChange: (field: keyof VehicleForm, value: any) => void
   onRemove: () => void; onFileChange: (file: File | null) => void
+  isUploadingDoc?: boolean
 }) {
   return (
     <div className="border border-gray-200 rounded-xl p-4 space-y-4">
@@ -530,11 +544,12 @@ function VehicleFormCard({ vehicle, index, showRemove, fieldErrors, t, inputCls,
       <div>
         <h3 className="text-sm font-semibold text-gray-700 mb-2">{t('section_docs')}</h3>
         <label className="block text-sm font-medium text-gray-700 mb-1">{t('upload_doc')} <span className="text-red-500">*</span></label>
-        <input type="file" accept=".jpg,.jpeg,.png,.pdf"
+        <input type="file" accept=".jpg,.jpeg,.png,.pdf" disabled={isUploadingDoc}
           onChange={e => onFileChange(e.target.files?.[0] ?? null)}
-          className="w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-sm file:font-semibold file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100" />
+          className="w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-sm file:font-semibold file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100 disabled:opacity-50" />
         <p className="text-xs text-gray-400 mt-1">{t('upload_hint')}</p>
-        {vehicle.registration_doc_filename && <p className="text-xs text-green-600 mt-1">Selected: {vehicle.registration_doc_filename}</p>}
+        {isUploadingDoc && <p className="text-xs text-blue-500 mt-1">Uploading…</p>}
+        {!isUploadingDoc && vehicle.registration_doc_url && <p className="text-xs text-green-600 mt-1">✓ {vehicle.registration_doc_filename}</p>}
         {fieldErrors[`doc_${index}`] && <p className="text-red-500 text-xs mt-1">{fieldErrors[`doc_${index}`]}</p>}
       </div>
     </div>

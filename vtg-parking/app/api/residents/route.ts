@@ -29,9 +29,9 @@ export async function POST(req: NextRequest) {
       if (pendingApp) return NextResponse.json({ error: 'plate_conflict', plate }, { status: 409 });
     }
 
-    // Upload registration doc if provided
-    let registration_doc_url: string | null = null;
-    if (vehicle.registration_doc_base64 && vehicle.registration_doc_filename) {
+    // Use pre-uploaded URL if provided; otherwise fall back to base64 upload
+    let registration_doc_url: string | null = vehicle.registration_doc_url ?? null;
+    if (!registration_doc_url && vehicle.registration_doc_base64 && vehicle.registration_doc_filename) {
       const ext = vehicle.registration_doc_filename.split('.').pop();
       const buffer = Buffer.from(vehicle.registration_doc_base64, 'base64');
       const path = `${unit_id}/${plate}.${ext}`;
