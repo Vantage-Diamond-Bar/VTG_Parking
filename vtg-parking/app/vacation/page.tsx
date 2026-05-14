@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react'
 import Link from 'next/link'
 import { useTranslations } from 'next-intl'
 import PhoneInput from '@/components/PhoneInput'
+import { splitPhone } from '@/lib/utils'
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -74,6 +75,8 @@ export default function VacationPage() {
   const [emergencyFirstName, setEmergencyFirstName] = useState('')
   const [emergencyLastName, setEmergencyLastName] = useState('')
   const [emergencyPhone, setEmergencyPhone] = useState('')
+  const [emergencyPhoneCC, setEmergencyPhoneCC] = useState('+1')
+  const [emergencyPhoneLocal, setEmergencyPhoneLocal] = useState('')
   const [reason, setReason] = useState('')
   const [startDatetime, setStartDatetime] = useState('')
   const [endDatetime, setEndDatetime] = useState('')
@@ -231,12 +234,14 @@ export default function VacationPage() {
             registrant_type: vehicle.registrant_type,
             first_name: owner.name.split(' ')[0] ?? owner.name,
             last_name: owner.name.split(' ').slice(1).join(' ') || owner.name,
-            phone: owner.phone,
+            phone: splitPhone(owner.phone).number,
+            phone_country_code: splitPhone(owner.phone).countryCode,
             email: owner.email,
             reason: reason.trim() || null,
             emergency_first_name: emergencyFirstName.trim(),
             emergency_last_name: emergencyLastName.trim(),
-            emergency_phone: emergencyPhone,
+            emergency_phone: emergencyPhoneLocal,
+            emergency_phone_country_code: emergencyPhoneCC,
             start_datetime: startDatetime,
             end_datetime: endDatetime,
             year: vehicle.year,
@@ -279,6 +284,8 @@ export default function VacationPage() {
     setEmergencyFirstName('')
     setEmergencyLastName('')
     setEmergencyPhone('')
+    setEmergencyPhoneCC('+1')
+    setEmergencyPhoneLocal('')
     setReason('')
     setStartDatetime('')
     setEndDatetime('')
@@ -489,7 +496,11 @@ export default function VacationPage() {
                   </div>
                   <div>
                     <label className={labelCls}>{t('emergency_phone')} *</label>
-                    <PhoneInput value={emergencyPhone} onChange={setEmergencyPhone} />
+                    <PhoneInput
+                      value={emergencyPhone}
+                      onChange={setEmergencyPhone}
+                      onChangeSplit={({ countryCode, number }) => { setEmergencyPhoneCC(countryCode); setEmergencyPhoneLocal(number) }}
+                    />
                     {fieldErrors.emergency_phone && (
                       <p className="text-red-500 text-xs mt-1">{fieldErrors.emergency_phone}</p>
                     )}

@@ -35,6 +35,8 @@ export default function VisitorPage() {
 
   const [visitorName, setVisitorName] = useState('')
   const [visitorPhone, setVisitorPhone] = useState('')
+  const [visitorPhoneCC, setVisitorPhoneCC] = useState('+1')
+  const [visitorPhoneLocal, setVisitorPhoneLocal] = useState('')
   const [licensePlate, setLicensePlate] = useState('')
   const [plateState, setPlateState] = useState('')
   const [make, setMake] = useState('')
@@ -143,7 +145,8 @@ export default function VisitorPage() {
       const body = {
         unit_id: unitId,
         visitor_name: visitorName,
-        visitor_phone: visitorPhone,
+        visitor_phone: visitorPhoneLocal,
+        visitor_phone_country_code: visitorPhoneCC,
         license_plate: licensePlate.toUpperCase(),
         plate_state: plateState,
         make,
@@ -193,6 +196,8 @@ export default function VisitorPage() {
     setQuota(null)
     setVisitorName('')
     setVisitorPhone('')
+    setVisitorPhoneCC('+1')
+    setVisitorPhoneLocal('')
     setLicensePlate('')
     setPlateState('')
     setMake('')
@@ -436,6 +441,7 @@ export default function VisitorPage() {
                           <PhoneInput
                             value={visitorPhone}
                             onChange={setVisitorPhone}
+                            onChangeSplit={({ countryCode, number }) => { setVisitorPhoneCC(countryCode); setVisitorPhoneLocal(number) }}
                           />
                           {fieldErrors.visitor_phone && (
                             <p className="text-red-500 text-xs mt-1">{fieldErrors.visitor_phone}</p>

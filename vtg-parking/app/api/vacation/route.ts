@@ -4,8 +4,8 @@ import { supabaseAdmin } from '@/lib/supabase'
 export async function POST(req: NextRequest) {
   const body = await req.json()
   const {
-    unit_id, registrant_type, first_name, last_name, phone, email, reason,
-    emergency_first_name, emergency_last_name, emergency_phone,
+    unit_id, registrant_type, first_name, last_name, phone, phone_country_code, email, reason,
+    emergency_first_name, emergency_last_name, emergency_phone, emergency_phone_country_code,
     start_datetime, end_datetime,
     year, make, model, color, license_plate, plate_state,
   } = body
@@ -52,9 +52,11 @@ export async function POST(req: NextRequest) {
     .from('vacation_parking_requests')
     .insert({
       unit_id, registrant_type, first_name, last_name, phone,
+      phone_country_code: phone_country_code ?? null,
       email: email ?? null,
       reason: reason ?? null,
       emergency_first_name, emergency_last_name, emergency_phone,
+      emergency_phone_country_code: emergency_phone_country_code ?? null,
       start_datetime, end_datetime,
       year, make, model, color, license_plate, plate_state,
       is_registered_vehicle: isRegistered,

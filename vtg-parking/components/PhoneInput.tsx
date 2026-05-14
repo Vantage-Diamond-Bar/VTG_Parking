@@ -36,13 +36,14 @@ export function dialCode(code: string) {
 interface PhoneInputProps {
   value: string
   onChange: (value: string) => void
+  onChangeSplit?: (split: { countryCode: string; number: string }) => void
   placeholder?: string
   className?: string
   required?: boolean
 }
 
 /** Stores value as "{dialCode} {digits}", e.g. "+1 6265551234" or "+86 13912345678" */
-export default function PhoneInput({ value, onChange, className, required }: PhoneInputProps) {
+export default function PhoneInput({ value, onChange, onChangeSplit, className, required }: PhoneInputProps) {
   const [countryCode, setCountryCode] = useState('+1')
   const [localNumber, setLocalNumber] = useState('')
 
@@ -64,12 +65,14 @@ export default function PhoneInput({ value, onChange, className, required }: Pho
     const cleaned = localNumber.replace(/\D/g, '')
     setLocalNumber(cleaned)
     onChange(`${dialCode(code)} ${cleaned}`)
+    onChangeSplit?.({ countryCode: dialCode(code), number: cleaned })
   }
 
   function handleLocalChange(raw: string) {
     const cleaned = raw.replace(/\D/g, '')
     setLocalNumber(cleaned)
     onChange(`${dialCode(countryCode)} ${cleaned}`)
+    onChangeSplit?.({ countryCode: dialCode(countryCode), number: cleaned })
   }
 
   const inputCls = className ?? 'w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500'

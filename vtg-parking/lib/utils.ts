@@ -97,6 +97,13 @@ export function countNights(startStr: string, endStr: string): number {
   return Math.max(0, Math.round((end - start) / 86_400_000))
 }
 
+export function splitPhone(combined: string): { countryCode: string; number: string } {
+  if (!combined) return { countryCode: '', number: '' }
+  const space = combined.indexOf(' ')
+  if (space === -1) return { countryCode: '', number: combined }
+  return { countryCode: combined.slice(0, space), number: combined.slice(space + 1) }
+}
+
 export function maskPhone(phone: string): string {
   if (!phone) return ''
   const m = phone.match(/^(\+\d{1,3})\s*(.+)$/)

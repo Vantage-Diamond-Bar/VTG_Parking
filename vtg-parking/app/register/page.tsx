@@ -92,6 +92,8 @@ export default function RegisterPage() {
   const [ownerFirstName, setOwnerFirstName] = useState('')
   const [ownerLastName, setOwnerLastName] = useState('')
   const [ownerPhone, setOwnerPhone] = useState('')
+  const [ownerPhoneCC, setOwnerPhoneCC] = useState('+1')
+  const [ownerPhoneLocal, setOwnerPhoneLocal] = useState('')
   const [ownerEmail, setOwnerEmail] = useState('')
   const [newVehicles, setNewVehicles] = useState<VehicleForm[]>([emptyVehicle()])
   const [docUploading, setDocUploading] = useState<Record<number, boolean>>({})
@@ -212,7 +214,8 @@ export default function RegisterPage() {
           unit_id: unitId,
           registrant_type: registrantType,
           owner_name: `${ownerFirstName.trim()} ${ownerLastName.trim()}`,
-          owner_phone: ownerPhone,
+          owner_phone: ownerPhoneLocal,
+          owner_phone_country_code: ownerPhoneCC,
           owner_email: ownerEmail,
           opt_in_sms: true,
           opt_in_email: true,
@@ -383,7 +386,11 @@ export default function RegisterPage() {
                   </div>
                   <div>
                     <label className={labelCls}>{t('phone')} *</label>
-                    <PhoneInput value={ownerPhone} onChange={setOwnerPhone} />
+                    <PhoneInput
+                      value={ownerPhone}
+                      onChange={setOwnerPhone}
+                      onChangeSplit={({ countryCode, number }) => { setOwnerPhoneCC(countryCode); setOwnerPhoneLocal(number) }}
+                    />
                     {fieldErrors.owner_phone && <p className="text-red-500 text-xs mt-1">{fieldErrors.owner_phone}</p>}
                   </div>
                   <div>

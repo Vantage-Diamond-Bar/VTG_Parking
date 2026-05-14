@@ -4,7 +4,7 @@ import { normalizedPlate } from '@/lib/utils';
 
 export async function POST(req: NextRequest) {
   const body = await req.json();
-  const { unit_id, owner_name, owner_phone, owner_email, opt_in_sms, opt_in_email, registrant_type, vehicles } = body;
+  const { unit_id, owner_name, owner_phone, owner_phone_country_code, owner_email, opt_in_sms, opt_in_email, registrant_type, vehicles } = body;
 
   // First pass: validate plates and upload docs
   for (const vehicle of vehicles) {
@@ -69,6 +69,7 @@ export async function POST(req: NextRequest) {
           unit_id,
           owner_name,
           owner_phone,
+          owner_phone_country_code: owner_phone_country_code ?? null,
           owner_email,
           registrant_type: registrant_type ?? 'owner',
           opt_in_sms: opt_in_sms ?? false,
@@ -89,6 +90,7 @@ export async function POST(req: NextRequest) {
           unit_id,
           owner_name,
           owner_phone: owner_phone ?? null,
+          owner_phone_country_code: owner_phone_country_code ?? null,
           owner_email: owner_email ?? null,
           registrant_type: registrant_type ?? 'owner',
           year: v.year,
@@ -108,6 +110,7 @@ export async function POST(req: NextRequest) {
         unit_id,
         owner_name,
         owner_phone,
+        owner_phone_country_code: owner_phone_country_code ?? null,
         owner_email,
         registrant_type: registrant_type ?? 'owner',
         opt_in_sms: opt_in_sms ?? false,
