@@ -95,7 +95,7 @@ export async function GET(req: NextRequest) {
   if (!search) {
     for (const u of units ?? []) {
       if (!unitMap[u.id]) {
-        result.push({ unit_id: u.id, address: u.address, total_nights: 0, months: {}, registrations: [] } as any)
+        result.push({ unit_id: u.id, address: u.address, total_nights: 0, months: [], registrations: [] })
       }
     }
   }
