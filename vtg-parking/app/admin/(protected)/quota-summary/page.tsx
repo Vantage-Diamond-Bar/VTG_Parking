@@ -86,20 +86,27 @@ function MonthlyBarChart({ months }: { months: VehicleMonthEntry[] }) {
   if (months.length === 0) {
     return <p className="text-xs text-gray-400 italic">No monthly data.</p>
   }
+  const CHART_H = 100 // px
   const max = Math.max(...months.map((m) => m.nights_used), 1)
   return (
     <div>
-      <div className="flex items-end gap-1.5 h-28">
+      <div className="flex items-end gap-1.5" style={{ height: CHART_H }}>
         {months.map((m) => {
           const pct = m.nights_used / max
-          const barColor =
-            pct >= 0.85 ? '#f87171' : pct >= 0.5 ? '#fbbf24' : '#60a5fa'
+          const barH = Math.max(6, Math.round(pct * CHART_H))
+          const barColor = pct >= 0.85 ? '#f87171' : pct >= 0.5 ? '#fbbf24' : '#60a5fa'
           return (
-            <div key={m.year_month} className="flex-1 flex flex-col items-center justify-end gap-0.5 min-w-0">
-              <span className="text-[9px] text-gray-500 font-medium">{m.nights_used}</span>
+            <div
+              key={m.year_month}
+              className="flex-1 flex flex-col items-center justify-end min-w-0"
+              style={{ height: CHART_H }}
+            >
+              <span style={{ fontSize: 9, color: '#6b7280', marginBottom: 2, lineHeight: 1 }}>
+                {m.nights_used}
+              </span>
               <div
-                className="w-full rounded-t-sm transition-all"
-                style={{ height: `${Math.max(6, Math.round(pct * 100))}%`, backgroundColor: barColor }}
+                className="w-full rounded-t-sm"
+                style={{ height: barH, backgroundColor: barColor, flexShrink: 0 }}
               />
             </div>
           )
@@ -111,9 +118,9 @@ function MonthlyBarChart({ months }: { months: VehicleMonthEntry[] }) {
           const showYear = i === 0 || m.year_month.slice(0, 4) !== months[i - 1].year_month.slice(0, 4)
           return (
             <div key={m.year_month} className="flex-1 flex flex-col items-center min-w-0">
-              <span className="text-[9px] text-gray-400 leading-none">{m.year_month.slice(5)}</span>
+              <span style={{ fontSize: 9, color: '#9ca3af', lineHeight: 1 }}>{m.year_month.slice(5)}</span>
               {showYear && (
-                <span className="text-[8px] text-gray-300 leading-none">{m.year_month.slice(2, 4)}</span>
+                <span style={{ fontSize: 8, color: '#d1d5db', lineHeight: 1 }}>{m.year_month.slice(2, 4)}</span>
               )}
             </div>
           )
