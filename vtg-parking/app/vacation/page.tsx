@@ -365,7 +365,7 @@ export default function VacationPage() {
 
           {/* ── Step 2: Unit check feedback ──────────────────────────────── */}
           {unitId && flowState === 'checking' && (
-            <p className="text-sm text-gray-400 text-center py-4">Checking unit eligibility…</p>
+            <p className="text-sm text-gray-500 text-center py-4">Checking unit eligibility…</p>
           )}
 
           {flowState === 'no_vehicles' && (
@@ -431,7 +431,7 @@ export default function VacationPage() {
           )}
 
           {flowState === 'loading_vehicles' && (
-            <p className="text-sm text-gray-400 text-center py-4">Loading your registered vehicles…</p>
+            <p className="text-sm text-gray-500 text-center py-4">Loading your registered vehicles…</p>
           )}
 
           {/* ── Steps 4–9: Full form (only when flow === 'form' or 'submitting') */}

@@ -511,7 +511,7 @@ function VehicleFormCard({ vehicle, index, showRemove, fieldErrors, t, inputCls,
         <div>
           <label className={labelCls}>{t('license_plate')} *</label>
           <input type="text" value={vehicle.license_plate} onChange={e => onChange('license_plate', e.target.value.replace(/\s/g, '').toUpperCase())} className={inputCls} placeholder="ABC1234" />
-          <p className="text-xs text-gray-400 mt-1">{t('plate_hint')}</p>
+          <p className="text-xs text-gray-500 mt-1">{t('plate_hint')}</p>
           {fieldErrors[`plate_${index}`] && <p className="text-red-500 text-xs mt-1">{fieldErrors[`plate_${index}`]}</p>}
         </div>
         <div>
@@ -554,7 +554,7 @@ function VehicleFormCard({ vehicle, index, showRemove, fieldErrors, t, inputCls,
         <input type="file" accept=".jpg,.jpeg,.png,.pdf" disabled={isUploadingDoc}
           onChange={e => onFileChange(e.target.files?.[0] ?? null)}
           className="w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-sm file:font-semibold file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100 disabled:opacity-50" />
-        <p className="text-xs text-gray-400 mt-1">{t('upload_hint')}</p>
+        <p className="text-xs text-gray-500 mt-1">{t('upload_hint')}</p>
         {isUploadingDoc && <p className="text-xs text-blue-500 mt-1">Uploading…</p>}
         {!isUploadingDoc && vehicle.registration_doc_url && <p className="text-xs text-green-600 mt-1">✓ {vehicle.registration_doc_filename}</p>}
         {fieldErrors[`doc_${index}`] && <p className="text-red-500 text-xs mt-1">{fieldErrors[`doc_${index}`]}</p>}
@@ -731,7 +731,7 @@ function ManageView({ t, unitId, confirmedEmail, unitData, units, toast, showToa
         <div className="mb-6">
           <h1 className="text-2xl font-bold text-gray-900">{t('title_manage')}</h1>
           <p className="text-gray-500 text-sm mt-0.5">{t('subtitle_manage')}</p>
-          <p className="text-gray-400 text-xs mt-1">{unitAddress}</p>
+          <p className="text-gray-500 text-xs mt-1">{unitAddress}</p>
         </div>
 
         {/* ── Contact Info ──────────────────────────────────── */}
@@ -999,7 +999,7 @@ function ManageView({ t, unitId, confirmedEmail, unitData, units, toast, showToa
               {nightsUsed > 0 && <div className="h-full bg-red-400 transition-all" style={{ width: `${usedPct}%` }} />}
               <div className="h-full bg-green-400 flex-1" />
             </div>
-            <p className="text-xs text-gray-400 text-center">
+            <p className="text-xs text-gray-500 text-center">
               {quotaLoading ? '…' : `${nightsUsed} / ${quotaLimit} nights used (${selectedMonth})`}
             </p>
           </div>

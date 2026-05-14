@@ -124,11 +124,11 @@ export default function AdminEmailsPage() {
             <tbody className="divide-y divide-gray-100">
               {loading ? (
                 <tr>
-                  <td colSpan={4} className="px-6 py-8 text-center text-gray-400">{t('loading')}</td>
+                  <td colSpan={4} className="px-6 py-8 text-center text-gray-500">{t('loading')}</td>
                 </tr>
               ) : emails.length === 0 ? (
                 <tr>
-                  <td colSpan={4} className="px-6 py-8 text-center text-gray-400">{t('no_results')}</td>
+                  <td colSpan={4} className="px-6 py-8 text-center text-gray-500">{t('no_results')}</td>
                 </tr>
               ) : (
                 emails.map((entry) => (

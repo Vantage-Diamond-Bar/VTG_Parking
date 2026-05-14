@@ -195,7 +195,7 @@ export default async function AdminDashboardPage() {
                     <td className="px-6 py-3 text-gray-700">{v.units?.address ?? '—'}</td>
                     <td className="px-6 py-3">
                       <div className="font-medium">{v.owner_name}</div>
-                      <div className="text-xs text-gray-400">{v.owner_email}</div>
+                      <div className="text-xs text-gray-600">{v.owner_email}</div>
                     </td>
                     <td className="px-6 py-3 text-gray-600">
                       {[v.color, v.make, v.model].filter(Boolean).join(' ')}
@@ -236,7 +236,7 @@ export default async function AdminDashboardPage() {
                   <tr key={alert.id}>
                     <td className="px-6 py-4 font-mono font-semibold">
                       {alert.license_plate}
-                      {alert.plate_state && <span className="ml-1 text-xs text-gray-400 font-normal">({alert.plate_state})</span>}
+                      {alert.plate_state && <span className="ml-1 text-xs text-gray-500 font-normal">({alert.plate_state})</span>}
                     </td>
                     <td className="px-6 py-4">{alert.month}</td>
                     <td className="px-6 py-4 text-xs text-gray-600">{alert.units_involved?.join(', ')}</td>
@@ -255,7 +255,7 @@ export default async function AdminDashboardPage() {
       {/* Recent Violations */}
       <div className="bg-white rounded-xl shadow-sm border border-gray-100">
         <div className="px-6 py-4 border-b border-gray-100">
-          <h2 className="text-lg font-semibold text-gray-900">{t('recent_violations')} <span className="text-sm font-normal text-gray-400 ml-1">(last 7 days)</span></h2>
+          <h2 className="text-lg font-semibold text-gray-900">{t('recent_violations')} <span className="text-sm font-normal text-gray-500 ml-1">(last 7 days)</span></h2>
         </div>
         {violations.length === 0 ? (
           <p className="text-sm text-gray-500 px-6 py-4">{t('no_violations')}</p>
@@ -281,7 +281,7 @@ export default async function AdminDashboardPage() {
                       <span className="inline-block bg-orange-100 text-orange-700 text-xs px-2 py-0.5 rounded-full">{v.type}</span>
                     </div>
                     <div className="text-gray-500 text-xs">{v.location}</div>
-                    <div className="text-gray-400 text-xs mt-0.5">{submittedAt.toLocaleString()}</div>
+                    <div className="text-gray-500 text-xs mt-0.5">{submittedAt.toLocaleString()}</div>
                   </div>
                   <div className="shrink-0">
                     <span className={`inline-block px-3 py-1.5 rounded-lg font-bold text-sm tracking-wide ${

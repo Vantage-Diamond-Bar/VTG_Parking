@@ -157,11 +157,11 @@ export default function AdminUnitsPage() {
             <tbody className="divide-y divide-gray-100">
               {loading ? (
                 <tr>
-                  <td colSpan={3} className="px-6 py-8 text-center text-gray-400">{t('loading')}</td>
+                  <td colSpan={3} className="px-6 py-8 text-center text-gray-500">{t('loading')}</td>
                 </tr>
               ) : units.length === 0 ? (
                 <tr>
-                  <td colSpan={3} className="px-6 py-8 text-center text-gray-400">{t('no_results')}</td>
+                  <td colSpan={3} className="px-6 py-8 text-center text-gray-500">{t('no_results')}</td>
                 </tr>
               ) : (
                 units.map((unit) => (

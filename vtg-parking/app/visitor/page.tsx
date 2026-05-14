@@ -315,7 +315,7 @@ export default function VisitorPage() {
               {unitId && (
                 <div className="mt-4">
                   {verifyState === 'loading' && (
-                    <p className="text-sm text-gray-400">{t('loading_quota')}</p>
+                    <p className="text-sm text-gray-500">{t('loading_quota')}</p>
                   )}
 
                   {verifyState === 'no_vehicles' && (
@@ -461,7 +461,7 @@ export default function VisitorPage() {
                             onChange={(e) => setLicensePlate(e.target.value.replace(/\s/g, '').toUpperCase())}
                             className={inputCls}
                           />
-                          <p className="text-xs text-gray-400 mt-1">{t('plate_hint')}</p>
+                          <p className="text-xs text-gray-500 mt-1">{t('plate_hint')}</p>
                           {fieldErrors.license_plate && (
                             <p className="text-red-500 text-xs mt-1">{fieldErrors.license_plate}</p>
                           )}

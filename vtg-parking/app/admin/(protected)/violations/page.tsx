@@ -241,9 +241,9 @@ export default function AdminViolationsPage() {
             </thead>
             <tbody className="divide-y divide-gray-100">
               {loading ? (
-                <tr><td colSpan={10} className="px-4 py-8 text-center text-gray-400">{t('loading')}</td></tr>
+                <tr><td colSpan={10} className="px-4 py-8 text-center text-gray-500">{t('loading')}</td></tr>
               ) : filteredViolations.length === 0 ? (
-                <tr><td colSpan={10} className="px-4 py-8 text-center text-gray-400">{t('no_results')}</td></tr>
+                <tr><td colSpan={10} className="px-4 py-8 text-center text-gray-500">{t('no_results')}</td></tr>
               ) : filteredViolations.map((v) => (
                 <tr key={v.id} className="hover:bg-gray-50 align-top">
                   <td className="px-4 py-3 text-gray-600 whitespace-nowrap text-xs">
@@ -268,7 +268,7 @@ export default function AdminViolationsPage() {
                       >
                         {v.photo_urls.length} {t('photos_count')}
                       </button>
-                    ) : <span className="text-gray-400 text-xs">—</span>}
+                    ) : <span className="text-gray-500 text-xs">—</span>}
                   </td>
                   <td className="px-4 py-3 text-gray-500 text-xs">{v.reporter_email || '—'}</td>
                   <td className="px-4 py-3 text-xs font-medium text-gray-700">
@@ -283,7 +283,7 @@ export default function AdminViolationsPage() {
                         {v.violation_history.slice(0, 4).map((h) => (
                           <div key={h.id} className="flex flex-col gap-0.5 border-l-2 border-gray-200 pl-2">
                             <div className="flex items-center gap-1.5 flex-wrap">
-                              <span className="text-gray-400 whitespace-nowrap font-mono">
+                              <span className="text-gray-600 whitespace-nowrap font-mono">
                                 {new Date(h.submitted_at).toLocaleDateString('en-US', { month: 'numeric', day: 'numeric', year: '2-digit' })}
                               </span>
                               <span className={`px-1.5 py-0.5 rounded text-xs font-medium ${STATUS_COLORS[h.status] ?? 'bg-gray-100 text-gray-600'}`}>
@@ -292,15 +292,15 @@ export default function AdminViolationsPage() {
                             </div>
                             <span className="text-gray-700 leading-snug" style={{ maxWidth: 200 }}>{h.violation_type}</span>
                             {h.resolution_type && (
-                              <span className="text-gray-400 italic leading-snug">{safeVioRes(t, h.resolution_type)}</span>
+                              <span className="text-gray-500 italic leading-snug">{safeVioRes(t, h.resolution_type)}</span>
                             )}
                           </div>
                         ))}
                         {v.violation_history.length > 4 && (
-                          <div className="text-gray-400 italic">+{v.violation_history.length - 4} more</div>
+                          <div className="text-gray-500 italic">+{v.violation_history.length - 4} more</div>
                         )}
                       </div>
-                    ) : <span className="text-gray-400">—</span>}
+                    ) : <span className="text-gray-500">—</span>}
                   </td>
                   <td className="px-4 py-3">
                     <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${STATUS_COLORS[v.status] ?? 'bg-gray-100 text-gray-600'}`}>
@@ -328,7 +328,7 @@ export default function AdminViolationsPage() {
           <div className="bg-white rounded-xl shadow-xl max-w-3xl w-full max-h-[90vh] overflow-y-auto p-6" onClick={(e) => e.stopPropagation()}>
             <div className="flex items-center justify-between mb-4">
               <h2 className="text-lg font-semibold text-gray-900">{t('violation_photos')}</h2>
-              <button onClick={() => setPhotoModal(null)} className="text-gray-400 hover:text-gray-600 text-xl">✕</button>
+              <button onClick={() => setPhotoModal(null)} className="text-gray-500 hover:text-gray-700 text-xl">✕</button>
             </div>
             <div className="grid grid-cols-2 gap-4">
               {photoModal.map((url, i) => (
@@ -348,7 +348,7 @@ export default function AdminViolationsPage() {
           <div className="bg-white rounded-xl shadow-xl w-full max-w-2xl my-8">
             <div className="flex items-center justify-between px-6 py-4 border-b border-gray-100">
               <h2 className="text-lg font-semibold text-gray-900">{t('vio_process_title')}</h2>
-              <button onClick={() => setViewViolation(null)} className="text-gray-400 hover:text-gray-600 text-xl">✕</button>
+              <button onClick={() => setViewViolation(null)} className="text-gray-500 hover:text-gray-700 text-xl">✕</button>
             </div>
 
             <div className="p-6 space-y-5">
@@ -383,8 +383,8 @@ export default function AdminViolationsPage() {
                 <div>
                   <div className="text-sm font-medium text-gray-700 mb-2">
                     {t('vio_history')}
-                    {viewViolation.unit_address && <span className="text-gray-400 font-normal ml-2">— {viewViolation.unit_address}</span>}
-                    <span className="ml-2 text-xs text-gray-400">({viewViolation.violation_history.length} {t('vio_history_count')})</span>
+                    {viewViolation.unit_address && <span className="text-gray-500 font-normal ml-2">— {viewViolation.unit_address}</span>}
+                    <span className="ml-2 text-xs text-gray-500">({viewViolation.violation_history.length} {t('vio_history_count')})</span>
                   </div>
                   <div className="border border-gray-200 rounded-lg divide-y divide-gray-100 text-xs max-h-48 overflow-y-auto">
                     {viewViolation.violation_history.map((h) => (
@@ -395,14 +395,14 @@ export default function AdminViolationsPage() {
                             <div className="text-green-700 mt-0.5 italic">{safeVioRes(t, h.resolution_type)}</div>
                           )}
                           {(h.final_license_plate || h.license_plate) && (
-                            <div className="text-gray-400 font-mono mt-0.5">{h.final_license_plate ?? h.license_plate}</div>
+                            <div className="text-gray-600 font-mono mt-0.5">{h.final_license_plate ?? h.license_plate}</div>
                           )}
                         </div>
                         <div className="flex flex-col items-end gap-1 shrink-0">
                           <span className={`px-1.5 py-0.5 rounded font-medium ${STATUS_COLORS[h.status] ?? 'bg-gray-100 text-gray-600'}`}>
                             {h.status}
                           </span>
-                          <span className="text-gray-400 whitespace-nowrap">
+                          <span className="text-gray-500 whitespace-nowrap">
                             {new Date(h.submitted_at).toLocaleString('en-US', { month: 'short', day: 'numeric', year: 'numeric', hour: '2-digit', minute: '2-digit' })}
                           </span>
                         </div>

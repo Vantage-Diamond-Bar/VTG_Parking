@@ -69,7 +69,7 @@ function MonthBar({ month }: { month: MonthEntry }) {
   const color = pct >= 100 ? 'bg-red-500' : pct >= 70 ? 'bg-amber-500' : 'bg-green-500'
   return (
     <div className="flex items-center gap-2 text-xs">
-      <span className="text-gray-400 w-16 shrink-0">{month.year_month}</span>
+      <span className="text-gray-500 w-16 shrink-0">{month.year_month}</span>
       <div className="flex-1 bg-gray-100 rounded-full h-3 overflow-hidden">
         <div className={`h-full ${color} transition-all`} style={{ width: `${pct}%` }} />
       </div>
@@ -171,12 +171,12 @@ function VehicleRow({ vehicle, globalMax }: { vehicle: VehicleSummary; globalMax
         onClick={() => setExpanded((p) => !p)}
         className="w-full flex items-center gap-4 px-5 py-4 hover:bg-gray-50 transition-colors text-left"
       >
-        <div className="w-5 text-gray-400 shrink-0 text-sm">{expanded ? '▾' : '▸'}</div>
+        <div className="w-5 text-gray-500 shrink-0 text-sm">{expanded ? '▾' : '▸'}</div>
 
         {/* Plate + vehicle info */}
         <div className="flex-1 min-w-0">
           <div className="font-mono font-bold text-gray-900 text-sm">{vehicle.license_plate}</div>
-          <div className="text-xs text-gray-400 mt-0.5">
+          <div className="text-xs text-gray-500 mt-0.5">
             {vehicleDesc || '—'}
             {vehicle.plate_state && (
               <span className="ml-1.5 px-1.5 py-0.5 bg-gray-100 rounded text-gray-500 text-[10px]">
@@ -189,7 +189,7 @@ function VehicleRow({ vehicle, globalMax }: { vehicle: VehicleSummary; globalMax
         {/* Visit stats */}
         <div className="text-xs text-gray-500 text-right shrink-0 hidden sm:block">
           <div>{visitCount} stays</div>
-          <div className="text-gray-400">{uniqueAddresses.length} unit{uniqueAddresses.length !== 1 ? 's' : ''}</div>
+          <div className="text-gray-500">{uniqueAddresses.length} unit{uniqueAddresses.length !== 1 ? 's' : ''}</div>
         </div>
 
         {/* Total nights badge */}
@@ -205,7 +205,7 @@ function VehicleRow({ vehicle, globalMax }: { vehicle: VehicleSummary; globalMax
           >
             {vehicle.total_nights}
           </span>
-          <span className="text-xs text-gray-400 ml-1">nights</span>
+          <span className="text-xs text-gray-500 ml-1">nights</span>
         </div>
       </button>
 
@@ -271,17 +271,17 @@ function VehicleRow({ vehicle, globalMax }: { vehicle: VehicleSummary; globalMax
                       <td className="py-2 pr-4 text-gray-600">{r.visitor_name || '—'}</td>
                       <td className="py-2 pr-4 text-gray-500 whitespace-nowrap">
                         {new Date(r.start_datetime).toLocaleDateString()}
-                        <span className="text-gray-400 ml-1">
+                        <span className="text-gray-500 ml-1">
                           {new Date(r.start_datetime).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
                         </span>
                       </td>
                       <td className="py-2 pr-4 text-gray-500 whitespace-nowrap">
                         {new Date(r.end_datetime).toLocaleDateString()}
-                        <span className="text-gray-400 ml-1">
+                        <span className="text-gray-500 ml-1">
                           {new Date(r.end_datetime).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
                         </span>
                       </td>
-                      <td className={`py-2 text-right font-semibold ${r.nights > 0 ? 'text-blue-600' : 'text-gray-400'}`}>
+                      <td className={`py-2 text-right font-semibold ${r.nights > 0 ? 'text-blue-600' : 'text-gray-500'}`}>
                         {r.nights > 0 ? r.nights : '<1'}
                       </td>
                     </tr>
@@ -379,14 +379,14 @@ export default function QuotaSummaryPage() {
       </div>
 
       {loading && data.length === 0 ? (
-        <div className="text-center text-gray-400 py-16">Loading…</div>
+        <div className="text-center text-gray-500 py-16">Loading…</div>
       ) : (
         <>
           {/* ── Unit view ─────────────────────────────────────────────────── */}
           {viewMode === 'units' && (
             <div className="space-y-3">
               {data.length === 0 ? (
-                <div className="text-center text-gray-400 py-16">No data found.</div>
+                <div className="text-center text-gray-500 py-16">No data found.</div>
               ) : (
                 data.map((unit) => {
                   const isExpanded = expandedUnit === unit.unit_id
@@ -405,15 +405,15 @@ export default function QuotaSummaryPage() {
                         onClick={() => toggleExpand(unit.unit_id)}
                         className="w-full flex items-center gap-4 px-5 py-4 hover:bg-gray-50 transition-colors text-left"
                       >
-                        <div className="w-5 text-gray-400 shrink-0 text-sm">{isExpanded ? '▾' : '▸'}</div>
+                        <div className="w-5 text-gray-500 shrink-0 text-sm">{isExpanded ? '▾' : '▸'}</div>
                         <div className="flex-1 min-w-0">
                           <div className="font-semibold text-gray-900 text-sm truncate">{unit.address}</div>
-                          <div className="text-xs text-gray-400 mt-0.5">
+                          <div className="text-xs text-gray-500 mt-0.5">
                             {unit.registrations.length} registrations · {unit.total_nights} total nights
                           </div>
                         </div>
                         <div className="flex items-center gap-2 w-52 shrink-0">
-                          <span className="text-xs text-gray-400 w-16 shrink-0 text-right">This month</span>
+                          <span className="text-xs text-gray-500 w-16 shrink-0 text-right">This month</span>
                           <div className="flex-1 bg-gray-100 rounded-full h-2 overflow-hidden">
                             <div className={`h-full ${currentColor} transition-all`} style={{ width: `${currentPct}%` }} />
                           </div>
@@ -425,7 +425,7 @@ export default function QuotaSummaryPage() {
                           <span className={`text-sm font-bold ${unit.total_nights > 50 ? 'text-red-600' : unit.total_nights > 20 ? 'text-amber-600' : 'text-gray-700'}`}>
                             {unit.total_nights}
                           </span>
-                          <span className="text-xs text-gray-400 ml-1">total</span>
+                          <span className="text-xs text-gray-500 ml-1">total</span>
                         </div>
                       </button>
 
@@ -449,7 +449,7 @@ export default function QuotaSummaryPage() {
                           {activeTab === 'months' && (
                             <div className="space-y-2">
                               {unit.months.length === 0 ? (
-                                <p className="text-xs text-gray-400 italic">No visitor registrations recorded.</p>
+                                <p className="text-xs text-gray-500 italic">No visitor registrations recorded.</p>
                               ) : (
                                 unit.months.map((m) => <MonthBar key={m.year_month} month={m} />)
                               )}
@@ -459,7 +459,7 @@ export default function QuotaSummaryPage() {
                           {activeTab === 'registrations' && (
                             <div className="overflow-x-auto">
                               {unit.registrations.length === 0 ? (
-                                <p className="text-xs text-gray-400 italic">No registrations found.</p>
+                                <p className="text-xs text-gray-500 italic">No registrations found.</p>
                               ) : (
                                 <table className="w-full text-xs">
                                   <thead className="text-gray-500 uppercase text-xs border-b border-gray-100">
@@ -484,17 +484,17 @@ export default function QuotaSummaryPage() {
                                         </td>
                                         <td className="py-2 pr-4 text-gray-500 whitespace-nowrap">
                                           {new Date(r.start_datetime).toLocaleDateString()}
-                                          <span className="text-gray-400 ml-1">
+                                          <span className="text-gray-500 ml-1">
                                             {new Date(r.start_datetime).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
                                           </span>
                                         </td>
                                         <td className="py-2 pr-4 text-gray-500 whitespace-nowrap">
                                           {new Date(r.end_datetime).toLocaleDateString()}
-                                          <span className="text-gray-400 ml-1">
+                                          <span className="text-gray-500 ml-1">
                                             {new Date(r.end_datetime).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
                                           </span>
                                         </td>
-                                        <td className={`py-2 text-right font-semibold ${r.nights > 0 ? 'text-blue-600' : 'text-gray-400'}`}>
+                                        <td className={`py-2 text-right font-semibold ${r.nights > 0 ? 'text-blue-600' : 'text-gray-500'}`}>
                                           {r.nights > 0 ? r.nights : '<1'}
                                         </td>
                                       </tr>
@@ -517,7 +517,7 @@ export default function QuotaSummaryPage() {
           {viewMode === 'vehicles' && (
             <div className="space-y-3">
               {vehicles.length === 0 ? (
-                <div className="text-center text-gray-400 py-16">No vehicles found.</div>
+                <div className="text-center text-gray-500 py-16">No vehicles found.</div>
               ) : (() => {
                 const globalMax = Math.max(...vehicles.flatMap(v => v.months.map(m => m.nights_used)), 1)
                 return vehicles.map((v) => (

@@ -197,9 +197,9 @@ export default function AdminOversizedPage() {
             </thead>
             <tbody className="divide-y divide-gray-100">
               {loading ? (
-                <tr><td colSpan={7} className="px-4 py-8 text-center text-gray-400">Loading...</td></tr>
+                <tr><td colSpan={7} className="px-4 py-8 text-center text-gray-500">Loading...</td></tr>
               ) : filteredApplications.length === 0 ? (
-                <tr><td colSpan={7} className="px-4 py-8 text-center text-gray-400">No records found.</td></tr>
+                <tr><td colSpan={7} className="px-4 py-8 text-center text-gray-500">No records found.</td></tr>
               ) : filteredApplications.map((app) => (
                 <tr key={app.id} className="hover:bg-gray-50 align-top">
                   <td className="px-4 py-3 text-sm font-medium text-gray-800">
@@ -207,16 +207,16 @@ export default function AdminOversizedPage() {
                   </td>
                   <td className="px-4 py-3">
                     <div className="font-medium text-gray-800">{app.owner_name}</div>
-                    {app.owner_phone && <div className="text-xs text-gray-400">{app.owner_phone}</div>}
-                    {app.owner_email && <div className="text-xs text-gray-400">{app.owner_email}</div>}
+                    {app.owner_phone && <div className="text-xs text-gray-600">{app.owner_phone}</div>}
+                    {app.owner_email && <div className="text-xs text-gray-600">{app.owner_email}</div>}
                   </td>
                   <td className="px-4 py-3 text-xs text-gray-700">
                     <div>{app.year ?? ''} {app.make} {app.model}</div>
-                    <div className="text-gray-400">{app.color}</div>
+                    <div className="text-gray-500">{app.color}</div>
                   </td>
                   <td className="px-4 py-3 font-mono font-semibold text-xs">
                     {app.license_plate}
-                    {app.plate_state && <span className="text-gray-400 font-normal ml-1">/ {app.plate_state}</span>}
+                    {app.plate_state && <span className="text-gray-500 font-normal ml-1">/ {app.plate_state}</span>}
                   </td>
                   <td className="px-4 py-3 text-xs text-gray-500 whitespace-nowrap">
                     {new Date(app.created_at).toLocaleDateString()}
@@ -260,7 +260,7 @@ export default function AdminOversizedPage() {
           >
             <div className="flex items-center justify-between px-6 py-4 border-b border-gray-100">
               <h2 className="text-lg font-bold text-gray-900">Oversized Vehicle Application</h2>
-              <button onClick={() => setSelected(null)} className="text-gray-400 hover:text-gray-600 text-xl">✕</button>
+              <button onClick={() => setSelected(null)} className="text-gray-500 hover:text-gray-700 text-xl">✕</button>
             </div>
 
             <div className="px-6 py-5 space-y-5 text-sm">
@@ -276,31 +276,31 @@ export default function AdminOversizedPage() {
                 <div className="text-xs font-semibold text-gray-500 uppercase mb-3">Application Details</div>
                 <div className="grid grid-cols-2 gap-x-6 gap-y-2">
                   <div>
-                    <p className="text-xs text-gray-400 uppercase">Unit</p>
+                    <p className="text-xs text-gray-500 uppercase">Unit</p>
                     <p className="font-medium">{selected.units?.address ?? '—'}</p>
                   </div>
                   <div>
-                    <p className="text-xs text-gray-400 uppercase">Submitted</p>
+                    <p className="text-xs text-gray-500 uppercase">Submitted</p>
                     <p className="font-medium">{new Date(selected.created_at).toLocaleString()}</p>
                   </div>
                   <div>
-                    <p className="text-xs text-gray-400 uppercase">Owner</p>
+                    <p className="text-xs text-gray-500 uppercase">Owner</p>
                     <p className="font-medium">{selected.owner_name}</p>
                     {selected.owner_phone && <p className="text-gray-500 text-xs">{selected.owner_phone}</p>}
                     {selected.owner_email && <p className="text-gray-500 text-xs">{selected.owner_email}</p>}
                   </div>
                   <div>
-                    <p className="text-xs text-gray-400 uppercase">Registrant Type</p>
+                    <p className="text-xs text-gray-500 uppercase">Registrant Type</p>
                     <p className="font-medium capitalize">{selected.registrant_type}</p>
                   </div>
                   <div className="col-span-2">
-                    <p className="text-xs text-gray-400 uppercase">Vehicle</p>
+                    <p className="text-xs text-gray-500 uppercase">Vehicle</p>
                     <p className="font-mono font-semibold">{selected.license_plate}{selected.plate_state ? ` / ${selected.plate_state}` : ''}</p>
                     <p className="text-gray-500 text-xs">{selected.year ?? ''} {selected.make} {selected.model} · {selected.color}</p>
                   </div>
                   {selected.registration_doc_url && (
                     <div className="col-span-2">
-                      <p className="text-xs text-gray-400 uppercase">Registration Document</p>
+                      <p className="text-xs text-gray-500 uppercase">Registration Document</p>
                       <a
                         href={selected.registration_doc_url}
                         target="_blank"
@@ -320,16 +320,16 @@ export default function AdminOversizedPage() {
                   Other Vehicles Registered to This Unit
                 </div>
                 {unitVehiclesLoading ? (
-                  <p className="text-xs text-gray-400">Loading...</p>
+                  <p className="text-xs text-gray-500">Loading...</p>
                 ) : unitVehicles.length === 0 ? (
-                  <p className="text-xs text-gray-400">No other vehicles registered to this unit.</p>
+                  <p className="text-xs text-gray-500">No other vehicles registered to this unit.</p>
                 ) : (
                   <div className="border border-gray-200 rounded-lg divide-y divide-gray-100 text-xs">
                     {unitVehicles.map((v) => (
                       <div key={v.id} className="px-3 py-2.5 flex items-center justify-between gap-3">
                         <div>
                           <span className="font-mono font-semibold">{v.license_plate}</span>
-                          {v.plate_state && <span className="text-gray-400 ml-1">/ {v.plate_state}</span>}
+                          {v.plate_state && <span className="text-gray-500 ml-1">/ {v.plate_state}</span>}
                           <span className="text-gray-500 ml-2">{v.year ?? ''} {v.make} {v.model} · {v.color}</span>
                         </div>
                         {v.is_oversized && (
@@ -346,10 +346,10 @@ export default function AdminOversizedPage() {
               {/* Prior admin notes if already reviewed */}
               {selected.admin_notes && selected.status !== 'pending' && (
                 <div className="bg-gray-50 rounded-lg px-4 py-3">
-                  <p className="text-xs text-gray-400 uppercase mb-1">Admin Notes</p>
+                  <p className="text-xs text-gray-500 uppercase mb-1">Admin Notes</p>
                   <p className="text-gray-700">{selected.admin_notes}</p>
                   {selected.reviewed_by && (
-                    <p className="text-xs text-gray-400 mt-1">
+                    <p className="text-xs text-gray-500 mt-1">
                       — {selected.reviewed_by}, {selected.reviewed_at ? new Date(selected.reviewed_at).toLocaleString() : ''}
                     </p>
                   )}

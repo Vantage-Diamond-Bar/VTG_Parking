@@ -182,13 +182,13 @@ export default function AdminResidentsPage() {
             <tbody className="divide-y divide-gray-100">
               {loading ? (
                 <tr>
-                  <td colSpan={11} className="px-4 py-8 text-center text-gray-400">
+                  <td colSpan={11} className="px-4 py-8 text-center text-gray-500">
                     {t('loading')}
                   </td>
                 </tr>
               ) : residents.length === 0 ? (
                 <tr>
-                  <td colSpan={11} className="px-4 py-8 text-center text-gray-400">
+                  <td colSpan={11} className="px-4 py-8 text-center text-gray-500">
                     {t('no_results')}
                   </td>
                 </tr>
@@ -376,7 +376,7 @@ export default function AdminResidentsPage() {
                 </a>
                 <button
                   onClick={() => setDocViewUrl(null)}
-                  className="text-gray-400 hover:text-gray-600 text-xl leading-none"
+                  className="text-gray-500 hover:text-gray-700 text-xl leading-none"
                 >
                   ✕
                 </button>

@@ -97,18 +97,18 @@ export default function AdminAlertsPage() {
             <tbody className="divide-y divide-gray-100">
               {loading ? (
                 <tr>
-                  <td colSpan={7} className="px-6 py-8 text-center text-gray-400">{t('loading')}</td>
+                  <td colSpan={7} className="px-6 py-8 text-center text-gray-500">{t('loading')}</td>
                 </tr>
               ) : alerts.length === 0 ? (
                 <tr>
-                  <td colSpan={7} className="px-6 py-8 text-center text-gray-400">{t('no_alerts')}</td>
+                  <td colSpan={7} className="px-6 py-8 text-center text-gray-500">{t('no_alerts')}</td>
                 </tr>
               ) : (
                 alerts.map((alert) => (
                   <tr key={alert.id} className="hover:bg-gray-50">
                     <td className="px-6 py-4 font-mono font-bold">
                       {alert.license_plate}
-                      {alert.plate_state && <span className="ml-1 text-xs text-gray-400 font-normal">({alert.plate_state})</span>}
+                      {alert.plate_state && <span className="ml-1 text-xs text-gray-500 font-normal">({alert.plate_state})</span>}
                     </td>
                     <td className="px-6 py-4">{alert.month}</td>
                     <td className="px-6 py-4 text-gray-600">

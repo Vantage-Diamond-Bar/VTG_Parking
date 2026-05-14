@@ -168,9 +168,9 @@ export default function AdminVacationPage() {
             </thead>
             <tbody className="divide-y divide-gray-100">
               {loading ? (
-                <tr><td colSpan={8} className="px-4 py-8 text-center text-gray-400">{t('loading')}</td></tr>
+                <tr><td colSpan={8} className="px-4 py-8 text-center text-gray-500">{t('loading')}</td></tr>
               ) : requests.length === 0 ? (
-                <tr><td colSpan={8} className="px-4 py-8 text-center text-gray-400">{t('no_results')}</td></tr>
+                <tr><td colSpan={8} className="px-4 py-8 text-center text-gray-500">{t('no_results')}</td></tr>
               ) : requests.map((r) => (
                 <tr key={r.id} className="hover:bg-gray-50">
                   <td className="px-4 py-3 text-gray-500 whitespace-nowrap text-xs">
@@ -179,7 +179,7 @@ export default function AdminVacationPage() {
                   <td className="px-4 py-3 text-sm font-medium">{r.units?.address ?? '—'}</td>
                   <td className="px-4 py-3">
                     <div className="font-medium">{r.first_name} {r.last_name}</div>
-                    <div className="text-xs text-gray-400">{r.phone}</div>
+                    <div className="text-xs text-gray-600">{r.phone}</div>
                   </td>
                   <td className="px-4 py-3">
                     <div className="font-mono font-semibold text-xs">{r.license_plate} / {r.plate_state}</div>
@@ -187,12 +187,12 @@ export default function AdminVacationPage() {
                   </td>
                   <td className="px-4 py-3 text-xs text-gray-600 whitespace-nowrap">
                     <div>{new Date(r.start_datetime).toLocaleDateString()}</div>
-                    <div className="text-gray-400">→ {new Date(r.end_datetime).toLocaleDateString()}</div>
+                    <div className="text-gray-500">→ {new Date(r.end_datetime).toLocaleDateString()}</div>
                   </td>
                   <td className="px-4 py-3 text-xs space-y-1">
                     {/* Row 1: is_registered_vehicle */}
                     {r.is_registered_vehicle === null ? (
-                      <div className="text-gray-400">— {tv('registered_vehicle')}</div>
+                      <div className="text-gray-500">— {tv('registered_vehicle')}</div>
                     ) : r.is_registered_vehicle ? (
                       <div className="text-green-600 font-semibold">✓ {tv('registered_vehicle')}</div>
                     ) : (
@@ -200,7 +200,7 @@ export default function AdminVacationPage() {
                     )}
                     {/* Row 2: is_eligible */}
                     {r.is_eligible === null ? (
-                      <div className="text-gray-400">— {tv('eligible')}</div>
+                      <div className="text-gray-500">— {tv('eligible')}</div>
                     ) : r.is_eligible ? (
                       <div className="text-green-600 font-semibold">✓ {tv('eligible')}</div>
                     ) : (
@@ -239,7 +239,7 @@ export default function AdminVacationPage() {
           >
             <div className="flex items-center justify-between px-6 py-4 border-b border-gray-100">
               <h2 className="text-lg font-bold text-gray-900">{tv('request_detail')}</h2>
-              <button onClick={() => setSelected(null)} className="text-gray-400 hover:text-gray-600 text-xl">✕</button>
+              <button onClick={() => setSelected(null)} className="text-gray-500 hover:text-gray-700 text-xl">✕</button>
             </div>
 
             <div className="px-6 py-4 space-y-4 text-sm">
@@ -265,17 +265,17 @@ export default function AdminVacationPage() {
               </div>
 
               <div className="grid grid-cols-2 gap-x-6 gap-y-3">
-                <div><p className="text-xs text-gray-400 uppercase">{tv('unit')}</p><p className="font-medium">{selected.units?.address}</p></div>
-                <div><p className="text-xs text-gray-400 uppercase">{tv('registrant_type')}</p><p className="font-medium capitalize">{selected.registrant_type}</p></div>
-                <div><p className="text-xs text-gray-400 uppercase">{tv('applicant')}</p><p className="font-medium">{selected.first_name} {selected.last_name}</p><p className="text-gray-500 text-xs">{selected.phone}</p></div>
-                <div><p className="text-xs text-gray-400 uppercase">{tv('emergency_contact')}</p><p className="font-medium">{selected.emergency_first_name} {selected.emergency_last_name}</p><p className="text-gray-500 text-xs">{selected.emergency_phone}</p></div>
-                <div><p className="text-xs text-gray-400 uppercase">{tv('period')}</p><p className="font-medium">{new Date(selected.start_datetime).toLocaleString()}</p><p className="text-gray-500 text-xs">→ {new Date(selected.end_datetime).toLocaleString()}</p></div>
-                <div><p className="text-xs text-gray-400 uppercase">{t('vehicle')}</p><p className="font-mono font-semibold">{selected.license_plate} / {selected.plate_state}</p><p className="text-gray-500 text-xs">{selected.year} {selected.make} {selected.model} · {selected.color}</p></div>
+                <div><p className="text-xs text-gray-500 uppercase">{tv('unit')}</p><p className="font-medium">{selected.units?.address}</p></div>
+                <div><p className="text-xs text-gray-500 uppercase">{tv('registrant_type')}</p><p className="font-medium capitalize">{selected.registrant_type}</p></div>
+                <div><p className="text-xs text-gray-500 uppercase">{tv('applicant')}</p><p className="font-medium">{selected.first_name} {selected.last_name}</p><p className="text-gray-500 text-xs">{selected.phone}</p></div>
+                <div><p className="text-xs text-gray-500 uppercase">{tv('emergency_contact')}</p><p className="font-medium">{selected.emergency_first_name} {selected.emergency_last_name}</p><p className="text-gray-500 text-xs">{selected.emergency_phone}</p></div>
+                <div><p className="text-xs text-gray-500 uppercase">{tv('period')}</p><p className="font-medium">{new Date(selected.start_datetime).toLocaleString()}</p><p className="text-gray-500 text-xs">→ {new Date(selected.end_datetime).toLocaleString()}</p></div>
+                <div><p className="text-xs text-gray-500 uppercase">{t('vehicle')}</p><p className="font-mono font-semibold">{selected.license_plate} / {selected.plate_state}</p><p className="text-gray-500 text-xs">{selected.year} {selected.make} {selected.model} · {selected.color}</p></div>
                 {selected.email && (
-                  <div className="col-span-2"><p className="text-xs text-gray-400 uppercase">{tv('email')}</p><p className="text-gray-700">{selected.email}</p></div>
+                  <div className="col-span-2"><p className="text-xs text-gray-500 uppercase">{tv('email')}</p><p className="text-gray-700">{selected.email}</p></div>
                 )}
                 {selected.reason && (
-                  <div className="col-span-2"><p className="text-xs text-gray-400 uppercase">{tv('reason')}</p><p className="text-gray-700">{selected.reason}</p></div>
+                  <div className="col-span-2"><p className="text-xs text-gray-500 uppercase">{tv('reason')}</p><p className="text-gray-700">{selected.reason}</p></div>
                 )}
               </div>
 
@@ -290,7 +290,7 @@ export default function AdminVacationPage() {
                 <div className="bg-gray-50 rounded-lg px-4 py-3">
                   <p className="text-xs text-gray-400 uppercase mb-1">{tv('admin_notes')}</p>
                   <p className="text-gray-700">{selected.admin_notes}</p>
-                  {selected.reviewed_by && <p className="text-xs text-gray-400 mt-1">— {selected.reviewed_by}, {selected.reviewed_at ? new Date(selected.reviewed_at).toLocaleString() : ''}</p>}
+                  {selected.reviewed_by && <p className="text-xs text-gray-500 mt-1">— {selected.reviewed_by}, {selected.reviewed_at ? new Date(selected.reviewed_at).toLocaleString() : ''}</p>}
                 </div>
               )}
 
