@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { supabaseAdmin } from '@/lib/supabase'
 import { getSessionFromRequest } from '@/lib/auth'
-import { countNights, VISITOR_QUOTA_LIMIT } from '@/lib/utils'
+import { countNights, monthBounds, VISITOR_QUOTA_LIMIT } from '@/lib/utils'
 
 export const dynamic = 'force-dynamic'
 
@@ -55,18 +55,29 @@ export async function GET(req: NextRequest) {
       }
     }
     const entry = unitMap[reg.unit_id]
-    const nights = countNights(reg.start_datetime, reg.end_datetime)
-    const yearMonth = (reg.start_datetime ?? '').slice(0, 7)
+    const totalNights = countNights(reg.start_datetime, reg.end_datetime)
 
-    if (yearMonth) {
-      if (!entry.months[yearMonth]) {
-        entry.months[yearMonth] = { year_month: yearMonth, nights_used: 0, count: 0, limit: VISITOR_QUOTA_LIMIT }
+    // Distribute nights across each month the booking spans
+    const startYm = (reg.start_datetime ?? '').slice(0, 7)
+    const endYm = (reg.end_datetime ?? '').slice(0, 7)
+    let ym = startYm
+    while (ym && ym <= endYm) {
+      const { start: ms, end: me } = monthBounds(ym)
+      const cs = reg.start_datetime > ms ? reg.start_datetime : ms
+      const ce = reg.end_datetime < me ? reg.end_datetime : me
+      const monthNights = countNights(cs, ce)
+      if (monthNights > 0) {
+        if (!entry.months[ym]) {
+          entry.months[ym] = { year_month: ym, nights_used: 0, count: 0, limit: VISITOR_QUOTA_LIMIT }
+        }
+        entry.months[ym].nights_used += monthNights
+        if (ym === startYm) entry.months[ym].count++
       }
-      entry.months[yearMonth].nights_used += nights
-      entry.months[yearMonth].count++
+      const [y, mo] = ym.split('-').map(Number)
+      ym = `${mo === 12 ? y + 1 : y}-${String(mo === 12 ? 1 : mo + 1).padStart(2, '0')}`
     }
 
-    entry.total_nights += nights
+    entry.total_nights += totalNights
     entry.registrations.push({
       id: reg.id,
       start_datetime: reg.start_datetime,
@@ -79,7 +90,7 @@ export async function GET(req: NextRequest) {
       color: reg.color ?? '',
       visitor_phone: reg.visitor_phone ?? '',
       access_code: reg.access_code ?? '',
-      nights,
+      nights: totalNights,
     })
   }
 
@@ -147,20 +158,33 @@ export async function GET(req: NextRequest) {
       }
     }
     const ve = vehicleMap[key]
-    const nights = countNights(reg.start_datetime, reg.end_datetime)
-    const ym = (reg.start_datetime ?? '').slice(0, 7)
-    if (ym) {
-      if (!ve.monthsMap[ym]) ve.monthsMap[ym] = { year_month: ym, nights_used: 0, count: 0 }
-      ve.monthsMap[ym].nights_used += nights
-      ve.monthsMap[ym].count++
+    const totalNights = countNights(reg.start_datetime, reg.end_datetime)
+
+    // Distribute nights across each month the booking spans
+    const vStartYm = (reg.start_datetime ?? '').slice(0, 7)
+    const vEndYm = (reg.end_datetime ?? '').slice(0, 7)
+    let vYm = vStartYm
+    while (vYm && vYm <= vEndYm) {
+      const { start: ms, end: me } = monthBounds(vYm)
+      const cs = reg.start_datetime > ms ? reg.start_datetime : ms
+      const ce = reg.end_datetime < me ? reg.end_datetime : me
+      const monthNights = countNights(cs, ce)
+      if (monthNights > 0) {
+        if (!ve.monthsMap[vYm]) ve.monthsMap[vYm] = { year_month: vYm, nights_used: 0, count: 0 }
+        ve.monthsMap[vYm].nights_used += monthNights
+        if (vYm === vStartYm) ve.monthsMap[vYm].count++
+      }
+      const [vy, vmo] = vYm.split('-').map(Number)
+      vYm = `${vmo === 12 ? vy + 1 : vy}-${String(vmo === 12 ? 1 : vmo + 1).padStart(2, '0')}`
     }
-    ve.total_nights += nights
+
+    ve.total_nights += totalNights
     ve.registrations.push({
       unit_id: reg.unit_id,
       address: unitAddressMap[reg.unit_id] ?? 'Unknown',
       start_datetime: reg.start_datetime,
       end_datetime: reg.end_datetime,
-      nights,
+      nights: totalNights,
       visitor_name: reg.visitor_name ?? '',
     })
   }
