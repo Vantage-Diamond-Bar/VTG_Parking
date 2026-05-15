@@ -135,50 +135,56 @@ export default async function AdminDashboardPage() {
     <div className="p-8">
       <h1 className="text-2xl font-bold text-gray-900 mb-6">{t('dashboard')}</h1>
 
-      {/* Top section: CSS Grid — left col = stat cards, right col = violations (same row height) */}
-      <div className="grid gap-6 mb-8" style={{ gridTemplateColumns: '224px 1fr' }}>
+      {/*
+        Top section layout:
+        - Left: stat cards column (flex, natural height = 6 × 100px + 5 × 12px gap = 660px)
+        - Right: violations box fixed at h-[660px] so it always aligns with last stat card
+        Each card: p-5 (40px padding) + text-sm label (20px) + mt-1 (4px) + text-3xl number (36px) = 100px
+      */}
+      <div className="flex gap-6 mb-8 items-start">
 
-        {/* Left: Stat Cards stacked vertically */}
-        <div className="flex flex-col gap-3">
+        {/* Left: Stat Cards — 6 × 100px + 5 × 12px = 660px natural height */}
+        <div className="flex flex-col gap-3 w-56 shrink-0">
 
-          <Link href="/admin/residents" className="block bg-white rounded-xl shadow-sm p-4 border border-gray-100 hover:bg-gray-50 transition-colors">
-            <p className="text-xs text-gray-500">{t('total_residents')}</p>
+          <Link href="/admin/residents" className="block bg-white rounded-xl shadow-sm p-5 border border-gray-100 hover:bg-gray-50 transition-colors">
+            <p className="text-sm font-medium text-gray-500">{t('total_residents')}</p>
             <p className="text-3xl font-bold text-gray-900 mt-1">{stats?.total_residents ?? '—'}</p>
           </Link>
 
-          <Link href="/admin/visitors" className="block bg-white rounded-xl shadow-sm p-4 border border-gray-100 hover:bg-gray-50 transition-colors">
-            <p className="text-xs text-gray-500">{t('visitor_registrations_month')}</p>
+          <Link href="/admin/visitors" className="block bg-white rounded-xl shadow-sm p-5 border border-gray-100 hover:bg-gray-50 transition-colors">
+            <p className="text-sm font-medium text-gray-500">{t('visitor_registrations_month')}</p>
             <p className="text-3xl font-bold text-gray-900 mt-1">{stats?.visitor_registrations_this_month ?? '—'}</p>
           </Link>
 
-          <Link href="/admin/violations" className="block bg-white rounded-xl shadow-sm p-4 border border-gray-100 hover:bg-gray-50 transition-colors">
-            <p className="text-xs text-gray-500">{t('violations_month')}</p>
+          <Link href="/admin/violations" className="block bg-white rounded-xl shadow-sm p-5 border border-gray-100 hover:bg-gray-50 transition-colors">
+            <p className="text-sm font-medium text-gray-500">{t('violations_month')}</p>
             <p className="text-3xl font-bold text-gray-900 mt-1">{stats?.violations_this_month ?? '—'}</p>
           </Link>
 
-          <Link href="/admin/residents" className={`block rounded-xl shadow-sm p-4 border transition-colors ${overdueTotal > 0 ? 'bg-amber-50 border-amber-200 hover:bg-amber-100' : 'bg-white border-gray-100 hover:bg-gray-50'}`}>
-            <p className={`text-xs ${overdueTotal > 0 ? 'text-amber-700' : 'text-gray-500'}`}>{t('overdue_vehicles')}</p>
+          <Link href="/admin/residents" className={`block rounded-xl shadow-sm p-5 border transition-colors ${overdueTotal > 0 ? 'bg-amber-50 border-amber-200 hover:bg-amber-100' : 'bg-white border-gray-100 hover:bg-gray-50'}`}>
+            <p className={`text-sm font-medium ${overdueTotal > 0 ? 'text-amber-700' : 'text-gray-500'}`}>{t('overdue_vehicles')}</p>
             <p className={`text-3xl font-bold mt-1 ${overdueTotal > 0 ? 'text-amber-800' : 'text-gray-900'}`}>{overdueTotal}</p>
           </Link>
 
-          <Link href="/admin/vacation" className={`block rounded-xl shadow-sm p-4 border transition-colors ${(stats?.pending_vacation ?? 0) > 0 ? 'bg-purple-50 border-purple-200 hover:bg-purple-100' : 'bg-white border-gray-100 hover:bg-gray-50'}`}>
-            <p className={`text-xs ${(stats?.pending_vacation ?? 0) > 0 ? 'text-purple-700' : 'text-gray-500'}`}>{t('pending_vacation')}</p>
+          <Link href="/admin/vacation" className={`block rounded-xl shadow-sm p-5 border transition-colors ${(stats?.pending_vacation ?? 0) > 0 ? 'bg-purple-50 border-purple-200 hover:bg-purple-100' : 'bg-white border-gray-100 hover:bg-gray-50'}`}>
+            <p className={`text-sm font-medium ${(stats?.pending_vacation ?? 0) > 0 ? 'text-purple-700' : 'text-gray-500'}`}>{t('pending_vacation')}</p>
             <p className={`text-3xl font-bold mt-1 ${(stats?.pending_vacation ?? 0) > 0 ? 'text-purple-800' : 'text-gray-900'}`}>{stats?.pending_vacation ?? '—'}</p>
           </Link>
 
-          <Link href="/admin/oversized" className={`block rounded-xl shadow-sm p-4 border transition-colors ${(stats?.pending_oversized ?? 0) > 0 ? 'bg-orange-50 border-orange-200 hover:bg-orange-100' : 'bg-white border-gray-100 hover:bg-gray-50'}`}>
-            <p className={`text-xs ${(stats?.pending_oversized ?? 0) > 0 ? 'text-orange-700' : 'text-gray-500'}`}>{t('pending_oversized')}</p>
+          <Link href="/admin/oversized" className={`block rounded-xl shadow-sm p-5 border transition-colors ${(stats?.pending_oversized ?? 0) > 0 ? 'bg-orange-50 border-orange-200 hover:bg-orange-100' : 'bg-white border-gray-100 hover:bg-gray-50'}`}>
+            <p className={`text-sm font-medium ${(stats?.pending_oversized ?? 0) > 0 ? 'text-orange-700' : 'text-gray-500'}`}>{t('pending_oversized')}</p>
             <p className={`text-3xl font-bold mt-1 ${(stats?.pending_oversized ?? 0) > 0 ? 'text-orange-800' : 'text-gray-900'}`}>{stats?.pending_oversized ?? '—'}</p>
           </Link>
 
         </div>
 
-        {/* Right: Recent Violations — constrained to grid row height, inner content scrolls */}
+        {/* Right: Recent Violations — fixed 660px height, scrollable content */}
         <Link
           href="/admin/violations"
-          className={`min-h-0 rounded-xl shadow-sm flex flex-col overflow-hidden cursor-pointer ${
+          className={`flex-1 rounded-xl shadow-sm flex flex-col overflow-hidden cursor-pointer ${
             violations.length > 0 ? 'border-2 border-amber-300' : 'border border-gray-100'
           }`}
+          style={{ height: '660px' }}
         >
           <div className={`px-6 py-4 border-b shrink-0 rounded-t-xl ${
             violations.length > 0 ? 'bg-amber-50 border-amber-200' : 'bg-white border-gray-100'
@@ -233,12 +239,12 @@ export default async function AdminDashboardPage() {
         </Link>
       </div>
 
-      {/* 访客额度滥用提醒 */}
+      {/* Visitor Abuse Alerts */}
       <div className="bg-white rounded-xl shadow-sm border border-gray-100 mb-8">
         <div className="px-6 py-4 border-b border-gray-100 flex items-center justify-between">
-          <h2 className="text-lg font-semibold text-gray-900">🚨 访客额度滥用提醒</h2>
+          <h2 className="text-lg font-semibold text-gray-900">🚨 {t('alerts')}</h2>
           <Link href="/admin/alerts" className="text-sm text-blue-600 hover:underline font-medium">
-            查看全部 →
+            {t('view_all')} →
           </Link>
         </div>
         <div className="overflow-x-auto">
@@ -285,7 +291,7 @@ export default async function AdminDashboardPage() {
               <p className="text-sm text-amber-700 mt-0.5">{t('overdue_desc')}</p>
             </div>
             <Link href="/admin/residents" className="text-sm text-amber-700 hover:underline font-medium shrink-0 ml-4">
-              查看全部 →
+              {t('view_all')} →
             </Link>
           </div>
           <div className="overflow-x-auto">
