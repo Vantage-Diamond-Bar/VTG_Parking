@@ -9,11 +9,11 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
 
   const { id } = await params
   const body = await req.json()
-  const { make, model, color, license_plate, plate_state, owner_phone, owner_email, opt_in_sms, opt_in_email, registrant_type } = body
+  const { make, model, color, license_plate, plate_state, owner_phone, owner_phone_country_code, owner_email, opt_in_sms, opt_in_email, registrant_type } = body
 
   const { data, error } = await supabaseAdmin
     .from('resident_vehicles')
-    .update({ make, model, color, license_plate, plate_state, owner_phone, owner_email, opt_in_sms, opt_in_email, registrant_type })
+    .update({ make, model, color, license_plate, plate_state, owner_phone, owner_phone_country_code: owner_phone_country_code ?? null, owner_email, opt_in_sms, opt_in_email, registrant_type })
     .eq('id', id)
     .select()
     .single()

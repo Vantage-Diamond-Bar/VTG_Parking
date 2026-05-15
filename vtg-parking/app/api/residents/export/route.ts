@@ -29,7 +29,7 @@ export async function GET(req: NextRequest) {
     'Color': v.color ?? '',
     'Plate': v.license_plate ?? '',
     'State': v.plate_state ?? '',
-    'Phone': v.owner_phone ?? '',
+    'Phone': [v.owner_phone_country_code, v.owner_phone].filter(Boolean).join(' ') || '',
     'Email': v.owner_email ?? '',
     'SMS Opt-in': v.opt_in_sms ? 'Yes' : 'No',
     'Email Opt-in': v.opt_in_email ? 'Yes' : 'No',

@@ -23,6 +23,7 @@ interface Registration {
   model: string
   color: string
   visitor_phone: string
+  visitor_phone_country_code: string
   access_code: string
   nights: number
 }

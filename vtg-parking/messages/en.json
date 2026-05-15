@@ -101,6 +101,7 @@
     "vehicle_added": "Vehicle added.",
     "update_owner": "Update Contact Info",
     "new_vehicle_section": "Add New Vehicle",
+    "delete": "Delete",
     "vio_date": "Date",
     "vio_type": "Violation Type",
     "vio_resolution": "Resolution",

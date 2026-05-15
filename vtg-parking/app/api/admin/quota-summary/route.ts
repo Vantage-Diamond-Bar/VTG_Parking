@@ -14,7 +14,7 @@ export async function GET(req: NextRequest) {
 
   const { data: regs, error: regsError } = await supabaseAdmin
     .from('visitor_registrations')
-    .select('id, unit_id, start_datetime, end_datetime, license_plate, plate_state, visitor_name, make, model, color, visitor_phone, access_code')
+    .select('id, unit_id, start_datetime, end_datetime, license_plate, plate_state, visitor_name, make, model, color, visitor_phone, visitor_phone_country_code, access_code')
     .order('start_datetime', { ascending: false })
 
   if (regsError) return NextResponse.json({ error: regsError.message }, { status: 500 })
@@ -36,7 +36,7 @@ export async function GET(req: NextRequest) {
     registrations: Array<{
       id: string; start_datetime: string; end_datetime: string
       license_plate: string; plate_state: string; visitor_name: string
-      make: string; model: string; color: string; visitor_phone: string
+      make: string; model: string; color: string; visitor_phone: string; visitor_phone_country_code: string
       access_code: string; nights: number
     }>
   }
@@ -89,6 +89,7 @@ export async function GET(req: NextRequest) {
       model: reg.model ?? '',
       color: reg.color ?? '',
       visitor_phone: reg.visitor_phone ?? '',
+      visitor_phone_country_code: reg.visitor_phone_country_code ?? '',
       access_code: reg.access_code ?? '',
       nights: totalNights,
     })

@@ -32,6 +32,7 @@ export async function PATCH(
       unit_id: application.unit_id,
       owner_name: application.owner_name,
       owner_phone: application.owner_phone ?? null,
+      owner_phone_country_code: application.owner_phone_country_code ?? null,
       owner_email: application.owner_email ?? null,
       registrant_type: application.registrant_type ?? 'owner',
       opt_in_sms: false,

@@ -51,6 +51,20 @@ export async function PATCH(req: NextRequest) {
       return NextResponse.json({ error: 'vehicle_id is required' }, { status: 400 });
     }
 
+    const plate = normalizedPlate(license_plate);
+
+    // Check for plate conflict with any other vehicle (excluding this one)
+    const { data: conflictVehicle } = await supabaseAdmin
+      .from('resident_vehicles')
+      .select('id')
+      .ilike('license_plate', plate)
+      .neq('id', vehicle_id)
+      .maybeSingle();
+
+    if (conflictVehicle) {
+      return NextResponse.json({ error: 'plate_conflict', plate }, { status: 409 });
+    }
+
     const { error } = await supabaseAdmin
       .from('resident_vehicles')
       .update({
@@ -58,7 +72,7 @@ export async function PATCH(req: NextRequest) {
         make,
         model,
         color,
-        license_plate: normalizedPlate(license_plate),
+        license_plate: plate,
         plate_state,
         is_oversized,
       })
@@ -182,7 +196,7 @@ export async function POST(req: NextRequest) {
     // Get owner info from an existing vehicle for this unit
     const { data: existingVehicles, error: existingError } = await supabaseAdmin
       .from('resident_vehicles')
-      .select('owner_name, owner_phone, owner_email, registrant_type')
+      .select('owner_name, owner_phone, owner_phone_country_code, owner_email, registrant_type')
       .eq('unit_id', unit_id)
       .limit(1);
 
@@ -190,7 +204,7 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'No existing vehicles found for unit' }, { status: 404 });
     }
 
-    const { owner_name, owner_phone, owner_email, registrant_type } = existingVehicles[0];
+    const { owner_name, owner_phone, owner_phone_country_code, owner_email, registrant_type } = existingVehicles[0];
 
     // Upload doc if provided
     let registration_doc_url: string | null = null;
@@ -218,25 +232,75 @@ export async function POST(req: NextRequest) {
       registration_doc_url = publicUrlData.publicUrl;
     }
 
-    // Insert new vehicle row
-    const { error: insertError } = await supabaseAdmin.from('resident_vehicles').insert({
-      unit_id,
-      year,
-      make,
-      model,
-      color,
-      license_plate: plate,
-      plate_state,
-      is_oversized,
-      registration_doc_url,
-      owner_name,
-      owner_phone,
-      owner_email,
-      registrant_type,
-    });
+    // Route based on oversized flag
+    if (is_oversized === true) {
+      // Check for pending application conflict
+      const { data: pendingApp } = await supabaseAdmin
+        .from('oversized_applications')
+        .select('id')
+        .ilike('license_plate', plate)
+        .eq('status', 'pending')
+        .maybeSingle();
+      if (pendingApp) {
+        return NextResponse.json({ error: 'plate_conflict' }, { status: 409 });
+      }
 
-    if (insertError) {
-      return NextResponse.json({ error: 'Failed to add vehicle' }, { status: 500 });
+      // Check if there's already an approved application (renewal bypass)
+      const { data: approvedApp } = await supabaseAdmin
+        .from('oversized_applications')
+        .select('id')
+        .ilike('license_plate', plate)
+        .eq('status', 'approved')
+        .maybeSingle();
+
+      if (approvedApp) {
+        // Insert directly to resident_vehicles with is_oversized: true
+        const { error: insertError } = await supabaseAdmin.from('resident_vehicles').insert({
+          unit_id, year, make, model, color,
+          license_plate: plate, plate_state,
+          is_oversized: true,
+          registration_doc_url,
+          owner_name, owner_phone, owner_phone_country_code: owner_phone_country_code ?? null, owner_email, registrant_type,
+        });
+        if (insertError) return NextResponse.json({ error: 'Failed to add vehicle' }, { status: 500 });
+      } else {
+        // Create a pending oversized application
+        const { error: appError } = await supabaseAdmin.from('oversized_applications').insert({
+          unit_id,
+          owner_name, owner_phone: owner_phone ?? null, owner_phone_country_code: owner_phone_country_code ?? null, owner_email: owner_email ?? null,
+          registrant_type: registrant_type ?? 'owner',
+          year, make, model, color,
+          license_plate: plate,
+          plate_state: plate_state ?? null,
+          registration_doc_url: registration_doc_url ?? null,
+          vehicle_type: body.vehicle_type ?? null,
+          status: 'pending',
+        });
+        if (appError) return NextResponse.json({ error: 'Failed to create oversized application' }, { status: 500 });
+        return NextResponse.json({ success: true, oversized_pending: true });
+      }
+    } else {
+      // Insert regular vehicle row
+      const { error: insertError } = await supabaseAdmin.from('resident_vehicles').insert({
+        unit_id,
+        year,
+        make,
+        model,
+        color,
+        license_plate: plate,
+        plate_state,
+        is_oversized: false,
+        registration_doc_url,
+        owner_name,
+        owner_phone,
+        owner_phone_country_code: owner_phone_country_code ?? null,
+        owner_email,
+        registrant_type,
+      });
+
+      if (insertError) {
+        return NextResponse.json({ error: 'Failed to add vehicle' }, { status: 500 });
+      }
     }
 
     return NextResponse.json({ success: true });

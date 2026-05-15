@@ -86,6 +86,7 @@ export default function RegisterPage() {
   const [unitData, setUnitData] = useState<UnitData | null>(null)
   const [confirmedEmail, setConfirmedEmail] = useState('')
   const [toast, setToast] = useState('')
+  const [toastType, setToastType] = useState<'success' | 'error'>('success')
 
   // New registration form state
   const [registrantType, setRegistrantType] = useState<'owner' | 'tenant'>('owner')
@@ -105,8 +106,9 @@ export default function RegisterPage() {
     fetch('/api/units').then(r => r.json()).then(d => setUnits(Array.isArray(d) ? d : d.units ?? [])).catch(() => {})
   }, [])
 
-  function showToast(msg: string) {
+  function showToast(msg: string, type: 'success' | 'error' = 'success') {
     setToast(msg)
+    setToastType(type)
     setTimeout(() => setToast(''), 4000)
   }
 
@@ -288,6 +290,7 @@ export default function RegisterPage() {
         unitData={unitData}
         units={units}
         toast={toast}
+        toastType={toastType}
         showToast={showToast}
         onReload={reloadUnitData}
         inputCls={inputCls}
@@ -565,9 +568,9 @@ function VehicleFormCard({ vehicle, index, showRemove, fieldErrors, t, inputCls,
 
 // ─── Management View ──────────────────────────────────────────────────────
 
-function ManageView({ t, unitId, confirmedEmail, unitData, units, toast, showToast, onReload, inputCls, labelCls, sectionCls }: {
+function ManageView({ t, unitId, confirmedEmail, unitData, units, toast, toastType, showToast, onReload, inputCls, labelCls, sectionCls }: {
   t: any; unitId: string; confirmedEmail: string; unitData: UnitData
-  units: Unit[]; toast: string; showToast: (m: string) => void; onReload: () => void
+  units: Unit[]; toast: string; toastType: 'success' | 'error'; showToast: (m: string, type?: 'success' | 'error') => void; onReload: () => void
   inputCls: string; labelCls: string; sectionCls: string
 }) {
   const tAdmin = useTranslations('admin')
@@ -647,7 +650,9 @@ function ManageView({ t, unitId, confirmedEmail, unitData, units, toast, showToa
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ action: 'update_vehicle', unit_id: unitId, email: confirmedEmail, vehicle_id: vehicleId, ...vehicleEdits }),
       })
+      const json = await res.json()
       if (res.ok) { setEditingVehicleId(null); showToast(t('vehicle_updated')); await onReload() }
+      else showToast(json.error === 'plate_conflict' ? t('error_plate_conflict') : (json.error ?? 'Failed to update vehicle'), 'error')
     } finally { setVehicleSaving(false) }
   }
 
@@ -706,8 +711,11 @@ function ManageView({ t, unitId, confirmedEmail, unitData, units, toast, showToa
         }),
       })
       const json = await res.json()
-      if (res.ok) { setShowAddVehicle(false); setAddVehicle(emptyVehicle()); showToast(t('vehicle_added')); await onReload() }
-      else showToast(json.error === 'plate_conflict' ? t('error_plate_conflict') : (json.error ?? 'Error'))
+      if (res.ok) {
+        setShowAddVehicle(false); setAddVehicle(emptyVehicle())
+        showToast(json.oversized_pending ? 'Oversized vehicle submitted for admin review.' : t('vehicle_added'))
+        await onReload()
+      } else showToast(json.error === 'plate_conflict' ? t('error_plate_conflict') : (json.error ?? 'Error'))
     } finally { setAddingVehicle(false) }
   }
 
@@ -720,7 +728,7 @@ function ManageView({ t, unitId, confirmedEmail, unitData, units, toast, showToa
     <div className="min-h-screen bg-gray-50">
       {/* Toast */}
       {toast && (
-        <div className="fixed top-4 right-4 bg-green-600 text-white px-4 py-3 rounded-lg shadow-lg z-50 text-sm font-medium transition-all">
+        <div className={`fixed top-4 right-4 text-white px-4 py-3 rounded-lg shadow-lg z-50 text-sm font-medium transition-all ${toastType === 'error' ? 'bg-red-600' : 'bg-green-600'}`}>
           {toast}
         </div>
       )}

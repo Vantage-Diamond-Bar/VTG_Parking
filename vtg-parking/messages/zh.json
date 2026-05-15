@@ -101,6 +101,7 @@
     "vehicle_added": "车辆已添加。",
     "update_owner": "更新联系信息",
     "new_vehicle_section": "添加新车辆",
+    "delete": "删除",
     "vio_date": "时间",
     "vio_type": "违规类型",
     "vio_resolution": "处理方式",

@@ -23,11 +23,13 @@ interface VacationRequest {
   first_name: string
   last_name: string
   phone: string
+  phone_country_code: string | null
   email: string | null
   reason: string | null
   emergency_first_name: string
   emergency_last_name: string
   emergency_phone: string
+  emergency_phone_country_code: string | null
   start_datetime: string
   end_datetime: string
   year: number
@@ -267,8 +269,8 @@ export default function AdminVacationPage() {
               <div className="grid grid-cols-2 gap-x-6 gap-y-3">
                 <div><p className="text-xs text-gray-500 uppercase">{tv('unit')}</p><p className="font-medium">{selected.units?.address}</p></div>
                 <div><p className="text-xs text-gray-500 uppercase">{tv('registrant_type')}</p><p className="font-medium capitalize">{selected.registrant_type}</p></div>
-                <div><p className="text-xs text-gray-500 uppercase">{tv('applicant')}</p><p className="font-medium">{selected.first_name} {selected.last_name}</p><p className="text-gray-700 text-xs">{selected.phone}</p></div>
-                <div><p className="text-xs text-gray-500 uppercase">{tv('emergency_contact')}</p><p className="font-medium">{selected.emergency_first_name} {selected.emergency_last_name}</p><p className="text-gray-700 text-xs">{selected.emergency_phone}</p></div>
+                <div><p className="text-xs text-gray-500 uppercase">{tv('applicant')}</p><p className="font-medium">{selected.first_name} {selected.last_name}</p><p className="text-gray-700 text-xs">{selected.phone_country_code && <span className="text-gray-500 mr-1">{selected.phone_country_code}</span>}{selected.phone}</p></div>
+                <div><p className="text-xs text-gray-500 uppercase">{tv('emergency_contact')}</p><p className="font-medium">{selected.emergency_first_name} {selected.emergency_last_name}</p><p className="text-gray-700 text-xs">{selected.emergency_phone_country_code && <span className="text-gray-500 mr-1">{selected.emergency_phone_country_code}</span>}{selected.emergency_phone}</p></div>
                 <div><p className="text-xs text-gray-500 uppercase">{tv('period')}</p><p className="font-medium">{new Date(selected.start_datetime).toLocaleString()}</p><p className="text-gray-700 text-xs">→ {new Date(selected.end_datetime).toLocaleString()}</p></div>
                 <div><p className="text-xs text-gray-500 uppercase">{t('vehicle')}</p><p className="font-mono font-semibold">{selected.license_plate} / {selected.plate_state}</p><p className="text-gray-700 text-xs">{selected.year} {selected.make} {selected.model} · {selected.color}</p></div>
                 {selected.email && (

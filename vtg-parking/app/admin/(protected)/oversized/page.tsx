@@ -9,6 +9,7 @@ interface OversizedApplication {
   unit_id: string;
   owner_name: string;
   owner_phone: string | null;
+  owner_phone_country_code: string | null;
   owner_email: string | null;
   registrant_type: string;
   year: number | null;
@@ -207,7 +208,7 @@ export default function AdminOversizedPage() {
                   </td>
                   <td className="px-4 py-3">
                     <div className="font-medium text-gray-800">{app.owner_name}</div>
-                    {app.owner_phone && <div className="text-xs text-gray-600">{app.owner_phone}</div>}
+                    {app.owner_phone && <div className="text-xs text-gray-600">{app.owner_phone_country_code && <span className="text-gray-500 mr-1">{app.owner_phone_country_code}</span>}{app.owner_phone}</div>}
                     {app.owner_email && <div className="text-xs text-gray-600">{app.owner_email}</div>}
                   </td>
                   <td className="px-4 py-3 text-xs text-gray-700">
@@ -286,7 +287,7 @@ export default function AdminOversizedPage() {
                   <div>
                     <p className="text-xs text-gray-500 uppercase">Owner</p>
                     <p className="font-medium">{selected.owner_name}</p>
-                    {selected.owner_phone && <p className="text-gray-500 text-xs">{selected.owner_phone}</p>}
+                    {selected.owner_phone && <p className="text-gray-500 text-xs">{selected.owner_phone_country_code && <span className="mr-1">{selected.owner_phone_country_code}</span>}{selected.owner_phone}</p>}
                     {selected.owner_email && <p className="text-gray-500 text-xs">{selected.owner_email}</p>}
                   </div>
                   <div>

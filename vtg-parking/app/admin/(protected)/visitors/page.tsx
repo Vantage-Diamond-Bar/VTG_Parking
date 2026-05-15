@@ -8,6 +8,8 @@ interface Visitor {
   access_code: string;
   units?: { address: string };
   visitor_name?: string;
+  visitor_phone?: string;
+  visitor_phone_country_code?: string;
   license_plate: string;
   plate_state: string;
   make?: string;
@@ -131,6 +133,7 @@ export default function AdminVisitorsPage() {
                 <th className="px-4 py-3 text-left">{t('access_code')}</th>
                 <th className="px-4 py-3 text-left">{t('unit')}</th>
                 <th className="px-4 py-3 text-left">{t('guest_name')}</th>
+                <th className="px-4 py-3 text-left">{t('phone')}</th>
                 <th className="px-4 py-3 text-left">{t('plate_state')}</th>
                 <th className="px-4 py-3 text-left">{t('vehicle')}</th>
                 <th className="px-4 py-3 text-left">{t('valid_from')}</th>
@@ -142,11 +145,11 @@ export default function AdminVisitorsPage() {
             <tbody className="divide-y divide-gray-100">
               {loading ? (
                 <tr>
-                  <td colSpan={9} className="px-4 py-8 text-center text-gray-500">{t('loading')}</td>
+                  <td colSpan={10} className="px-4 py-8 text-center text-gray-500">{t('loading')}</td>
                 </tr>
               ) : visitors.length === 0 ? (
                 <tr>
-                  <td colSpan={9} className="px-4 py-8 text-center text-gray-500">{t('no_results')}</td>
+                  <td colSpan={10} className="px-4 py-8 text-center text-gray-500">{t('no_results')}</td>
                 </tr>
               ) : (
                 visitors.map((v) => (
@@ -154,6 +157,14 @@ export default function AdminVisitorsPage() {
                     <td className="px-4 py-3 font-mono font-bold tracking-widest text-blue-700">{v.access_code}</td>
                     <td className="px-4 py-3">{v.units?.address ?? '—'}</td>
                     <td className="px-4 py-3">{v.visitor_name || '—'}</td>
+                    <td className="px-4 py-3 whitespace-nowrap">
+                      {v.visitor_phone ? (
+                        <>
+                          {v.visitor_phone_country_code && <span className="text-gray-500 mr-1">{v.visitor_phone_country_code}</span>}
+                          {v.visitor_phone}
+                        </>
+                      ) : '—'}
+                    </td>
                     <td className="px-4 py-3 font-mono">{v.license_plate} / {v.plate_state}</td>
                     <td className="px-4 py-3">{[v.make, v.model, v.color].filter(Boolean).join(' ')}</td>
                     <td className="px-4 py-3 text-gray-600">{new Date(v.start_datetime).toLocaleString()}</td>

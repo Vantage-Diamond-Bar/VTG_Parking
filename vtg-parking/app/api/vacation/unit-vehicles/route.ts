@@ -12,7 +12,7 @@ export async function GET(req: NextRequest) {
 
   const { data: vehicles } = await supabaseAdmin
     .from('resident_vehicles')
-    .select('id, year, make, model, color, license_plate, plate_state, is_oversized, owner_name, owner_phone, owner_email, registrant_type')
+    .select('id, year, make, model, color, license_plate, plate_state, is_oversized, owner_name, owner_phone, owner_phone_country_code, owner_email, registrant_type')
     .eq('unit_id', unit_id)
     .ilike('owner_email', email)
 

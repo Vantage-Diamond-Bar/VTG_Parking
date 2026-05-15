@@ -33,6 +33,7 @@ interface EditFormData {
   license_plate: string;
   plate_state: string;
   owner_phone: string;
+  owner_phone_country_code: string;
   owner_email: string;
   registrant_type: string;
   opt_in_email: boolean;
@@ -95,6 +96,7 @@ export default function AdminResidentsPage() {
       license_plate: r.license_plate,
       plate_state: r.plate_state,
       owner_phone: r.owner_phone,
+      owner_phone_country_code: r.owner_phone_country_code ?? '',
       owner_email: r.owner_email,
       registrant_type: r.registrant_type ?? 'owner',
       opt_in_email: r.opt_in_email ?? false,
@@ -320,7 +322,10 @@ export default function AdminResidentsPage() {
                 </div>
                 <div>
                   <label className="block text-xs font-medium text-gray-700 mb-1">{t('phone')}</label>
-                  <input {...register('owner_phone')} className="w-full border border-gray-300 rounded px-2 py-1.5 text-sm" />
+                  <div className="flex gap-2">
+                    <input {...register('owner_phone_country_code')} placeholder="+1" className="w-16 border border-gray-300 rounded px-2 py-1.5 text-sm" />
+                    <input {...register('owner_phone')} className="flex-1 border border-gray-300 rounded px-2 py-1.5 text-sm" />
+                  </div>
                 </div>
                 <div className="col-span-2">
                   <label className="block text-xs font-medium text-gray-700 mb-1">{t('email')}</label>
