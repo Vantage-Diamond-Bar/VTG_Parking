@@ -3,7 +3,7 @@
 import { useState, useEffect, useCallback } from 'react'
 import Link from 'next/link'
 import { useTranslations } from 'next-intl'
-import { US_STATES, CAR_COLORS, CAR_MAKES, VEHICLE_TYPES, VISITOR_QUOTA_LIMIT, getYearMonth, generateMonthOptions } from '@/lib/utils'
+import { US_STATES, CAR_COLORS, CAR_MAKES, VEHICLE_TYPES, VISITOR_QUOTA_LIMIT, getYearMonth } from '@/lib/utils'
 import PhoneInput from '@/components/PhoneInput'
 
 // ─── Types ─────────────────────────────────────────────────────────────────
@@ -607,7 +607,7 @@ function ManageView({ t, unitId, confirmedEmail, unitData, units, toast, showToa
   const [addingVehicle, setAddingVehicle] = useState(false)
 
   // Quota by selected month
-  const MONTH_OPTIONS = generateMonthOptions()
+  const currentYear = new Date().getFullYear()
   const [selectedMonth, setSelectedMonth] = useState(getYearMonth())
   const [displayQuota, setDisplayQuota] = useState({ nights_used: unitData.quota.nights_used ?? 0, quota_limit: unitData.quota.quota_limit ?? VISITOR_QUOTA_LIMIT })
   const [quotaLoading, setQuotaLoading] = useState(false)
@@ -985,16 +985,11 @@ function ManageView({ t, unitId, confirmedEmail, unitData, units, toast, showToa
             <div className="flex gap-2 items-center">
               <select
                 value={selectedMonth.slice(0, 4)}
-                onChange={e => {
-                  const yr = e.target.value
-                  const monthsForYr = MONTH_OPTIONS.filter(o => o.value.startsWith(yr)).map(o => o.value.slice(5, 7))
-                  const mm = monthsForYr.includes(selectedMonth.slice(5, 7)) ? selectedMonth.slice(5, 7) : monthsForYr[0]
-                  setSelectedMonth(`${yr}-${mm}`)
-                }}
+                onChange={e => setSelectedMonth(`${e.target.value}-${selectedMonth.slice(5, 7)}`)}
                 className="text-sm border border-gray-300 rounded-lg px-2 py-1 focus:outline-none focus:ring-2 focus:ring-blue-500 text-gray-700"
               >
-                {[...new Set(MONTH_OPTIONS.map(o => o.value.slice(0, 4)))].map(yr => (
-                  <option key={yr} value={yr}>{yr}</option>
+                {[currentYear - 1, currentYear, currentYear + 1].map(yr => (
+                  <option key={yr} value={String(yr)}>{yr}</option>
                 ))}
               </select>
               <select
@@ -1002,12 +997,8 @@ function ManageView({ t, unitId, confirmedEmail, unitData, units, toast, showToa
                 onChange={e => setSelectedMonth(`${selectedMonth.slice(0, 4)}-${e.target.value}`)}
                 className="text-sm border border-gray-300 rounded-lg px-2 py-1 focus:outline-none focus:ring-2 focus:ring-blue-500 text-gray-700"
               >
-                {MONTH_OPTIONS
-                  .filter(o => o.value.startsWith(selectedMonth.slice(0, 4)))
-                  .map(o => (
-                    <option key={o.value} value={o.value.slice(5, 7)}>
-                      {new Date(+o.value.slice(0, 4), +o.value.slice(5, 7) - 1, 1).toLocaleString('en-US', { month: 'long' })}
-                    </option>
+                {['January','February','March','April','May','June','July','August','September','October','November','December'].map((name, i) => (
+                    <option key={i} value={String(i + 1).padStart(2, '0')}>{name}</option>
                   ))
                 }
               </select>
