@@ -1,2 +1,3 @@
 # Claude Code local settings (auto-generated, machine-specific)
 .claude/settings.local.json
+*.log
