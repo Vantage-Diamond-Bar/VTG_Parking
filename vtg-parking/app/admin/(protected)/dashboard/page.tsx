@@ -1,5 +1,6 @@
 import { getTranslations } from 'next-intl/server';
 import { supabaseAdmin } from '@/lib/supabase';
+import { getPTYearMonth, PT_ZONE } from '@/lib/utils';
 import ResolveAlertButton from './ResolveAlertButton';
 
 interface Stats {
@@ -41,7 +42,7 @@ interface OverdueVehicle {
 }
 
 async function getStats(): Promise<Stats | null> {
-  const year_month = new Date().toISOString().slice(0, 7);
+  const year_month = getPTYearMonth(); // Pacific Time month
   const monthStart = `${year_month}-01`;
   const [residentsResult, visitorsResult, violationsResult, vacationResult, oversizedResult] = await Promise.all([
     supabaseAdmin.from('resident_vehicles').select('id', { count: 'exact', head: true }),
@@ -137,7 +138,7 @@ export default async function AdminDashboardPage() {
       <h1 className="text-2xl font-bold text-gray-900 mb-6">{t('dashboard')}</h1>
 
       {/* Top section: stat cards (left) + Recent Violations square (right) */}
-      <div className="flex gap-6 mb-8 items-start">
+      <div className="flex gap-6 mb-8 items-stretch">
 
         {/* Left: Stat Cards stacked vertically */}
         <div className="flex flex-col gap-3 w-56 shrink-0">
@@ -185,17 +186,23 @@ export default async function AdminDashboardPage() {
           </div>
         </div>
 
-        {/* Right: Recent Violations — compact square with scroll */}
-        <div className="flex-1 bg-white rounded-xl shadow-sm border border-gray-100 flex flex-col" style={{ height: '420px' }}>
-          <div className="px-5 py-3 border-b border-gray-100 shrink-0">
-            <h2 className="text-base font-semibold text-gray-900">
-              {t('recent_violations')}
-              <span className="text-xs font-normal text-gray-500 ml-2">(last 7 days)</span>
+        {/* Right: Recent Violations — scrollable, height matches stat column */}
+        <div className={`flex-1 rounded-xl shadow-sm flex flex-col overflow-hidden ${
+          violations.length > 0 ? 'border-2 border-amber-300' : 'border border-gray-100'
+        }`}>
+          <div className={`px-6 py-4 border-b shrink-0 rounded-t-xl ${
+            violations.length > 0
+              ? 'bg-amber-50 border-amber-200'
+              : 'bg-white border-gray-100'
+          }`}>
+            <h2 className={`text-lg font-semibold ${violations.length > 0 ? 'text-amber-900' : 'text-gray-900'}`}>
+              🚔 {t('recent_violations')}
+              <span className={`text-sm font-normal ml-2 ${violations.length > 0 ? 'text-amber-700' : 'text-gray-500'}`}>(last 7 days)</span>
             </h2>
           </div>
-          <div className="overflow-y-auto flex-1">
+          <div className="overflow-y-auto flex-1 bg-white">
             {violations.length === 0 ? (
-              <p className="text-sm text-gray-500 px-5 py-4">{t('no_violations')}</p>
+              <p className="text-sm text-gray-500 px-6 py-4">{t('no_violations')}</p>
             ) : (
               <ul className="divide-y divide-gray-100">
                 {violations.map((v) => {
@@ -211,16 +218,19 @@ export default async function AdminDashboardPage() {
                   const ago = agoParts.join(' ') + ' ago'
                   const isRecent = diffHr < 24
                   return (
-                    <li key={v.id} className="px-5 py-3 flex items-start justify-between gap-3 text-sm">
+                    <li key={v.id} className="px-6 py-4 flex items-start justify-between gap-4 text-sm">
                       <div className="flex-1 min-w-0">
-                        <div className="flex items-center flex-wrap gap-1.5 mb-0.5">
-                          {v.plate && <span className="font-mono font-bold text-gray-900 text-xs">{v.plate}</span>}
-                          <span className="inline-block bg-orange-100 text-orange-700 text-xs px-1.5 py-0.5 rounded-full">{v.type}</span>
+                        <div className="flex items-center flex-wrap gap-2 mb-1">
+                          {v.plate && <span className="font-mono font-bold text-gray-900">{v.plate}</span>}
+                          <span className="inline-block bg-orange-100 text-orange-700 text-xs px-2 py-0.5 rounded-full">{v.type}</span>
                         </div>
                         <div className="text-gray-500 text-xs truncate">{v.location}</div>
+                        <div className="text-gray-400 text-xs mt-0.5">
+                          {submittedAt.toLocaleString('en-US', { timeZone: PT_ZONE })}
+                        </div>
                       </div>
                       <div className="shrink-0">
-                        <span className={`inline-block px-2 py-1 rounded-lg font-bold text-xs tracking-wide ${
+                        <span className={`inline-block px-3 py-1.5 rounded-lg font-bold text-sm tracking-wide ${
                           isRecent ? 'bg-red-100 text-red-700' : 'bg-amber-100 text-amber-800'
                         }`}>
                           {ago}

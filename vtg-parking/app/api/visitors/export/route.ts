@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { supabaseAdmin } from '@/lib/supabase';
 import { getSessionFromRequest } from '@/lib/auth';
+import { formatPDT } from '@/lib/utils';
 import * as XLSX from 'xlsx';
 
 export async function GET(req: NextRequest) {
@@ -29,9 +30,9 @@ export async function GET(req: NextRequest) {
     'Make': v.make ?? '',
     'Model': v.model ?? '',
     'Color': v.color ?? '',
-    'Start': v.start_datetime ? new Date(v.start_datetime).toLocaleString() : '',
-    'End': v.end_datetime ? new Date(v.end_datetime).toLocaleString() : '',
-    'Created': v.created_at ? new Date(v.created_at).toLocaleString() : '',
+    'Start': formatPDT(v.start_datetime, { short: true }),
+    'End': formatPDT(v.end_datetime, { short: true }),
+    'Created': formatPDT(v.created_at, { short: true }),
   }));
 
   if (format === 'excel') {

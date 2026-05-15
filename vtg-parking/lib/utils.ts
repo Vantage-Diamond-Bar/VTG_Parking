@@ -71,12 +71,58 @@ export const VEHICLE_TYPES = [
 
 export const VISITOR_QUOTA_LIMIT = 10
 
+// ─── Pacific Time helpers ────────────────────────────────────────────────────
+// All date/time display and calculations use America/Los_Angeles (PDT/PST).
+export const PT_ZONE = 'America/Los_Angeles'
+
 /**
- * Count how many midnight boundaries (00:00) fall within a parking period.
- * Equivalent to: floor(end_date) - floor(start_date) in calendar days.
- * e.g. May 12 22:00 → May 15 08:00 = 3 nights (crosses May 13, 14, 15 00:00)
- *      May 12 08:00 → May 12 23:00 = 0 nights (no midnight crossed)
+ * Get the calendar date (YYYY-MM-DD) of a Date object in Pacific Time.
+ * Works on both server (UTC) and browser (any locale).
  */
+function ptDateParts(d: Date): { y: number; m: number; day: number } {
+  const parts = new Intl.DateTimeFormat('en-CA', {
+    timeZone: PT_ZONE,
+    year: 'numeric', month: '2-digit', day: '2-digit',
+  }).formatToParts(d)
+  return {
+    y:   parseInt(parts.find(p => p.type === 'year')!.value),
+    m:   parseInt(parts.find(p => p.type === 'month')!.value),
+    day: parseInt(parts.find(p => p.type === 'day')!.value),
+  }
+}
+
+/**
+ * Format a datetime string in Pacific Time for display.
+ * Returns e.g. "5/20/2026, 6:00 PM" or date-only if opts.dateOnly.
+ */
+export function formatPDT(
+  dateStr: string | null | undefined,
+  opts?: { dateOnly?: boolean; short?: boolean }
+): string {
+  if (!dateStr) return '—'
+  const d = new Date(dateStr)
+  if (isNaN(d.getTime())) return '—'
+  if (opts?.dateOnly) {
+    return d.toLocaleDateString('en-US', { timeZone: PT_ZONE, year: 'numeric', month: 'numeric', day: 'numeric' })
+  }
+  if (opts?.short) {
+    return d.toLocaleString('en-US', {
+      timeZone: PT_ZONE,
+      year: 'numeric', month: 'numeric', day: 'numeric',
+      hour: '2-digit', minute: '2-digit',
+    })
+  }
+  return d.toLocaleString('en-US', { timeZone: PT_ZONE })
+}
+
+/**
+ * Return the current year-month string in Pacific Time (e.g. "2026-05").
+ */
+export function getPTYearMonth(): string {
+  const { y, m } = ptDateParts(new Date())
+  return `${y}-${String(m).padStart(2, '0')}`
+}
+
 /** Returns ISO-string boundaries [start, end) for a given "YYYY-MM" month. */
 export function monthBounds(yearMonth: string): { start: string; end: string } {
   const [y, mo] = yearMonth.split('-').map(Number)
@@ -88,15 +134,21 @@ export function monthBounds(yearMonth: string): { start: string; end: string } {
   }
 }
 
+/**
+ * Count overnight stays between two datetime strings, using Pacific Time calendar dates.
+ * e.g. May 20 18:00 PDT → May 21 10:00 PDT = 1 night (correct even when stored as UTC).
+ */
 export function countNights(startStr: string, endStr: string): number {
   if (!startStr || !endStr) return 0
   const s = new Date(startStr)
   const e = new Date(endStr)
   if (isNaN(s.getTime()) || isNaN(e.getTime())) return 0
-  // Use local calendar dates so e.g. 18:00 → next day 10:00 correctly counts as 1 night
-  const startDay = new Date(s.getFullYear(), s.getMonth(), s.getDate()).getTime()
-  const endDay   = new Date(e.getFullYear(), e.getMonth(), e.getDate()).getTime()
-  return Math.max(0, Math.round((endDay - startDay) / 86_400_000))
+  // Use Pacific Time calendar dates so UTC-stored times near midnight are handled correctly
+  const { y: sy, m: sm, day: sd } = ptDateParts(s)
+  const { y: ey, m: em, day: ed } = ptDateParts(e)
+  const startMs = Date.UTC(sy, sm - 1, sd)
+  const endMs   = Date.UTC(ey, em - 1, ed)
+  return Math.max(0, Math.round((endMs - startMs) / 86_400_000))
 }
 
 export function splitPhone(combined: string): { countryCode: string; number: string } {
