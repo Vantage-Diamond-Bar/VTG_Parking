@@ -18,6 +18,7 @@ interface Resident {
   license_plate: string;
   plate_state: string;
   owner_phone: string;
+  owner_phone_country_code?: string | null;
   owner_email: string;
   registration_doc_url?: string;
   created_at: string;
@@ -218,7 +219,10 @@ export default function AdminResidentsPage() {
                     </td>
                     <td className="px-4 py-3">{r.color}</td>
                     <td className="px-4 py-3 font-mono">{r.license_plate} / {r.plate_state}</td>
-                    <td className="px-4 py-3">{r.owner_phone}</td>
+                    <td className="px-4 py-3 whitespace-nowrap">
+                      {r.owner_phone_country_code && <span className="text-gray-500 mr-1">{r.owner_phone_country_code}</span>}
+                      {r.owner_phone}
+                    </td>
                     <td className="px-4 py-3 truncate max-w-[140px]">{r.owner_email}</td>
                     <td className="px-4 py-3">
                       {r.registration_doc_url ? (

@@ -22,7 +22,7 @@ interface ResidentVehicle {
   id: string; unit_id: string; year: number; make: string; model: string
   color: string; license_plate: string; plate_state: string
   is_oversized: boolean; registration_doc_url?: string
-  owner_name: string; owner_email: string; owner_phone: string
+  owner_name: string; owner_email: string; owner_phone: string; owner_phone_country_code?: string | null
   registrant_type: string; created_at: string
 }
 
@@ -755,7 +755,7 @@ function ManageView({ t, unitId, confirmedEmail, unitData, units, toast, showToa
             <div className="grid grid-cols-2 gap-3 text-sm">
               <div><span className="text-gray-500">{t('owner_name')}:</span> <span className="font-medium">{firstVehicle?.owner_name}</span></div>
               <div><span className="text-gray-500">{t('registrant_type')}:</span> <span className="font-medium">{firstVehicle?.registrant_type}</span></div>
-              <div><span className="text-gray-500">{t('phone')}:</span> <span className="font-medium">{firstVehicle?.owner_phone}</span></div>
+              <div><span className="text-gray-500">{t('phone')}:</span> <span className="font-medium">{firstVehicle?.owner_phone_country_code && <span className="text-gray-500 mr-1">{firstVehicle.owner_phone_country_code}</span>}{firstVehicle?.owner_phone}</span></div>
               <div><span className="text-gray-500">{t('email')}:</span> <span className="font-medium">{firstVehicle?.owner_email}</span></div>
             </div>
           ) : (
