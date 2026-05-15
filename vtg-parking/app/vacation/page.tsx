@@ -31,6 +31,7 @@ interface Vehicle {
 interface Owner {
   name: string
   phone: string
+  phone_country_code: string | null
   email: string
   registrant_type: string
 }
@@ -450,7 +451,7 @@ export default function VacationPage() {
                   </div>
                   <div>
                     <span className="text-gray-500 text-xs uppercase tracking-wide">Phone</span>
-                    <p className="font-medium text-gray-900 mt-0.5">{owner.phone}</p>
+                    <p className="font-medium text-gray-900 mt-0.5">{owner.phone_country_code && <span className="text-gray-500 mr-1">{owner.phone_country_code}</span>}{owner.phone}</p>
                   </div>
                   <div className="sm:col-span-2">
                     <span className="text-gray-500 text-xs uppercase tracking-wide">Email</span>

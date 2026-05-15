@@ -25,6 +25,7 @@ export async function GET(req: NextRequest) {
     owner: {
       name: vehicles[0].owner_name,
       phone: vehicles[0].owner_phone,
+      phone_country_code: vehicles[0].owner_phone_country_code,
       email: vehicles[0].owner_email,
       registrant_type: vehicles[0].registrant_type,
     },

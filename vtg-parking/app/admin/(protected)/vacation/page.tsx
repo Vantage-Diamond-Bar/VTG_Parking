@@ -181,7 +181,7 @@ export default function AdminVacationPage() {
                   <td className="px-4 py-3 text-sm font-medium">{r.units?.address ?? '—'}</td>
                   <td className="px-4 py-3">
                     <div className="font-medium">{r.first_name} {r.last_name}</div>
-                    <div className="text-xs text-gray-700">{r.phone}</div>
+                    <div className="text-xs text-gray-700">{r.phone_country_code && <span className="text-gray-500 mr-1">{r.phone_country_code}</span>}{r.phone}</div>
                   </td>
                   <td className="px-4 py-3">
                     <div className="font-mono font-semibold text-xs">{r.license_plate} / {r.plate_state}</div>
