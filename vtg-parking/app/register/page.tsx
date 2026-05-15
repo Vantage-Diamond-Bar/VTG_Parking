@@ -731,7 +731,7 @@ function ManageView({ t, unitId, confirmedEmail, unitData, units, toast, showToa
         <div className="mb-6">
           <h1 className="text-2xl font-bold text-gray-900">{t('title_manage')}</h1>
           <p className="text-gray-500 text-sm mt-0.5">{t('subtitle_manage')}</p>
-          <p className="text-gray-500 text-xs mt-1">{unitAddress}</p>
+          <p className="text-gray-700 text-xs mt-1">{unitAddress}</p>
         </div>
 
         {/* ── Contact Info ──────────────────────────────────── */}

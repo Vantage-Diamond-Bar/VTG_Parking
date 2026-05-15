@@ -134,7 +134,7 @@ export default function AdminEmailsPage() {
                 emails.map((entry) => (
                   <tr key={entry.id} className="hover:bg-gray-50">
                     <td className="px-6 py-4">{entry.email}</td>
-                    <td className="px-6 py-4 text-gray-600">{entry.label}</td>
+                    <td className="px-6 py-4 text-gray-800">{entry.label}</td>
                     <td className="px-6 py-4">
                       <span
                         className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${

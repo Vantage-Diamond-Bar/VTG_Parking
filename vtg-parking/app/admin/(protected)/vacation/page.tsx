@@ -173,21 +173,21 @@ export default function AdminVacationPage() {
                 <tr><td colSpan={8} className="px-4 py-8 text-center text-gray-500">{t('no_results')}</td></tr>
               ) : requests.map((r) => (
                 <tr key={r.id} className="hover:bg-gray-50">
-                  <td className="px-4 py-3 text-gray-500 whitespace-nowrap text-xs">
+                  <td className="px-4 py-3 text-gray-700 whitespace-nowrap text-xs">
                     {new Date(r.submitted_at).toLocaleDateString()}
                   </td>
                   <td className="px-4 py-3 text-sm font-medium">{r.units?.address ?? '—'}</td>
                   <td className="px-4 py-3">
                     <div className="font-medium">{r.first_name} {r.last_name}</div>
-                    <div className="text-xs text-gray-600">{r.phone}</div>
+                    <div className="text-xs text-gray-700">{r.phone}</div>
                   </td>
                   <td className="px-4 py-3">
                     <div className="font-mono font-semibold text-xs">{r.license_plate} / {r.plate_state}</div>
-                    <div className="text-xs text-gray-500">{r.year} {r.make} {r.model} · {r.color}</div>
+                    <div className="text-xs text-gray-600">{r.year} {r.make} {r.model} · {r.color}</div>
                   </td>
-                  <td className="px-4 py-3 text-xs text-gray-600 whitespace-nowrap">
+                  <td className="px-4 py-3 text-xs text-gray-700 whitespace-nowrap">
                     <div>{new Date(r.start_datetime).toLocaleDateString()}</div>
-                    <div className="text-gray-500">→ {new Date(r.end_datetime).toLocaleDateString()}</div>
+                    <div className="text-gray-700">→ {new Date(r.end_datetime).toLocaleDateString()}</div>
                   </td>
                   <td className="px-4 py-3 text-xs space-y-1">
                     {/* Row 1: is_registered_vehicle */}
@@ -267,10 +267,10 @@ export default function AdminVacationPage() {
               <div className="grid grid-cols-2 gap-x-6 gap-y-3">
                 <div><p className="text-xs text-gray-500 uppercase">{tv('unit')}</p><p className="font-medium">{selected.units?.address}</p></div>
                 <div><p className="text-xs text-gray-500 uppercase">{tv('registrant_type')}</p><p className="font-medium capitalize">{selected.registrant_type}</p></div>
-                <div><p className="text-xs text-gray-500 uppercase">{tv('applicant')}</p><p className="font-medium">{selected.first_name} {selected.last_name}</p><p className="text-gray-500 text-xs">{selected.phone}</p></div>
-                <div><p className="text-xs text-gray-500 uppercase">{tv('emergency_contact')}</p><p className="font-medium">{selected.emergency_first_name} {selected.emergency_last_name}</p><p className="text-gray-500 text-xs">{selected.emergency_phone}</p></div>
-                <div><p className="text-xs text-gray-500 uppercase">{tv('period')}</p><p className="font-medium">{new Date(selected.start_datetime).toLocaleString()}</p><p className="text-gray-500 text-xs">→ {new Date(selected.end_datetime).toLocaleString()}</p></div>
-                <div><p className="text-xs text-gray-500 uppercase">{t('vehicle')}</p><p className="font-mono font-semibold">{selected.license_plate} / {selected.plate_state}</p><p className="text-gray-500 text-xs">{selected.year} {selected.make} {selected.model} · {selected.color}</p></div>
+                <div><p className="text-xs text-gray-500 uppercase">{tv('applicant')}</p><p className="font-medium">{selected.first_name} {selected.last_name}</p><p className="text-gray-700 text-xs">{selected.phone}</p></div>
+                <div><p className="text-xs text-gray-500 uppercase">{tv('emergency_contact')}</p><p className="font-medium">{selected.emergency_first_name} {selected.emergency_last_name}</p><p className="text-gray-700 text-xs">{selected.emergency_phone}</p></div>
+                <div><p className="text-xs text-gray-500 uppercase">{tv('period')}</p><p className="font-medium">{new Date(selected.start_datetime).toLocaleString()}</p><p className="text-gray-700 text-xs">→ {new Date(selected.end_datetime).toLocaleString()}</p></div>
+                <div><p className="text-xs text-gray-500 uppercase">{t('vehicle')}</p><p className="font-mono font-semibold">{selected.license_plate} / {selected.plate_state}</p><p className="text-gray-700 text-xs">{selected.year} {selected.make} {selected.model} · {selected.color}</p></div>
                 {selected.email && (
                   <div className="col-span-2"><p className="text-xs text-gray-500 uppercase">{tv('email')}</p><p className="text-gray-700">{selected.email}</p></div>
                 )}
@@ -288,7 +288,7 @@ export default function AdminVacationPage() {
 
               {selected.admin_notes && selected.status !== 'pending' && (
                 <div className="bg-gray-50 rounded-lg px-4 py-3">
-                  <p className="text-xs text-gray-400 uppercase mb-1">{tv('admin_notes')}</p>
+                  <p className="text-xs text-gray-500 uppercase mb-1">{tv('admin_notes')}</p>
                   <p className="text-gray-700">{selected.admin_notes}</p>
                   {selected.reviewed_by && <p className="text-xs text-gray-500 mt-1">— {selected.reviewed_by}, {selected.reviewed_at ? new Date(selected.reviewed_at).toLocaleString() : ''}</p>}
                 </div>
@@ -296,25 +296,25 @@ export default function AdminVacationPage() {
 
               {selected.rejection_reason && selected.status === 'rejected' && (
                 <div className="bg-red-50 border border-red-100 rounded-lg px-4 py-3">
-                  <p className="text-xs text-red-400 uppercase mb-1">{tv('rejection_reason')}</p>
+                  <p className="text-xs text-red-600 uppercase mb-1">{tv('rejection_reason')}</p>
                   <p className="text-red-700">{selected.rejection_reason}</p>
                 </div>
               )}
 
               {/* All registered vehicles for this unit */}
               <div className="border-t border-gray-100 pt-4">
-                <p className="text-xs text-gray-400 uppercase mb-2">All Registered Vehicles for This Unit</p>
+                <p className="text-xs text-gray-500 uppercase mb-2">All Registered Vehicles for This Unit</p>
                 {unitVehiclesLoading ? (
-                  <p className="text-xs text-gray-400">Loading…</p>
+                  <p className="text-xs text-gray-500">Loading…</p>
                 ) : unitVehicles.length === 0 ? (
-                  <p className="text-xs text-gray-400 italic">No registered vehicles found.</p>
+                  <p className="text-xs text-gray-500 italic">No registered vehicles found.</p>
                 ) : (
                   <div className="space-y-1.5">
                     {unitVehicles.map((v) => (
                       <div key={v.id} className={`flex items-center gap-2 text-xs px-3 py-1.5 rounded-lg ${v.license_plate === selected?.license_plate ? 'bg-blue-50 border border-blue-200' : 'bg-gray-50'}`}>
                         <span className={`w-1.5 h-1.5 rounded-full flex-shrink-0 ${v.is_oversized ? 'bg-amber-500' : 'bg-gray-400'}`} />
                         <span className="font-mono font-semibold">{v.license_plate}{v.plate_state ? ` / ${v.plate_state}` : ''}</span>
-                        <span className="text-gray-500">{v.year} {v.make} {v.model} · {v.color}</span>
+                        <span className="text-gray-700">{v.year} {v.make} {v.model} · {v.color}</span>
                         {v.is_oversized && <span className="ml-auto text-amber-600 font-medium">Oversized</span>}
                         {v.license_plate === selected?.license_plate && <span className="ml-auto text-blue-600 font-medium">This vehicle</span>}
                       </div>

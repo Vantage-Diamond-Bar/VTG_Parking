@@ -230,7 +230,7 @@ export default function AdminResidentsPage() {
                         </button>
                       ) : '—'}
                     </td>
-                    <td className={`px-4 py-3 ${isExpired ? 'text-red-600 font-semibold' : 'text-gray-500'}`}>
+                    <td className={`px-4 py-3 ${isExpired ? 'text-red-600 font-semibold' : 'text-gray-700'}`}>
                       {isExpired && <span className="mr-1">⚠️</span>}
                       {new Date(r.created_at).toLocaleDateString()}
                     </td>
