@@ -1,6 +1,7 @@
+import Link from 'next/link';
 import { getTranslations } from 'next-intl/server';
 import { supabaseAdmin } from '@/lib/supabase';
-import { getPTYearMonth, PT_ZONE } from '@/lib/utils';
+import { getPTYearMonth, PT_ZONE, formatPDT } from '@/lib/utils';
 import ResolveAlertButton from './ResolveAlertButton';
 
 interface Stats {
@@ -42,7 +43,7 @@ interface OverdueVehicle {
 }
 
 async function getStats(): Promise<Stats | null> {
-  const year_month = getPTYearMonth(); // Pacific Time month
+  const year_month = getPTYearMonth();
   const monthStart = `${year_month}-01`;
   const [residentsResult, visitorsResult, violationsResult, vacationResult, oversizedResult] = await Promise.all([
     supabaseAdmin.from('resident_vehicles').select('id', { count: 'exact', head: true }),
@@ -85,8 +86,8 @@ async function getAlerts(): Promise<Alert[]> {
 }
 
 async function getRecentViolations(): Promise<Violation[]> {
-  const sevenDaysAgo = new Date()
-  sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7)
+  const sevenDaysAgo = new Date();
+  sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
   const { data } = await supabaseAdmin
     .from('violation_reports')
     .select('id, submitted_at, location, violation_type, license_plate, description')
@@ -108,10 +109,7 @@ async function getOverdueVehicles(): Promise<{ vehicles: OverdueVehicle[]; total
   oneYearAgo.setFullYear(oneYearAgo.getFullYear() - 1);
   const cutoff = oneYearAgo.toISOString();
   const [{ count }, { data }] = await Promise.all([
-    supabaseAdmin
-      .from('resident_vehicles')
-      .select('id', { count: 'exact', head: true })
-      .lt('created_at', cutoff),
+    supabaseAdmin.from('resident_vehicles').select('id', { count: 'exact', head: true }).lt('created_at', cutoff),
     supabaseAdmin
       .from('resident_vehicles')
       .select('id, owner_name, owner_email, make, model, color, license_plate, created_at, units(address)')
@@ -137,63 +135,53 @@ export default async function AdminDashboardPage() {
     <div className="p-8">
       <h1 className="text-2xl font-bold text-gray-900 mb-6">{t('dashboard')}</h1>
 
-      {/* Top section: stat cards (left) + Recent Violations square (right) */}
-      <div className="flex gap-6 mb-8 items-stretch">
+      {/* Top section: CSS Grid — left col = stat cards, right col = violations (same row height) */}
+      <div className="grid gap-6 mb-8" style={{ gridTemplateColumns: '224px 1fr' }}>
 
         {/* Left: Stat Cards stacked vertically */}
-        <div className="flex flex-col gap-3 w-56 shrink-0">
-          <div className="bg-white rounded-xl shadow-sm p-4 border border-gray-100">
+        <div className="flex flex-col gap-3">
+
+          <Link href="/admin/residents" className="block bg-white rounded-xl shadow-sm p-4 border border-gray-100 hover:bg-gray-50 transition-colors">
             <p className="text-xs text-gray-500">{t('total_residents')}</p>
-            <p className="text-3xl font-bold text-gray-900 mt-1">
-              {stats?.total_residents ?? '—'}
-            </p>
-          </div>
-          <div className="bg-white rounded-xl shadow-sm p-4 border border-gray-100">
+            <p className="text-3xl font-bold text-gray-900 mt-1">{stats?.total_residents ?? '—'}</p>
+          </Link>
+
+          <Link href="/admin/visitors" className="block bg-white rounded-xl shadow-sm p-4 border border-gray-100 hover:bg-gray-50 transition-colors">
             <p className="text-xs text-gray-500">{t('visitor_registrations_month')}</p>
-            <p className="text-3xl font-bold text-gray-900 mt-1">
-              {stats?.visitor_registrations_this_month ?? '—'}
-            </p>
-          </div>
-          <div className="bg-white rounded-xl shadow-sm p-4 border border-gray-100">
+            <p className="text-3xl font-bold text-gray-900 mt-1">{stats?.visitor_registrations_this_month ?? '—'}</p>
+          </Link>
+
+          <Link href="/admin/violations" className="block bg-white rounded-xl shadow-sm p-4 border border-gray-100 hover:bg-gray-50 transition-colors">
             <p className="text-xs text-gray-500">{t('violations_month')}</p>
-            <p className="text-3xl font-bold text-gray-900 mt-1">
-              {stats?.violations_this_month ?? '—'}
-            </p>
-          </div>
-          <div className={`rounded-xl shadow-sm p-4 border ${overdueTotal > 0 ? 'bg-amber-50 border-amber-200' : 'bg-white border-gray-100'}`}>
-            <p className={`text-xs ${overdueTotal > 0 ? 'text-amber-700' : 'text-gray-500'}`}>
-              {t('overdue_vehicles')}
-            </p>
-            <p className={`text-3xl font-bold mt-1 ${overdueTotal > 0 ? 'text-amber-800' : 'text-gray-900'}`}>
-              {overdueTotal}
-            </p>
-          </div>
-          <div className={`rounded-xl shadow-sm p-4 border ${(stats?.pending_vacation ?? 0) > 0 ? 'bg-purple-50 border-purple-200' : 'bg-white border-gray-100'}`}>
-            <p className={`text-xs ${(stats?.pending_vacation ?? 0) > 0 ? 'text-purple-700' : 'text-gray-500'}`}>
-              {t('pending_vacation')}
-            </p>
-            <p className={`text-3xl font-bold mt-1 ${(stats?.pending_vacation ?? 0) > 0 ? 'text-purple-800' : 'text-gray-900'}`}>
-              {stats?.pending_vacation ?? '—'}
-            </p>
-          </div>
-          <div className={`rounded-xl shadow-sm p-4 border ${(stats?.pending_oversized ?? 0) > 0 ? 'bg-orange-50 border-orange-200' : 'bg-white border-gray-100'}`}>
-            <p className={`text-xs ${(stats?.pending_oversized ?? 0) > 0 ? 'text-orange-700' : 'text-gray-500'}`}>
-              {t('pending_oversized')}
-            </p>
-            <p className={`text-3xl font-bold mt-1 ${(stats?.pending_oversized ?? 0) > 0 ? 'text-orange-800' : 'text-gray-900'}`}>
-              {stats?.pending_oversized ?? '—'}
-            </p>
-          </div>
+            <p className="text-3xl font-bold text-gray-900 mt-1">{stats?.violations_this_month ?? '—'}</p>
+          </Link>
+
+          <Link href="/admin/residents" className={`block rounded-xl shadow-sm p-4 border transition-colors ${overdueTotal > 0 ? 'bg-amber-50 border-amber-200 hover:bg-amber-100' : 'bg-white border-gray-100 hover:bg-gray-50'}`}>
+            <p className={`text-xs ${overdueTotal > 0 ? 'text-amber-700' : 'text-gray-500'}`}>{t('overdue_vehicles')}</p>
+            <p className={`text-3xl font-bold mt-1 ${overdueTotal > 0 ? 'text-amber-800' : 'text-gray-900'}`}>{overdueTotal}</p>
+          </Link>
+
+          <Link href="/admin/vacation" className={`block rounded-xl shadow-sm p-4 border transition-colors ${(stats?.pending_vacation ?? 0) > 0 ? 'bg-purple-50 border-purple-200 hover:bg-purple-100' : 'bg-white border-gray-100 hover:bg-gray-50'}`}>
+            <p className={`text-xs ${(stats?.pending_vacation ?? 0) > 0 ? 'text-purple-700' : 'text-gray-500'}`}>{t('pending_vacation')}</p>
+            <p className={`text-3xl font-bold mt-1 ${(stats?.pending_vacation ?? 0) > 0 ? 'text-purple-800' : 'text-gray-900'}`}>{stats?.pending_vacation ?? '—'}</p>
+          </Link>
+
+          <Link href="/admin/oversized" className={`block rounded-xl shadow-sm p-4 border transition-colors ${(stats?.pending_oversized ?? 0) > 0 ? 'bg-orange-50 border-orange-200 hover:bg-orange-100' : 'bg-white border-gray-100 hover:bg-gray-50'}`}>
+            <p className={`text-xs ${(stats?.pending_oversized ?? 0) > 0 ? 'text-orange-700' : 'text-gray-500'}`}>{t('pending_oversized')}</p>
+            <p className={`text-3xl font-bold mt-1 ${(stats?.pending_oversized ?? 0) > 0 ? 'text-orange-800' : 'text-gray-900'}`}>{stats?.pending_oversized ?? '—'}</p>
+          </Link>
+
         </div>
 
-        {/* Right: Recent Violations — scrollable, height matches stat column */}
-        <div className={`flex-1 rounded-xl shadow-sm flex flex-col overflow-hidden ${
-          violations.length > 0 ? 'border-2 border-amber-300' : 'border border-gray-100'
-        }`}>
+        {/* Right: Recent Violations — constrained to grid row height, inner content scrolls */}
+        <Link
+          href="/admin/violations"
+          className={`min-h-0 rounded-xl shadow-sm flex flex-col overflow-hidden cursor-pointer ${
+            violations.length > 0 ? 'border-2 border-amber-300' : 'border border-gray-100'
+          }`}
+        >
           <div className={`px-6 py-4 border-b shrink-0 rounded-t-xl ${
-            violations.length > 0
-              ? 'bg-amber-50 border-amber-200'
-              : 'bg-white border-gray-100'
+            violations.length > 0 ? 'bg-amber-50 border-amber-200' : 'bg-white border-gray-100'
           }`}>
             <h2 className={`text-lg font-semibold ${violations.length > 0 ? 'text-amber-900' : 'text-gray-900'}`}>
               🚔 {t('recent_violations')}
@@ -206,19 +194,19 @@ export default async function AdminDashboardPage() {
             ) : (
               <ul className="divide-y divide-gray-100">
                 {violations.map((v) => {
-                  const submittedAt = new Date(v.submitted_at)
-                  const diffMs = Date.now() - submittedAt.getTime()
-                  const diffMin = Math.floor(diffMs / 60000)
-                  const diffHr = Math.floor(diffMin / 60)
-                  const diffDay = Math.floor(diffHr / 24)
-                  let agoParts: string[] = []
-                  if (diffDay > 0) agoParts.push(`${diffDay}d`)
-                  if (diffHr % 24 > 0 || diffDay > 0) agoParts.push(`${diffHr % 24}h`)
-                  agoParts.push(`${diffMin % 60}m`)
-                  const ago = agoParts.join(' ') + ' ago'
-                  const isRecent = diffHr < 24
+                  const submittedAt = new Date(v.submitted_at);
+                  const diffMs = Date.now() - submittedAt.getTime();
+                  const diffMin = Math.floor(diffMs / 60000);
+                  const diffHr = Math.floor(diffMin / 60);
+                  const diffDay = Math.floor(diffHr / 24);
+                  const agoParts: string[] = [];
+                  if (diffDay > 0) agoParts.push(`${diffDay}d`);
+                  if (diffHr % 24 > 0 || diffDay > 0) agoParts.push(`${diffHr % 24}h`);
+                  agoParts.push(`${diffMin % 60}m`);
+                  const ago = agoParts.join(' ') + ' ago';
+                  const isRecent = diffHr < 24;
                   return (
-                    <li key={v.id} className="px-6 py-4 flex items-start justify-between gap-4 text-sm">
+                    <li key={v.id} className="px-6 py-4 flex items-start justify-between gap-4 text-sm hover:bg-amber-50">
                       <div className="flex-1 min-w-0">
                         <div className="flex items-center flex-wrap gap-2 mb-1">
                           {v.plate && <span className="font-mono font-bold text-gray-900">{v.plate}</span>}
@@ -237,18 +225,21 @@ export default async function AdminDashboardPage() {
                         </span>
                       </div>
                     </li>
-                  )
+                  );
                 })}
               </ul>
             )}
           </div>
-        </div>
+        </Link>
       </div>
 
-      {/* 访客额度滥用提醒 (formerly Unresolved Alerts) */}
+      {/* 访客额度滥用提醒 */}
       <div className="bg-white rounded-xl shadow-sm border border-gray-100 mb-8">
-        <div className="px-6 py-4 border-b border-gray-100">
+        <div className="px-6 py-4 border-b border-gray-100 flex items-center justify-between">
           <h2 className="text-lg font-semibold text-gray-900">🚨 访客额度滥用提醒</h2>
+          <Link href="/admin/alerts" className="text-sm text-blue-600 hover:underline font-medium">
+            查看全部 →
+          </Link>
         </div>
         <div className="overflow-x-auto">
           {alerts.length === 0 ? (
@@ -266,7 +257,7 @@ export default async function AdminDashboardPage() {
               </thead>
               <tbody className="divide-y divide-gray-100">
                 {alerts.map((alert) => (
-                  <tr key={alert.id}>
+                  <tr key={alert.id} className="hover:bg-red-50">
                     <td className="px-6 py-4 font-mono font-semibold">
                       {alert.license_plate}
                       {alert.plate_state && <span className="ml-1 text-xs text-gray-500 font-normal">({alert.plate_state})</span>}
@@ -288,9 +279,14 @@ export default async function AdminDashboardPage() {
       {/* Overdue Registrations */}
       {overdueVehicles.length > 0 && (
         <div className="bg-white rounded-xl shadow-sm border border-amber-200 mb-8">
-          <div className="px-6 py-4 border-b border-amber-100 bg-amber-50 rounded-t-xl">
-            <h2 className="text-lg font-semibold text-amber-900">⚠️ {t('overdue_vehicles')}</h2>
-            <p className="text-sm text-amber-700 mt-0.5">{t('overdue_desc')}</p>
+          <div className="px-6 py-4 border-b border-amber-100 bg-amber-50 rounded-t-xl flex items-center justify-between">
+            <div>
+              <h2 className="text-lg font-semibold text-amber-900">⚠️ {t('overdue_vehicles')}</h2>
+              <p className="text-sm text-amber-700 mt-0.5">{t('overdue_desc')}</p>
+            </div>
+            <Link href="/admin/residents" className="text-sm text-amber-700 hover:underline font-medium shrink-0 ml-4">
+              查看全部 →
+            </Link>
           </div>
           <div className="overflow-x-auto">
             <table className="w-full text-sm">
@@ -311,13 +307,9 @@ export default async function AdminDashboardPage() {
                       <div className="font-medium">{v.owner_name}</div>
                       <div className="text-xs text-gray-600">{v.owner_email}</div>
                     </td>
-                    <td className="px-6 py-3 text-gray-600">
-                      {[v.color, v.make, v.model].filter(Boolean).join(' ')}
-                    </td>
+                    <td className="px-6 py-3 text-gray-600">{[v.color, v.make, v.model].filter(Boolean).join(' ')}</td>
                     <td className="px-6 py-3 font-mono font-semibold text-gray-800">{v.license_plate}</td>
-                    <td className="px-6 py-3 text-red-600 font-medium">
-                      {new Date(v.created_at).toLocaleDateString()}
-                    </td>
+                    <td className="px-6 py-3 text-red-600 font-medium">{formatPDT(v.created_at, { dateOnly: true })}</td>
                   </tr>
                 ))}
               </tbody>
