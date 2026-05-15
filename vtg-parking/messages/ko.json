@@ -472,6 +472,7 @@
     "violation_photos": "위반 사진",
     "all": "전체",
     "pending_vacation": "대기 중인 휴가 주차 신청",
+    "pending_oversized": "대기 중인 대형 차량 신청",
     "vio_tab_pending": "대기 중",
     "vio_tab_no_action": "조치 없음",
     "vio_tab_resolved": "처리 완료",

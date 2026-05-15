@@ -177,7 +177,7 @@ export default async function AdminDashboardPage() {
           </div>
           <div className={`rounded-xl shadow-sm p-4 border ${(stats?.pending_oversized ?? 0) > 0 ? 'bg-orange-50 border-orange-200' : 'bg-white border-gray-100'}`}>
             <p className={`text-xs ${(stats?.pending_oversized ?? 0) > 0 ? 'text-orange-700' : 'text-gray-500'}`}>
-              待审 Oversized 申请
+              {t('pending_oversized')}
             </p>
             <p className={`text-3xl font-bold mt-1 ${(stats?.pending_oversized ?? 0) > 0 ? 'text-orange-800' : 'text-gray-900'}`}>
               {stats?.pending_oversized ?? '—'}

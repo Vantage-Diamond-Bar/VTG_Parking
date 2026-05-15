@@ -472,6 +472,7 @@
     "violation_photos": "违章照片",
     "all": "全部",
     "pending_vacation": "待审核度假停车申请",
+    "pending_oversized": "待审 Oversized 申请",
     "vio_tab_pending": "待处理",
     "vio_tab_no_action": "无需处理",
     "vio_tab_resolved": "已处理",

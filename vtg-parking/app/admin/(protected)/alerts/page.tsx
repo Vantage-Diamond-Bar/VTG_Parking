@@ -15,7 +15,7 @@ interface Alert {
   resolved_at?: string;
 }
 
-type Tab = 'unresolved' | 'all';
+type Tab = 'unresolved' | 'resolved' | 'all';
 
 export default function AdminAlertsPage() {
   const t = useTranslations('admin');
@@ -28,6 +28,7 @@ export default function AdminAlertsPage() {
     try {
       const params = new URLSearchParams();
       if (tab === 'unresolved') params.set('resolved', 'false');
+      else if (tab === 'resolved') params.set('resolved', 'true');
       const res = await fetch(`/api/admin/alerts?${params}`);
       if (res.ok) {
         const data = await res.json();
@@ -57,26 +58,19 @@ export default function AdminAlertsPage() {
 
       {/* Tabs */}
       <div className="flex gap-1 mb-6 bg-gray-100 rounded-lg p-1 w-fit">
-        <button
-          onClick={() => setTab('unresolved')}
-          className={`px-4 py-2 rounded-md text-sm font-medium transition-colors ${
-            tab === 'unresolved'
-              ? 'bg-white text-gray-900 shadow-sm'
-              : 'text-gray-500 hover:text-gray-700'
-          }`}
-        >
-          {t('unresolved')}
-        </button>
-        <button
-          onClick={() => setTab('all')}
-          className={`px-4 py-2 rounded-md text-sm font-medium transition-colors ${
-            tab === 'all'
-              ? 'bg-white text-gray-900 shadow-sm'
-              : 'text-gray-500 hover:text-gray-700'
-          }`}
-        >
-          {t('all')}
-        </button>
+        {(['unresolved', 'resolved', 'all'] as Tab[]).map((tabKey) => (
+          <button
+            key={tabKey}
+            onClick={() => setTab(tabKey)}
+            className={`px-4 py-2 rounded-md text-sm font-medium transition-colors ${
+              tab === tabKey
+                ? 'bg-white text-gray-900 shadow-sm'
+                : 'text-gray-500 hover:text-gray-700'
+            }`}
+          >
+            {tabKey === 'unresolved' ? t('unresolved') : tabKey === 'resolved' ? t('resolved') : t('all')}
+          </button>
+        ))}
       </div>
 
       {/* Table */}

@@ -89,12 +89,14 @@ export function monthBounds(yearMonth: string): { start: string; end: string } {
 }
 
 export function countNights(startStr: string, endStr: string): number {
-  const sd = startStr.slice(0, 10)
-  const ed = endStr.slice(0, 10)
-  if (!sd || !ed || sd.length < 10 || ed.length < 10) return 0
-  const start = Date.UTC(+sd.slice(0, 4), +sd.slice(5, 7) - 1, +sd.slice(8, 10))
-  const end   = Date.UTC(+ed.slice(0, 4), +ed.slice(5, 7) - 1, +ed.slice(8, 10))
-  return Math.max(0, Math.round((end - start) / 86_400_000))
+  if (!startStr || !endStr) return 0
+  const s = new Date(startStr)
+  const e = new Date(endStr)
+  if (isNaN(s.getTime()) || isNaN(e.getTime())) return 0
+  // Use local calendar dates so e.g. 18:00 → next day 10:00 correctly counts as 1 night
+  const startDay = new Date(s.getFullYear(), s.getMonth(), s.getDate()).getTime()
+  const endDay   = new Date(e.getFullYear(), e.getMonth(), e.getDate()).getTime()
+  return Math.max(0, Math.round((endDay - startDay) / 86_400_000))
 }
 
 export function splitPhone(combined: string): { countryCode: string; number: string } {

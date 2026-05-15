@@ -472,6 +472,7 @@
     "violation_photos": "Violation Photos",
     "all": "All",
     "pending_vacation": "Pending Vacation Requests",
+    "pending_oversized": "Pending Oversized Applications",
     "vio_tab_pending": "Pending",
     "vio_tab_no_action": "No Action",
     "vio_tab_resolved": "Resolved",
