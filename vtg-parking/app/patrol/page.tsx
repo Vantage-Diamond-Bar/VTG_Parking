@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { useTranslations } from 'next-intl';
+import { formatPDT } from '@/lib/utils';
 
 type SearchTab = 'plate' | 'code';
 
@@ -201,13 +202,13 @@ export default function PatrolPage() {
             {result.valid_from && (
               <div>
                 <span className={`text-${cardColor}-600 font-medium`}>{t('valid_from')}:</span>{' '}
-                <span className="font-semibold">{new Date(result.valid_from).toLocaleString()}</span>
+                <span className="font-semibold">{formatPDT(result.valid_from, { short: true })}</span>
               </div>
             )}
             {result.valid_until && (
               <div>
                 <span className={`text-${cardColor}-600 font-medium`}>{t('valid_until')}:</span>{' '}
-                <span className="font-semibold">{new Date(result.valid_until).toLocaleString()}</span>
+                <span className="font-semibold">{formatPDT(result.valid_until, { short: true })}</span>
               </div>
             )}
           </div>
@@ -248,13 +249,13 @@ export default function PatrolPage() {
             {result.valid_from && (
               <div>
                 <span className={`text-${cardColor}-600 font-medium`}>{t('valid_from')}:</span>{' '}
-                <span className="font-semibold">{new Date(result.valid_from).toLocaleString()}</span>
+                <span className="font-semibold">{formatPDT(result.valid_from, { short: true })}</span>
               </div>
             )}
             {result.valid_until && (
               <div>
                 <span className={`text-${cardColor}-600 font-medium`}>{t('valid_until')}:</span>{' '}
-                <span className="font-semibold">{new Date(result.valid_until).toLocaleString()}</span>
+                <span className="font-semibold">{formatPDT(result.valid_until, { short: true })}</span>
               </div>
             )}
           </div>

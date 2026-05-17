@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useCallback, useMemo } from 'react';
 import { useTranslations } from 'next-intl';
-import { VIOLATION_TYPES, VIOLATION_LOCATIONS } from '@/lib/utils';
+import { VIOLATION_TYPES, VIOLATION_LOCATIONS, formatPDT } from '@/lib/utils';
 
 // Safe translation for vio_res_* keys — falls back to humanized key for unknown historical values
 function safeVioRes(t: ReturnType<typeof useTranslations>, key: string): string {
@@ -247,7 +247,7 @@ export default function AdminViolationsPage() {
               ) : filteredViolations.map((v) => (
                 <tr key={v.id} className="hover:bg-gray-50 align-top">
                   <td className="px-4 py-3 text-gray-600 whitespace-nowrap text-xs">
-                    {new Date(v.submitted_at).toLocaleString()}
+                    {formatPDT(v.submitted_at, { short: true })}
                   </td>
                   <td className="px-4 py-3 text-xs max-w-[140px] truncate" title={v.final_location ?? v.location}>
                     {v.final_location ?? v.location}
@@ -284,7 +284,7 @@ export default function AdminViolationsPage() {
                           <div key={h.id} className="flex flex-col gap-0.5 border-l-2 border-gray-200 pl-2">
                             <div className="flex items-center gap-1.5 flex-wrap">
                               <span className="text-gray-600 whitespace-nowrap font-mono">
-                                {new Date(h.submitted_at).toLocaleDateString('en-US', { month: 'numeric', day: 'numeric', year: '2-digit' })}
+                                {formatPDT(h.submitted_at, { dateOnly: true })}
                               </span>
                               <span className={`px-1.5 py-0.5 rounded text-xs font-medium ${STATUS_COLORS[h.status] ?? 'bg-gray-100 text-gray-600'}`}>
                                 {h.status}
@@ -355,7 +355,7 @@ export default function AdminViolationsPage() {
               {/* Original info */}
               <div className="bg-gray-50 rounded-lg p-4 text-sm space-y-1">
                 <div className="text-xs text-gray-500 mb-2">{t('vio_original_info')}</div>
-                <div><span className="font-medium">{t('submitted')}:</span> {new Date(viewViolation.submitted_at).toLocaleString()}</div>
+                <div><span className="font-medium">{t('submitted')}:</span> {formatPDT(viewViolation.submitted_at, { short: true })}</div>
                 <div><span className="font-medium">{t('location')}:</span> {viewViolation.location}</div>
                 <div><span className="font-medium">{t('type')}:</span> {viewViolation.violation_type}</div>
                 <div><span className="font-medium">{t('plate')}:</span> {viewViolation.license_plate || '—'}</div>
@@ -403,7 +403,7 @@ export default function AdminViolationsPage() {
                             {h.status}
                           </span>
                           <span className="text-gray-500 whitespace-nowrap">
-                            {new Date(h.submitted_at).toLocaleString('en-US', { month: 'short', day: 'numeric', year: 'numeric', hour: '2-digit', minute: '2-digit' })}
+                            {formatPDT(h.submitted_at, { short: true })}
                           </span>
                         </div>
                       </div>

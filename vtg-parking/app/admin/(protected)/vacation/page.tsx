@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useCallback } from 'react'
 import { useTranslations } from 'next-intl'
+import { formatPDT } from '@/lib/utils'
 
 interface UnitVehicle {
   id: string
@@ -176,7 +177,7 @@ export default function AdminVacationPage() {
               ) : requests.map((r) => (
                 <tr key={r.id} className="hover:bg-gray-50">
                   <td className="px-4 py-3 text-gray-700 whitespace-nowrap text-xs">
-                    {new Date(r.submitted_at).toLocaleDateString()}
+                    {formatPDT(r.submitted_at, { dateOnly: true })}
                   </td>
                   <td className="px-4 py-3 text-sm font-medium">{r.units?.address ?? '—'}</td>
                   <td className="px-4 py-3">
@@ -188,8 +189,8 @@ export default function AdminVacationPage() {
                     <div className="text-xs text-gray-600">{r.year} {r.make} {r.model} · {r.color}</div>
                   </td>
                   <td className="px-4 py-3 text-xs text-gray-700 whitespace-nowrap">
-                    <div>{new Date(r.start_datetime).toLocaleDateString()}</div>
-                    <div className="text-gray-700">→ {new Date(r.end_datetime).toLocaleDateString()}</div>
+                    <div>{formatPDT(r.start_datetime, { dateOnly: true })}</div>
+                    <div className="text-gray-700">→ {formatPDT(r.end_datetime, { dateOnly: true })}</div>
                   </td>
                   <td className="px-4 py-3 text-xs space-y-1">
                     {/* Row 1: is_registered_vehicle */}
@@ -271,7 +272,7 @@ export default function AdminVacationPage() {
                 <div><p className="text-xs text-gray-500 uppercase">{tv('registrant_type')}</p><p className="font-medium capitalize">{selected.registrant_type}</p></div>
                 <div><p className="text-xs text-gray-500 uppercase">{tv('applicant')}</p><p className="font-medium">{selected.first_name} {selected.last_name}</p><p className="text-gray-700 text-xs">{selected.phone_country_code && <span className="text-gray-500 mr-1">{selected.phone_country_code}</span>}{selected.phone}</p></div>
                 <div><p className="text-xs text-gray-500 uppercase">{tv('emergency_contact')}</p><p className="font-medium">{selected.emergency_first_name} {selected.emergency_last_name}</p><p className="text-gray-700 text-xs">{selected.emergency_phone_country_code && <span className="text-gray-500 mr-1">{selected.emergency_phone_country_code}</span>}{selected.emergency_phone}</p></div>
-                <div><p className="text-xs text-gray-500 uppercase">{tv('period')}</p><p className="font-medium">{new Date(selected.start_datetime).toLocaleString()}</p><p className="text-gray-700 text-xs">→ {new Date(selected.end_datetime).toLocaleString()}</p></div>
+                <div><p className="text-xs text-gray-500 uppercase">{tv('period')}</p><p className="font-medium">{formatPDT(selected.start_datetime, { short: true })}</p><p className="text-gray-700 text-xs">→ {formatPDT(selected.end_datetime, { short: true })}</p></div>
                 <div><p className="text-xs text-gray-500 uppercase">{t('vehicle')}</p><p className="font-mono font-semibold">{selected.license_plate} / {selected.plate_state}</p><p className="text-gray-700 text-xs">{selected.year} {selected.make} {selected.model} · {selected.color}</p></div>
                 {selected.email && (
                   <div className="col-span-2"><p className="text-xs text-gray-500 uppercase">{tv('email')}</p><p className="text-gray-700">{selected.email}</p></div>
@@ -292,7 +293,7 @@ export default function AdminVacationPage() {
                 <div className="bg-gray-50 rounded-lg px-4 py-3">
                   <p className="text-xs text-gray-500 uppercase mb-1">{tv('admin_notes')}</p>
                   <p className="text-gray-700">{selected.admin_notes}</p>
-                  {selected.reviewed_by && <p className="text-xs text-gray-500 mt-1">— {selected.reviewed_by}, {selected.reviewed_at ? new Date(selected.reviewed_at).toLocaleString() : ''}</p>}
+                  {selected.reviewed_by && <p className="text-xs text-gray-500 mt-1">— {selected.reviewed_by}, {selected.reviewed_at ? formatPDT(selected.reviewed_at, { short: true }) : ''}</p>}
                 </div>
               )}
 

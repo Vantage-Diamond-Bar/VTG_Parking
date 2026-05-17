@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useEffect, useCallback } from 'react'
-import { VISITOR_QUOTA_LIMIT } from '@/lib/utils'
+import { VISITOR_QUOTA_LIMIT, formatPDT } from '@/lib/utils'
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
@@ -271,16 +271,10 @@ function VehicleRow({ vehicle, globalMax }: { vehicle: VehicleSummary; globalMax
                       <td className="py-2 pr-4 text-gray-700 font-medium">{r.address}</td>
                       <td className="py-2 pr-4 text-gray-600">{r.visitor_name || '—'}</td>
                       <td className="py-2 pr-4 text-gray-500 whitespace-nowrap">
-                        {new Date(r.start_datetime).toLocaleDateString()}
-                        <span className="text-gray-500 ml-1">
-                          {new Date(r.start_datetime).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-                        </span>
+                        {formatPDT(r.start_datetime, { short: true })}
                       </td>
                       <td className="py-2 pr-4 text-gray-500 whitespace-nowrap">
-                        {new Date(r.end_datetime).toLocaleDateString()}
-                        <span className="text-gray-500 ml-1">
-                          {new Date(r.end_datetime).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-                        </span>
+                        {formatPDT(r.end_datetime, { short: true })}
                       </td>
                       <td className={`py-2 text-right font-semibold ${r.nights > 0 ? 'text-blue-600' : 'text-gray-500'}`}>
                         {r.nights > 0 ? r.nights : '<1'}
@@ -484,16 +478,10 @@ export default function QuotaSummaryPage() {
                                           {[r.make, r.model, r.color].filter(Boolean).join(' ') || '—'}
                                         </td>
                                         <td className="py-2 pr-4 text-gray-500 whitespace-nowrap">
-                                          {new Date(r.start_datetime).toLocaleDateString()}
-                                          <span className="text-gray-500 ml-1">
-                                            {new Date(r.start_datetime).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-                                          </span>
+                                          {formatPDT(r.start_datetime, { short: true })}
                                         </td>
                                         <td className="py-2 pr-4 text-gray-500 whitespace-nowrap">
-                                          {new Date(r.end_datetime).toLocaleDateString()}
-                                          <span className="text-gray-500 ml-1">
-                                            {new Date(r.end_datetime).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-                                          </span>
+                                          {formatPDT(r.end_datetime, { short: true })}
                                         </td>
                                         <td className={`py-2 text-right font-semibold ${r.nights > 0 ? 'text-blue-600' : 'text-gray-500'}`}>
                                           {r.nights > 0 ? r.nights : '<1'}

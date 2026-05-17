@@ -3,7 +3,7 @@
 import { useState, useEffect } from 'react'
 import Link from 'next/link'
 import { useTranslations } from 'next-intl'
-import { US_STATES, CAR_COLORS, CAR_MAKES, VEHICLE_TYPES, VISITOR_QUOTA_LIMIT, getYearMonth } from '@/lib/utils'
+import { US_STATES, CAR_COLORS, CAR_MAKES, VEHICLE_TYPES, VISITOR_QUOTA_LIMIT, getYearMonth, ptInputToISO } from '@/lib/utils'
 import PhoneInput from '@/components/PhoneInput'
 
 type VerifyState = 'idle' | 'loading' | 'no_vehicles' | 'awaiting_email' | 'verifying' | 'mismatch' | 'overdue' | 'verified'
@@ -154,8 +154,8 @@ export default function VisitorPage() {
         model,
         color,
         vehicle_type: vehicleType || null,
-        start_datetime: startDatetime,
-        end_datetime: endDatetime,
+        start_datetime: ptInputToISO(startDatetime),
+        end_datetime: ptInputToISO(endDatetime),
       }
       const res = await fetch('/api/visitors', {
         method: 'POST',

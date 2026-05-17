@@ -4,7 +4,7 @@ import { useState, useEffect } from 'react'
 import Link from 'next/link'
 import { useTranslations } from 'next-intl'
 import PhoneInput from '@/components/PhoneInput'
-import { splitPhone } from '@/lib/utils'
+import { splitPhone, ptInputToISO } from '@/lib/utils'
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -243,8 +243,8 @@ export default function VacationPage() {
             emergency_last_name: emergencyLastName.trim(),
             emergency_phone: emergencyPhoneLocal,
             emergency_phone_country_code: emergencyPhoneCC,
-            start_datetime: startDatetime,
-            end_datetime: endDatetime,
+            start_datetime: ptInputToISO(startDatetime),
+            end_datetime: ptInputToISO(endDatetime),
             year: vehicle.year,
             make: vehicle.make,
             model: vehicle.model,

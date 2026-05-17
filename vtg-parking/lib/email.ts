@@ -35,7 +35,7 @@ export async function sendViolationReport(report: {
       <tr><td style="padding:8px;font-weight:bold;background:#f5f5f5;">Description</td><td style="padding:8px;">${report.description || 'N/A'}</td></tr>
       <tr><td style="padding:8px;font-weight:bold;background:#f5f5f5;">Photos</td><td style="padding:8px;">${photoLinks || 'None'}</td></tr>
       <tr><td style="padding:8px;font-weight:bold;background:#f5f5f5;">Reporter Email</td><td style="padding:8px;">${report.reporter_email || 'Anonymous'}</td></tr>
-      <tr><td style="padding:8px;font-weight:bold;background:#f5f5f5;">Submitted At</td><td style="padding:8px;">${new Date(report.submitted_at).toLocaleString()}</td></tr>
+      <tr><td style="padding:8px;font-weight:bold;background:#f5f5f5;">Submitted At</td><td style="padding:8px;">${new Date(report.submitted_at).toLocaleString('en-US', { timeZone: 'America/Los_Angeles' })} PT</td></tr>
     </table>
     <p style="color:#666;font-size:12px;margin-top:16px;">This report was submitted via the VTG Community Parking Management System.</p>
   `
@@ -84,7 +84,7 @@ export async function sendViolationHearing({
       <tr><td style="padding:8px;font-weight:bold;background:#f5f5f5;">Location</td><td style="padding:8px;">${location}</td></tr>
       <tr><td style="padding:8px;font-weight:bold;background:#f5f5f5;">Violation Type</td><td style="padding:8px;">${violation_type}</td></tr>
       <tr><td style="padding:8px;font-weight:bold;background:#f5f5f5;">License Plate</td><td style="padding:8px;">${license_plate || 'N/A'}</td></tr>
-      <tr><td style="padding:8px;font-weight:bold;background:#f5f5f5;">Originally Submitted</td><td style="padding:8px;">${new Date(submitted_at).toLocaleString()}</td></tr>
+      <tr><td style="padding:8px;font-weight:bold;background:#f5f5f5;">Originally Submitted</td><td style="padding:8px;">${new Date(submitted_at).toLocaleString('en-US', { timeZone: 'America/Los_Angeles' })} PT</td></tr>
       ${admin_notes ? `<tr><td style="padding:8px;font-weight:bold;background:#f5f5f5;">Admin Notes</td><td style="padding:8px;">${admin_notes}</td></tr>` : ''}
     </table>
     <p style="color:#666;font-size:12px;margin-top:16px;">A hearing has been requested for this violation via the VTG Community Parking Management System.</p>
@@ -134,8 +134,8 @@ export async function sendVacationDecision({
   const isApproved = status === 'approved'
   const headerColor = isApproved ? '#15803d' : '#b91c1c'
   const statusText = isApproved ? 'APPROVED ✓' : 'REJECTED ✗'
-  const start = new Date(startDatetime).toLocaleString('en-US', { dateStyle: 'medium', timeStyle: 'short' })
-  const end = new Date(endDatetime).toLocaleString('en-US', { dateStyle: 'medium', timeStyle: 'short' })
+  const start = new Date(startDatetime).toLocaleString('en-US', { timeZone: 'America/Los_Angeles', dateStyle: 'medium', timeStyle: 'short' })
+  const end = new Date(endDatetime).toLocaleString('en-US', { timeZone: 'America/Los_Angeles', dateStyle: 'medium', timeStyle: 'short' })
 
   const accessCodeSection = isApproved && access_code ? `
     <div style="background:#eff6ff;border:2px solid #3b82f6;border-radius:8px;padding:20px;margin:20px 0;text-align:center;">
@@ -213,8 +213,8 @@ export async function sendVisitorBookingEmail({
 }) {
   if (!hostEmail) return
 
-  const start = new Date(startDatetime).toLocaleString('en-US', { dateStyle: 'medium', timeStyle: 'short' })
-  const end = new Date(endDatetime).toLocaleString('en-US', { dateStyle: 'medium', timeStyle: 'short' })
+  const start = new Date(startDatetime).toLocaleString('en-US', { timeZone: 'America/Los_Angeles', dateStyle: 'medium', timeStyle: 'short' })
+  const end = new Date(endDatetime).toLocaleString('en-US', { timeZone: 'America/Los_Angeles', dateStyle: 'medium', timeStyle: 'short' })
   const vehicleDesc = [color, make, model].filter(Boolean).join(' ') || 'Unknown vehicle'
 
   const html = `
@@ -287,7 +287,7 @@ export async function sendRegistrationReminder({
       <div style="background:white;padding:28px 24px;border:1px solid #e5e7eb;border-top:none;border-radius:0 0 8px 8px;">
         <p>Dear <strong>${ownerName}</strong>,</p>
         <p>Your vehicle registration at <strong>${address}</strong> was submitted on
-        <strong>${registeredAt.toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' })}</strong>.
+        <strong>${registeredAt.toLocaleDateString('en-US', { timeZone: 'America/Los_Angeles', year: 'numeric', month: 'long', day: 'numeric' })}</strong>.
         It has now been over one year since your last registration update.</p>
         <p>As required by VTG community parking policy, all residents must renew their vehicle registration information annually to keep records current.</p>
         <p><strong>Vehicles currently on file for your unit:</strong></p>

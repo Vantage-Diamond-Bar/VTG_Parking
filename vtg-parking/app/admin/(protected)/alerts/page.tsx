@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useCallback } from 'react';
 import { useTranslations } from 'next-intl';
+import { formatPDT } from '@/lib/utils';
 
 interface Alert {
   id: string;
@@ -110,7 +111,7 @@ export default function AdminAlertsPage() {
                     </td>
                     <td className="px-6 py-4 font-semibold">{alert.count}</td>
                     <td className="px-6 py-4 text-gray-500">
-                      {new Date(alert.created_at).toLocaleDateString()}
+                      {formatPDT(alert.created_at, { dateOnly: true })}
                     </td>
                     <td className="px-6 py-4">
                       <span

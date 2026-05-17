@@ -3,6 +3,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { useTranslations } from 'next-intl';
 import { useForm } from 'react-hook-form';
+import { formatPDT } from '@/lib/utils';
 
 interface Resident {
   id: string;
@@ -238,7 +239,7 @@ export default function AdminResidentsPage() {
                     </td>
                     <td className={`px-4 py-3 ${isExpired ? 'text-red-600 font-semibold' : 'text-gray-700'}`}>
                       {isExpired && <span className="mr-1">⚠️</span>}
-                      {new Date(r.created_at).toLocaleDateString()}
+                      {formatPDT(r.created_at, { dateOnly: true })}
                     </td>
                     <td className="px-4 py-3">
                       <div className="flex gap-2">

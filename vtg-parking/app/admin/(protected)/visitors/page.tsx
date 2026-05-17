@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useCallback } from 'react';
 import { useTranslations } from 'next-intl';
+import { formatPDT } from '@/lib/utils';
 
 interface Visitor {
   id: string;
@@ -189,9 +190,9 @@ export default function AdminVisitorsPage() {
                     </td>
                     <td className="px-4 py-3 font-mono">{v.license_plate} / {v.plate_state}</td>
                     <td className="px-4 py-3">{[v.make, v.model, v.color].filter(Boolean).join(' ')}</td>
-                    <td className="px-4 py-3 text-gray-600">{new Date(v.start_datetime).toLocaleString()}</td>
-                    <td className="px-4 py-3 text-gray-600">{new Date(v.end_datetime).toLocaleString()}</td>
-                    <td className="px-4 py-3 text-gray-500">{new Date(v.created_at).toLocaleDateString()}</td>
+                    <td className="px-4 py-3 text-gray-600">{formatPDT(v.start_datetime, { short: true })}</td>
+                    <td className="px-4 py-3 text-gray-600">{formatPDT(v.end_datetime, { short: true })}</td>
+                    <td className="px-4 py-3 text-gray-500">{formatPDT(v.created_at, { dateOnly: true })}</td>
                     <td className="px-4 py-3">
                       <button
                         onClick={() => setDeleteTarget(v.id)}

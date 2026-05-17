@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect, useCallback, useMemo } from 'react';
+import { formatPDT } from '@/lib/utils';
 
 interface OversizedApplication {
   id: string;
@@ -220,7 +221,7 @@ export default function AdminOversizedPage() {
                     {app.plate_state && <span className="text-gray-500 font-normal ml-1">/ {app.plate_state}</span>}
                   </td>
                   <td className="px-4 py-3 text-xs text-gray-500 whitespace-nowrap">
-                    {new Date(app.created_at).toLocaleDateString()}
+                    {formatPDT(app.created_at, { dateOnly: true })}
                   </td>
                   <td className="px-4 py-3">
                     <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${STATUS_BADGE[app.status] ?? 'bg-gray-100 text-gray-600'}`}>
@@ -282,7 +283,7 @@ export default function AdminOversizedPage() {
                   </div>
                   <div>
                     <p className="text-xs text-gray-500 uppercase">Submitted</p>
-                    <p className="font-medium">{new Date(selected.created_at).toLocaleString()}</p>
+                    <p className="font-medium">{formatPDT(selected.created_at, { short: true })}</p>
                   </div>
                   <div>
                     <p className="text-xs text-gray-500 uppercase">Owner</p>
@@ -351,7 +352,7 @@ export default function AdminOversizedPage() {
                   <p className="text-gray-700">{selected.admin_notes}</p>
                   {selected.reviewed_by && (
                     <p className="text-xs text-gray-500 mt-1">
-                      — {selected.reviewed_by}, {selected.reviewed_at ? new Date(selected.reviewed_at).toLocaleString() : ''}
+                      — {selected.reviewed_by}, {selected.reviewed_at ? formatPDT(selected.reviewed_at, { short: true }) : ''}
                     </p>
                   )}
                 </div>

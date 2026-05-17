@@ -151,6 +151,27 @@ export function countNights(startStr: string, endStr: string): number {
   return Math.max(0, Math.round((endMs - startMs) / 86_400_000))
 }
 
+/**
+ * Convert a datetime-local string (treated as Pacific Time) to a UTC ISO string.
+ * e.g. "2026-05-20T23:30" entered in LA → "2026-05-21T06:30:00.000Z" (during PDT, UTC-7)
+ * Uses Intl to correctly probe the DST offset on that calendar date.
+ */
+export function ptInputToISO(localStr: string): string {
+  if (!localStr) return localStr
+  const [datePart, timePart] = localStr.split('T')
+  const [year, month, day] = datePart.split('-').map(Number)
+  const [hour, minute] = timePart.split(':').map(Number)
+  // Probe PT offset near noon on that day to avoid the ambiguous DST hour (2 AM)
+  const refUTC = Date.UTC(year, month - 1, day, 20, 0) // ~noon PT
+  const tzParts = new Intl.DateTimeFormat('en-US', {
+    timeZone: PT_ZONE,
+    timeZoneName: 'shortOffset',
+  }).formatToParts(new Date(refUTC))
+  const tzName = tzParts.find((p) => p.type === 'timeZoneName')?.value ?? 'GMT-7'
+  const offsetHours = -parseInt(tzName.replace('GMT', '')) // 7 (PDT) or 8 (PST)
+  return new Date(Date.UTC(year, month - 1, day, hour + offsetHours, minute)).toISOString()
+}
+
 export function splitPhone(combined: string): { countryCode: string; number: string } {
   if (!combined) return { countryCode: '', number: '' }
   const space = combined.indexOf(' ')
