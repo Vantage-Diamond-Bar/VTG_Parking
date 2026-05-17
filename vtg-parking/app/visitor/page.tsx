@@ -166,8 +166,10 @@ export default function VisitorPage() {
       if (!res.ok) {
         if (data?.error === 'plate_conflict') {
           setError(t('error_plate_conflict'))
+        } else if (data?.error === 'quota_exceeded') {
+          setError(t('error_quota_exceeded'))
         } else {
-          setError(data?.message ?? 'Submission failed')
+          setError(t('error_submission_failed'))
         }
         return
       }
@@ -176,7 +178,7 @@ export default function VisitorPage() {
         valid_until: data.valid_until ?? endDatetime,
       })
     } catch {
-      setError('Network error. Please try again.')
+      setError(t('error_network'))
     } finally {
       setSubmitting(false)
     }
@@ -433,8 +435,8 @@ export default function VisitorPage() {
               )}
             </div>
 
-            {/* Vehicle Info — only shown after verified and quota not exceeded */}
-            {verifyState === 'verified' && !quotaExceeded && (
+            {/* Vehicle Info — shown after verified */}
+            {verifyState === 'verified' && (
               <fieldset>
                 <div className="space-y-8">
                   <div>
