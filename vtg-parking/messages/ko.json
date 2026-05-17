@@ -456,6 +456,7 @@
     "from": "시작일",
     "to": "종료일",
     "filter_unit": "세대로 필터...",
+    "search_visitors_placeholder": "주소, 번호판, 접근코드, 차량으로 검색...",
     "guest_name": "방문객 이름",
     "plate_state": "번호판 / 주",
     "vehicle": "차량",

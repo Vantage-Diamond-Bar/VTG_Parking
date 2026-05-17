@@ -456,6 +456,7 @@
     "from": "开始日期",
     "to": "结束日期",
     "filter_unit": "按门牌号筛选...",
+    "search_visitors_placeholder": "搜索地址、车牌、访问码、车型...",
     "guest_name": "访客姓名",
     "plate_state": "车牌 / 州",
     "vehicle": "车辆",

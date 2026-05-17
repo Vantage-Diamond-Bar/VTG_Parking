@@ -22,7 +22,7 @@ interface Visitor {
 
 export default function AdminVisitorsPage() {
   const t = useTranslations('admin');
-  const [unitId, setUnitId] = useState('');
+  const [keyword, setKeyword] = useState('');
   const [fromDate, setFromDate] = useState('');
   const [toDate, setToDate] = useState('');
   const [visitors, setVisitors] = useState<Visitor[]>([]);
@@ -33,9 +33,9 @@ export default function AdminVisitorsPage() {
     setLoading(true);
     try {
       const params = new URLSearchParams();
-      if (unitId) params.set('unit_id', unitId);
       if (fromDate) params.set('from', fromDate);
       if (toDate) params.set('to', toDate);
+      params.set('limit', '500');
       const res = await fetch(`/api/visitors?${params}`, { credentials: 'include' });
       const json = await res.json();
       if (res.ok) {
@@ -46,7 +46,24 @@ export default function AdminVisitorsPage() {
     } finally {
       setLoading(false);
     }
-  }, [unitId, fromDate, toDate]);
+  }, [fromDate, toDate]);
+
+  // Client-side keyword filter: address, plate, access code, make/model/color, name
+  const filteredVisitors = keyword.trim()
+    ? visitors.filter((v) => {
+        const kw = keyword.trim().toLowerCase();
+        return (
+          v.access_code?.toLowerCase().includes(kw) ||
+          v.units?.address?.toLowerCase().includes(kw) ||
+          v.license_plate?.toLowerCase().includes(kw) ||
+          v.plate_state?.toLowerCase().includes(kw) ||
+          v.visitor_name?.toLowerCase().includes(kw) ||
+          v.make?.toLowerCase().includes(kw) ||
+          v.model?.toLowerCase().includes(kw) ||
+          v.color?.toLowerCase().includes(kw)
+        );
+      })
+    : visitors;
 
   useEffect(() => {
     fetchVisitors();
@@ -62,7 +79,6 @@ export default function AdminVisitorsPage() {
 
   const exportData = (format: 'csv' | 'excel') => {
     const params = new URLSearchParams();
-    if (unitId) params.set('unit_id', unitId);
     if (fromDate) params.set('from', fromDate);
     if (toDate) params.set('to', toDate);
     params.set('format', format);
@@ -93,10 +109,11 @@ export default function AdminVisitorsPage() {
       <div className="flex flex-wrap gap-3 mb-5 bg-white border border-gray-100 rounded-xl p-4 shadow-sm">
         <input
           type="text"
-          value={unitId}
-          onChange={(e) => setUnitId(e.target.value)}
-          placeholder={t('filter_unit')}
-          className="border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+          value={keyword}
+          onChange={(e) => setKeyword(e.target.value)}
+          onKeyDown={(e) => e.key === 'Enter' && fetchVisitors()}
+          placeholder={t('search_visitors_placeholder')}
+          className="border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 min-w-[220px]"
         />
         <div className="flex items-center gap-2">
           <label className="text-xs text-gray-500">{t('from')}</label>
@@ -122,6 +139,11 @@ export default function AdminVisitorsPage() {
         >
           {t('search')}
         </button>
+        {keyword && (
+          <span className="self-center text-xs text-gray-500">
+            {filteredVisitors.length} / {visitors.length} {t('results')}
+          </span>
+        )}
       </div>
 
       {/* Table */}
@@ -147,12 +169,12 @@ export default function AdminVisitorsPage() {
                 <tr>
                   <td colSpan={10} className="px-4 py-8 text-center text-gray-500">{t('loading')}</td>
                 </tr>
-              ) : visitors.length === 0 ? (
+              ) : filteredVisitors.length === 0 ? (
                 <tr>
                   <td colSpan={10} className="px-4 py-8 text-center text-gray-500">{t('no_results')}</td>
                 </tr>
               ) : (
-                visitors.map((v) => (
+                filteredVisitors.map((v) => (
                   <tr key={v.id} className="hover:bg-gray-50">
                     <td className="px-4 py-3 font-mono font-bold tracking-widest text-blue-700">{v.access_code}</td>
                     <td className="px-4 py-3">{v.units?.address ?? '—'}</td>

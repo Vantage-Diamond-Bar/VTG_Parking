@@ -456,6 +456,7 @@
     "from": "From",
     "to": "To",
     "filter_unit": "Filter by unit...",
+    "search_visitors_placeholder": "Search by address, plate, access code, vehicle...",
     "guest_name": "Guest Name",
     "plate_state": "Plate / State",
     "vehicle": "Vehicle",
