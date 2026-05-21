@@ -9,8 +9,8 @@ import './globals.css'
 const geist = Geist({ subsets: ['latin'], variable: '--font-geist' })
 
 export const metadata: Metadata = {
-  title: 'VTG Community Parking',
-  description: 'Community Parking Management System',
+  title: 'Vantage Community Parking',
+  description: 'Vantage Community Parking Management System',
 }
 
 export default async function RootLayout({ children }: { children: React.ReactNode }) {
