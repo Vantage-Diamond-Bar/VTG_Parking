@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { supabaseAdmin } from '@/lib/supabase';
 import { getSessionFromRequest } from '@/lib/auth';
+import { sendOversizedDecision } from '@/lib/email';
 
 export async function PATCH(
   req: NextRequest,
@@ -64,6 +65,25 @@ export async function PATCH(
     .eq('id', id);
 
   if (updateError) return NextResponse.json({ error: updateError.message }, { status: 500 });
+
+  // Send decision email to applicant
+  if (application.owner_email) {
+    sendOversizedDecision({
+      applicantEmail: application.owner_email,
+      ownerName: application.owner_name,
+      unitAddress: (application.units as any)?.address ?? '',
+      vehicle: {
+        year: application.year,
+        make: application.make,
+        model: application.model,
+        color: application.color,
+        license_plate: application.license_plate,
+        plate_state: application.plate_state,
+      },
+      status,
+      admin_notes: admin_notes ?? null,
+    })
+  }
 
   return NextResponse.json({ success: true });
 }

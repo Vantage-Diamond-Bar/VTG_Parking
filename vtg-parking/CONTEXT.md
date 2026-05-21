@@ -372,11 +372,11 @@ Files changed: `lib/utils.ts` (+`ptInputToISO`), `lib/email.ts` (5 email templat
 
 These items were discussed but not yet implemented:
 
-- [ ] **Test all three i18n locales** — do a full pass through the app in zh and ko to catch any hardcoded English strings.
+- [x] **i18n zh.json mixed-language strings fixed** — 4 strings in `messages/zh.json` had English mixed in: `quota_remaining_label`, `no_vehicles_message`, `overdue_message`, `pending_oversized`. All corrected to pure Chinese.
 
-- [ ] **Oversized application email notification** — notify residents when their oversized application is approved/rejected (similar to vacation decision email which already exists in `lib/email.ts`).
+- [x] **Oversized application email notification** — `sendOversizedDecision()` added to `lib/email.ts`. Called from `app/api/admin/oversized/[id]/route.ts` after a successful PATCH (approve or reject). Sends to `owner_email` if present; fire-and-forget (no await, won't block the response).
 
-- [ ] **Patrol plate lookup end-to-end timezone verify** — confirm `valid_from`/`valid_until` now display correctly in PT after the timezone fix.
+- [x] **Patrol plate lookup timezone verified** — API route (`app/api/patrol/lookup/route.ts`) returns raw UTC ISO strings for `valid_from`/`valid_until`. Patrol page (`app/patrol/page.tsx`) calls `formatPDT(..., { short: true })` on both fields. Chain is correct.
 
 ---
 

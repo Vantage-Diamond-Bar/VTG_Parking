@@ -1,108 +1,146 @@
 'use client'
 
-import { useState, useEffect } from 'react'
 import Link from 'next/link'
 import { useTranslations } from 'next-intl'
 import Navbar from '@/components/Navbar'
 
 function HomeCard({
-  href, icon, title, desc, color,
+  href, icon, title, desc, colorClass,
 }: {
-  href: string; icon: string; title: string; desc: string; color: string
+  href: string; icon: string; title: string; desc: string; colorClass: string
 }) {
   return (
-    <Link href={href} className={`flex flex-col h-full rounded-2xl p-8 shadow-md hover:shadow-xl transition-all hover:-translate-y-1 ${color} text-white`}>
-      <div className="text-5xl mb-4">{icon}</div>
-      <h2 className="text-2xl font-bold mb-2">{title}</h2>
-      <p className="opacity-90 text-sm leading-relaxed">{desc}</p>
+    <Link
+      href={href}
+      className={`flex flex-col h-full rounded-2xl p-7 shadow-md hover:shadow-xl transition-all duration-200 hover:-translate-y-1 text-white ${colorClass}`}
+    >
+      <div className="text-4xl mb-3">{icon}</div>
+      <h2 className="text-xl font-bold mb-1.5 leading-snug">{title}</h2>
+      <p className="text-sm leading-relaxed" style={{ opacity: 0.88 }}>{desc}</p>
     </Link>
   )
 }
 
 export default function HomePage() {
   const t = useTranslations('home')
-  const [dark, setDark] = useState(false)
-
-  useEffect(() => {
-    const saved = localStorage.getItem('vtg-dark-mode')
-    if (saved === 'true') setDark(true)
-  }, [])
-
-  function toggleDark() {
-    const next = !dark
-    setDark(next)
-    localStorage.setItem('vtg-dark-mode', String(next))
-  }
-
-  const bg = dark ? 'bg-gray-900' : 'bg-gray-50'
-  const text = dark ? 'text-gray-100' : 'text-gray-900'
-  const subtext = dark ? 'text-gray-400' : 'text-gray-500'
-  const divider = dark ? 'border-gray-700' : 'border-gray-200'
-  const staffLabel = dark ? 'text-gray-500' : 'text-gray-400'
-  const staffBtn = dark
-    ? 'border-gray-600 text-gray-300 hover:bg-gray-700'
-    : 'border-gray-300 text-gray-600 hover:bg-gray-100'
-  const toggleBtn = dark
-    ? 'bg-gray-800 border-gray-600 text-gray-200 hover:bg-gray-700'
-    : 'bg-white border-gray-200 text-gray-600 hover:bg-gray-100'
-  const footerText = dark ? 'text-gray-600 border-gray-800' : 'text-gray-400 border-gray-100'
 
   return (
-    <div className={`min-h-screen flex flex-col transition-colors duration-200 ${bg}`}>
+    <div className="min-h-screen flex flex-col" style={{ backgroundColor: '#f5f4f0' }}>
       <Navbar />
 
-      <main className="flex-1 max-w-5xl mx-auto w-full px-4 py-12">
-        {/* Dark mode toggle */}
-        <div className="flex justify-end mb-2">
-          <button
-            onClick={toggleDark}
-            className={`flex items-center gap-2 px-3 py-1.5 rounded-full border text-sm font-medium transition-colors ${toggleBtn}`}
-            title={dark ? 'Switch to light mode' : 'Switch to dark mode'}
+      {/* ── Hero: gate photo with gradient overlay ── */}
+      <div
+        className="relative overflow-hidden"
+        style={{
+          backgroundImage: "url('/community-gate.jpg')",
+          backgroundSize: 'cover',
+          backgroundPosition: 'center 38%',
+          minHeight: '320px',
+        }}
+      >
+        {/* Dark-teal at top → fades to page bg at bottom */}
+        <div
+          className="absolute inset-0"
+          style={{
+            background:
+              'linear-gradient(to bottom, rgba(3,43,42,0.84) 0%, rgba(10,100,92,0.58) 48%, rgba(245,244,240,1) 100%)',
+          }}
+        />
+
+        <div
+          className="relative z-10 text-center px-4"
+          style={{ paddingTop: '68px', paddingBottom: '72px' }}
+        >
+          <h1
+            className="font-extrabold text-white tracking-tight mb-3"
+            style={{
+              fontSize: 'clamp(1.9rem, 5vw, 3.1rem)',
+              textShadow: '0 2px 14px rgba(0,0,0,0.40)',
+            }}
           >
-            {dark ? '☀️ Light' : '🌙 Dark'}
-          </button>
+            {t('title')}
+          </h1>
+          <p className="text-lg mb-1" style={{ color: 'rgba(187,247,237,0.92)' }}>
+            {t('subtitle')}
+          </p>
+          <p className="text-sm" style={{ color: 'rgba(148,236,220,0.76)' }}>
+            {t('description')}
+          </p>
         </div>
+      </div>
 
-        {/* Hero */}
-        <div className="text-center mb-12">
-          <div className="text-6xl mb-4">🅿️</div>
-          <h1 className={`text-4xl font-extrabold mb-2 ${text}`}>{t('title')}</h1>
-          <p className={`text-lg ${subtext}`}>{t('subtitle')}</p>
-          <p className={`mt-2 ${subtext}`}>{t('description')}</p>
-        </div>
+      {/* ── Service cards ── */}
+      <main className="flex-1 max-w-5xl mx-auto w-full px-4 pb-14" style={{ marginTop: '2px' }}>
 
-        {/* Main 3-col layout: Report | Visitor | Register+Vacation stacked */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-10 items-stretch">
-          <HomeCard href="/report"   icon="📸" title={t('card_report_title')}   desc={t('card_report_desc')}   color="bg-orange-500" />
-          <HomeCard href="/visitor"  icon="🎫" title={t('card_visitor_title')}  desc={t('card_visitor_desc')}  color="bg-emerald-600" />
-          <div className="flex flex-col gap-6">
-            <HomeCard href="/register" icon="🚗" title={t('card_register_title')} desc={t('card_register_desc')} color="bg-blue-600" />
+        {/* 3-col grid: Report | Visitor | (Register + Vacation stacked) */}
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-5 mb-9 items-stretch">
+
+          {/* Report */}
+          <HomeCard
+            href="/report"
+            icon="📸"
+            title={t('card_report_title')}
+            desc={t('card_report_desc')}
+            colorClass="bg-amber-600 hover:bg-amber-700"
+          />
+
+          {/* Visitor */}
+          <HomeCard
+            href="/visitor"
+            icon="🎫"
+            title={t('card_visitor_title')}
+            desc={t('card_visitor_desc')}
+            colorClass="bg-teal-600 hover:bg-teal-700"
+          />
+
+          {/* Register + Vacation stacked */}
+          <div className="flex flex-col gap-5">
+            <HomeCard
+              href="/register"
+              icon="🚗"
+              title={t('card_register_title')}
+              desc={t('card_register_desc')}
+              colorClass="bg-teal-800 hover:bg-teal-900"
+            />
             <Link
               href="/vacation"
-              className="flex items-center gap-3 rounded-2xl px-6 py-5 shadow-md hover:shadow-xl transition-all hover:-translate-y-1 bg-teal-500 text-white"
+              className="flex items-center gap-4 rounded-2xl px-6 py-5 shadow-md hover:shadow-xl transition-all duration-200 hover:-translate-y-1 text-white"
+              style={{ backgroundColor: '#0f9e91' }}
+              onMouseEnter={e => (e.currentTarget.style.backgroundColor = '#0c8a7e')}
+              onMouseLeave={e => (e.currentTarget.style.backgroundColor = '#0f9e91')}
             >
               <span className="text-3xl">🏖️</span>
               <div>
-                <div className="font-bold text-base">{t('vacation_portal')}</div>
-                <div className="text-xs opacity-80 mt-0.5">Extended stay request for residents</div>
+                <div className="font-bold text-base leading-snug">{t('vacation_portal')}</div>
+                <div className="text-xs mt-0.5" style={{ opacity: 0.80 }}>
+                  Extended stay request for residents
+                </div>
               </div>
             </Link>
           </div>
         </div>
 
-        {/* Staff portal */}
-        <div className={`border-t ${divider} pt-8`}>
-          <p className={`text-center text-sm ${staffLabel} mb-4`}>{t('staff_portal')}</p>
+        {/* Staff portals */}
+        <div className="border-t pt-7" style={{ borderColor: '#dedad2' }}>
+          <p className="text-center text-sm mb-4" style={{ color: '#a09890' }}>
+            {t('staff_portal')}
+          </p>
           <div className="flex justify-center gap-4">
             <Link
               href="/admin/login"
-              className={`px-6 py-2 rounded-lg border text-sm transition-colors ${staffBtn}`}
+              className="px-6 py-2 rounded-lg border text-sm transition-colors"
+              style={{ borderColor: '#ccc8bd', color: '#6b6460' }}
+              onMouseEnter={e => (e.currentTarget.style.backgroundColor = '#eceae4')}
+              onMouseLeave={e => (e.currentTarget.style.backgroundColor = 'transparent')}
             >
               🔐 {t('admin_portal')}
             </Link>
             <Link
               href="/patrol/login"
-              className={`px-6 py-2 rounded-lg border text-sm transition-colors ${staffBtn}`}
+              className="px-6 py-2 rounded-lg border text-sm transition-colors"
+              style={{ borderColor: '#ccc8bd', color: '#6b6460' }}
+              onMouseEnter={e => (e.currentTarget.style.backgroundColor = '#eceae4')}
+              onMouseLeave={e => (e.currentTarget.style.backgroundColor = 'transparent')}
             >
               🚔 {t('patrol_portal')}
             </Link>
@@ -110,7 +148,11 @@ export default function HomePage() {
         </div>
       </main>
 
-      <footer className={`text-center py-6 text-xs border-t ${footerText}`}>
+      {/* Footer */}
+      <footer
+        className="text-center py-5 text-xs border-t"
+        style={{ color: '#a09890', borderColor: '#dedad2', backgroundColor: '#eeece6' }}
+      >
         Vantage Community Parking Management System
       </footer>
     </div>
