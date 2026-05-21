@@ -34,8 +34,8 @@ export default function HomePage() {
         style={{
           backgroundImage: "url('/community-gate.jpg')",
           backgroundSize: 'cover',
-          backgroundPosition: 'center 38%',
-          minHeight: '320px',
+          backgroundPosition: 'center 50%',
+          minHeight: 'clamp(320px, 40vw, 500px)',
         }}
       >
         {/* Dark-teal at top → fades to page bg at bottom */}
@@ -43,7 +43,7 @@ export default function HomePage() {
           className="absolute inset-0"
           style={{
             background:
-              'linear-gradient(to bottom, rgba(3,43,42,0.84) 0%, rgba(10,100,92,0.58) 48%, rgba(245,244,240,1) 100%)',
+              'linear-gradient(to bottom, rgba(3,43,42,0.84) 0%, rgba(10,100,92,0.52) 55%, rgba(245,244,240,0.92) 88%, rgba(245,244,240,1) 100%)',
           }}
         />
 
