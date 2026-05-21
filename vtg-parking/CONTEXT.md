@@ -63,6 +63,7 @@ export function formatPDT(dateStr, opts?)
 // opts.dateOnly → "5/20/2026"
 // opts.short    → "5/20/2026, 6:00 PM"
 // default       → full locale string
+// USE THIS everywhere instead of toLocaleString()
 
 export function getPTYearMonth(): string
 // Returns current month as "2026-05" in Pacific Time
@@ -70,9 +71,21 @@ export function getPTYearMonth(): string
 export function countNights(startStr, endStr): number
 // Counts overnight stays using PDT calendar dates
 // CRITICAL: uses ptDateParts() — NOT getDate() which returns UTC day
+
+export function ptInputToISO(localStr: string): string
+// Converts a datetime-local string (YYYY-MM-DDTHH:mm) treated as Pacific Time
+// to a UTC ISO string. Handles DST correctly by probing offset near noon.
+// USE THIS in form submissions for start_datetime / end_datetime fields.
+// e.g. "2026-05-20T23:30" (user enters 11:30 PM PT) → "2026-05-21T06:30:00.000Z"
 ```
 
-**Why this matters:** Supabase stores timestamps as UTC. A PDT 6:00 PM May 20 is UTC 1:00 AM May 21. Using `getDate()` on the server would return the wrong calendar day.
+**Storage rule:** All `datetime-local` inputs from forms (visitor, vacation) are converted with `ptInputToISO()` before being sent to the API, so they are stored as correct UTC in Supabase.
+
+**Display rule:** All timestamps read from Supabase must be rendered with `formatPDT()`. Never use bare `toLocaleString()` or `toLocaleDateString()` — the server is UTC, so those calls produce UTC times.
+
+**Email rule:** All timestamps in `lib/email.ts` use `{ timeZone: 'America/Los_Angeles' }` in their `toLocaleString()` calls, and show "PT" as a suffix.
+
+**Why this matters:** Supabase stores timestamps as UTC. A PDT 6:00 PM May 20 is UTC 1:00 AM May 21. Using `getDate()` or bare `toLocaleString()` on the server returns UTC time — e.g. 11:40 AM PT was being shown as 6:40 PM (UTC).
 
 ### 3.2 Authentication
 
@@ -292,7 +305,9 @@ generateAccessCode()        // 6-char alphanumeric, no ambiguous chars (0,O,1,I)
 normalizedPlate(plate)      // uppercase, remove spaces
 formatPDT(dateStr, opts)    // display timestamp in PDT — USE THIS everywhere
 getPTYearMonth()            // current "2026-05" in PDT — USE THIS for month queries
-countNights(start, end)     // PDT-aware overnight count
+ptInputToISO(localStr)      // datetime-local string → UTC ISO (treats input as PT)
+                            //   USE THIS before submitting form date fields to API
+countNights(start, end)     // PDT-aware overnight count (uses ptDateParts internally)
 monthBounds(yearMonth)      // { start, end } ISO strings for a given "YYYY-MM"
 sortAddresses(items)        // sorts by street → house number → unit number
 splitPhone(combined)        // "'+1' '4155551234'" → { countryCode, number }
@@ -327,17 +342,41 @@ PT_ZONE = 'America/Los_Angeles'
 
 ---
 
-## 11. Pending / Future Work
+## 11. Recent Changes (this session)
+
+### Visitor Registration — error messages
+- `app/visitor/page.tsx`: `handleSubmit` now handles error codes with specific i18n messages:
+  - `plate_conflict` (409) → `t('error_plate_conflict')` (was already done)
+  - `quota_exceeded` (429) → `t('error_quota_exceeded')` ← **new**
+  - other errors → `t('error_submission_failed')` ← **new**
+  - network catch → `t('error_network')` ← **new**
+- New keys added to all three locale files: `error_quota_exceeded`, `error_submission_failed`, `error_network` (under `visitor` namespace)
+
+### Visitor Registration — quota gate removed
+- Previously: form fields were hidden when `quotaExceeded === true`
+- Now: form is always visible after email verification; quota exceeded shows as a warning only; actual enforcement is server-side (API returns 429 → handled by error message above)
+
+### Visitor Search (admin)
+- `app/admin/(protected)/visitors/page.tsx`: search box now does **client-side** keyword filtering across address, plate, access code, make, model, color, visitor name
+- Previously it passed text as a UUID query param to the API (broken)
+- New: loads up to 500 records, filters in-browser; shows `N / Total results` count when keyword active
+
+### Timezone — full system fix (12 files)
+All timestamps now correctly display Pacific Time. See Section 3.1 for full rules.
+
+Files changed: `lib/utils.ts` (+`ptInputToISO`), `lib/email.ts` (5 email templates), `app/visitor/page.tsx`, `app/vacation/page.tsx`, and all 7 admin pages + patrol page.
+
+---
+
+## 12. Pending / Future Work
 
 These items were discussed but not yet implemented:
 
-- [ ] **Vacation approval/rejection email** — when admin approves or rejects a vacation request, send an email to the resident. The `lib/email.ts` scaffolding exists; the `PATCH /api/admin/vacation/[id]` route needs to call it on status change.
-
-- [ ] **Patrol plate lookup — show visitor bar chart** — the patrol page shows visitor stays but the night count bar chart showed "0 nights" for overnight stays before the `countNights` PDT fix. Verify this now works correctly end-to-end in the patrol UI.
-
 - [ ] **Test all three i18n locales** — do a full pass through the app in zh and ko to catch any hardcoded English strings.
 
-- [ ] **Oversized application email notification** — similar to vacation, notify residents when their application is approved/rejected.
+- [ ] **Oversized application email notification** — notify residents when their oversized application is approved/rejected (similar to vacation decision email which already exists in `lib/email.ts`).
+
+- [ ] **Patrol plate lookup end-to-end timezone verify** — confirm `valid_from`/`valid_until` now display correctly in PT after the timezone fix.
 
 ---
 
