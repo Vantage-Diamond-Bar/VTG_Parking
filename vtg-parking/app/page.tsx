@@ -25,62 +25,53 @@ export default function HomePage() {
   const t = useTranslations('home')
 
   return (
-    <div className="min-h-screen flex flex-col relative" style={{ backgroundColor: '#f5f4f0' }}>
+    <div className="min-h-screen flex flex-col" style={{ backgroundColor: '#f5f4f0' }}>
+      <Navbar />
 
-      {/* ── Background photo layer: extends from top through card area ── */}
+      {/* ── Hero: gate photo with gradient overlay ── */}
       <div
-        className="absolute top-0 left-0 right-0 pointer-events-none"
+        className="relative overflow-hidden"
         style={{
           backgroundImage: "url('/community-gate.jpg')",
           backgroundSize: 'cover',
           backgroundPosition: 'center 50%',
-          height: '85vh',
-          zIndex: 0,
+          minHeight: 'clamp(320px, 40vw, 500px)',
         }}
       >
-        {/* Gradient: dark teal at top → fades to page bg over card area */}
+        {/* Dark-teal at top → fades to page bg at bottom */}
         <div
           className="absolute inset-0"
           style={{
             background:
-              'linear-gradient(to bottom, rgba(3,43,42,0.84) 0%, rgba(10,100,92,0.48) 28%, rgba(245,244,240,0.68) 55%, rgba(245,244,240,0.94) 80%, rgba(245,244,240,1) 100%)',
+              'linear-gradient(to bottom, rgba(3,43,42,0.84) 0%, rgba(10,100,92,0.52) 55%, rgba(245,244,240,0.92) 88%, rgba(245,244,240,1) 100%)',
           }}
         />
-      </div>
 
-      {/* ── Navbar ── */}
-      <div className="relative" style={{ zIndex: 10 }}>
-        <Navbar />
-      </div>
-
-      {/* ── Hero text ── */}
-      <div
-        className="relative text-center px-4"
-        style={{ zIndex: 10, paddingTop: '68px', paddingBottom: '44px' }}
-      >
-        <h1
-          className="font-extrabold text-white tracking-tight mb-3"
-          style={{
-            fontSize: 'clamp(1.9rem, 5vw, 3.1rem)',
-            textShadow: '0 2px 14px rgba(0,0,0,0.40)',
-          }}
+        <div
+          className="relative z-10 text-center px-4"
+          style={{ paddingTop: '68px', paddingBottom: '64px' }}
         >
-          {t('title')}
-        </h1>
-        <p className="text-lg mb-1" style={{ color: 'rgba(187,247,237,0.92)' }}>
-          {t('subtitle')}
-        </p>
-        <p className="text-sm" style={{ color: 'rgba(148,236,220,0.76)' }}>
-          {t('description')}
-        </p>
+          <h1
+            className="font-extrabold text-white tracking-tight mb-3"
+            style={{
+              fontSize: 'clamp(1.9rem, 5vw, 3.1rem)',
+              textShadow: '0 2px 14px rgba(0,0,0,0.40)',
+            }}
+          >
+            {t('title')}
+          </h1>
+          <p className="text-lg mb-1" style={{ color: 'rgba(187,247,237,0.92)' }}>
+            {t('subtitle')}
+          </p>
+          <p className="text-sm" style={{ color: 'rgba(148,236,220,0.76)' }}>
+            {t('description')}
+          </p>
+        </div>
       </div>
 
       {/* ── Service cards + staff portals ── */}
-      <main
-        className="relative flex-1 max-w-5xl mx-auto w-full px-4 pb-14"
-        style={{ zIndex: 10 }}
-      >
-        {/* 3-col grid */}
+      <main className="flex-1 max-w-5xl mx-auto w-full px-4 pb-14" style={{ marginTop: '2px' }}>
+
         <div className="grid grid-cols-1 md:grid-cols-3 gap-5 mb-9 items-stretch">
 
           <HomeCard
@@ -155,8 +146,8 @@ export default function HomePage() {
 
       {/* ── Footer ── */}
       <footer
-        className="relative text-center py-5 text-xs border-t"
-        style={{ zIndex: 10, color: '#a09890', borderColor: '#dedad2', backgroundColor: '#eeece6' }}
+        className="text-center py-5 text-xs border-t"
+        style={{ color: '#a09890', borderColor: '#dedad2', backgroundColor: '#eeece6' }}
       >
         Vantage Community Parking Management System
       </footer>
