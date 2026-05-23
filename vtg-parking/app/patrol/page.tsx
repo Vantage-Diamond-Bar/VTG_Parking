@@ -6,13 +6,12 @@ import { formatPDT } from '@/lib/utils';
 
 type SearchTab = 'plate' | 'code';
 
-interface LookupResult {
-  found: boolean;
-  type?: 'resident' | 'visitor' | 'vacation';
+interface ResultItem {
+  type: 'resident' | 'visitor' | 'vacation';
   address?: string;
   owner_name?: string;
   guest_name?: string;
-  year?: string;
+  year?: string | number;
   make?: string;
   model?: string;
   color?: string;
@@ -39,31 +38,22 @@ export default function PatrolPage() {
   const [sessionChecked, setSessionChecked] = useState(false);
   const [tab, setTab] = useState<SearchTab>('plate');
 
-  // Plate search state
   const [plate, setPlate] = useState('');
   const [plateState, setPlateState] = useState('');
-
-  // Code search state
   const [code, setCode] = useState('');
 
-  const [result, setResult] = useState<LookupResult | null>(null);
+  const [results, setResults] = useState<ResultItem[]>([]);
+  const [notFound, setNotFound] = useState(false);
   const [searching, setSearching] = useState(false);
   const [error, setError] = useState('');
 
-  // Check session on mount
   useEffect(() => {
     (async () => {
       try {
         const res = await fetch('/api/auth/session');
-        if (!res.ok || res.status === 401) {
-          window.location.href = '/patrol/login';
-          return;
-        }
+        if (!res.ok || res.status === 401) { window.location.href = '/patrol/login'; return; }
         const data = await res.json();
-        if (!data || !data.role) {
-          window.location.href = '/patrol/login';
-          return;
-        }
+        if (!data?.role) { window.location.href = '/patrol/login'; return; }
         setSessionChecked(true);
       } catch {
         window.location.href = '/patrol/login';
@@ -71,17 +61,27 @@ export default function PatrolPage() {
     })();
   }, []);
 
+  function resetResults() {
+    setResults([]);
+    setNotFound(false);
+    setError('');
+  }
+
   const handlePlateSearch = async () => {
     if (!plate.trim()) return;
     setSearching(true);
-    setResult(null);
-    setError('');
+    resetResults();
     try {
       const params = new URLSearchParams({ plate: plate.toUpperCase() });
       if (plateState) params.set('state', plateState);
       const res = await fetch(`/api/patrol/lookup?${params}`);
       if (res.ok) {
-        setResult(await res.json());
+        const data = await res.json();
+        if (data.found) {
+          setResults(data.results ?? []);
+        } else {
+          setNotFound(true);
+        }
       } else {
         setError(t('search_error'));
       }
@@ -95,12 +95,16 @@ export default function PatrolPage() {
   const handleCodeSearch = async () => {
     if (!code.trim()) return;
     setSearching(true);
-    setResult(null);
-    setError('');
+    resetResults();
     try {
       const res = await fetch(`/api/patrol/lookup?code=${code.toUpperCase()}`);
       if (res.ok) {
-        setResult(await res.json());
+        const data = await res.json();
+        if (data.found) {
+          setResults(data.results ?? []);
+        } else {
+          setNotFound(true);
+        }
       } else {
         setError(t('search_error'));
       }
@@ -137,24 +141,10 @@ export default function PatrolPage() {
     }
   };
 
-  const getResultCard = () => {
-    if (!result) return null;
-
-    if (!result.found) {
+  const renderCard = (item: ResultItem, index: number) => {
+    if (item.type === 'resident') {
       return (
-        <div className="bg-red-50 border-2 border-red-300 rounded-xl p-6 mt-6">
-          <div className="flex items-center gap-3 mb-2">
-            <span className="text-2xl">❌</span>
-            <h2 className="text-xl font-bold text-red-800">{t('not_found')}</h2>
-          </div>
-          <p className="text-red-600 text-sm">{result.message || t('not_found_desc')}</p>
-        </div>
-      );
-    }
-
-    if (result.type === 'resident') {
-      return (
-        <div className="bg-blue-50 border-2 border-blue-300 rounded-xl p-6 mt-6">
+        <div key={index} className="bg-blue-50 border-2 border-blue-300 rounded-xl p-6 mt-4">
           <div className="flex items-center justify-between mb-4">
             <div className="flex items-center gap-3">
               <span className="text-2xl">🚗</span>
@@ -165,98 +155,86 @@ export default function PatrolPage() {
             </span>
           </div>
           <div className="grid grid-cols-2 gap-3 text-sm">
-            <div><span className="text-blue-600 font-medium">{t('unit')}:</span> <span className="font-semibold">{result.address}</span></div>
-            <div><span className="text-blue-600 font-medium">{t('owner')}:</span> <span className="font-semibold">{result.owner_name}</span></div>
-            <div><span className="text-blue-600 font-medium">{t('vehicle')}:</span> <span className="font-semibold">{[result.year, result.make, result.model].filter(Boolean).join(' ')}</span></div>
-            <div><span className="text-blue-600 font-medium">{t('color')}:</span> <span className="font-semibold">{result.color}</span></div>
-            <div><span className="text-blue-600 font-medium">{t('plate')}:</span> <span className="font-mono font-bold text-blue-900">{result.plate} / {result.state}</span></div>
+            <div><span className="text-blue-600 font-medium">{t('unit')}:</span> <span className="font-semibold">{item.address}</span></div>
+            <div><span className="text-blue-600 font-medium">{t('owner')}:</span> <span className="font-semibold">{item.owner_name}</span></div>
+            <div><span className="text-blue-600 font-medium">{t('vehicle')}:</span> <span className="font-semibold">{[item.year, item.make, item.model].filter(Boolean).join(' ')}</span></div>
+            <div><span className="text-blue-600 font-medium">{t('color')}:</span> <span className="font-semibold">{item.color}</span></div>
+            <div><span className="text-blue-600 font-medium">{t('plate')}:</span> <span className="font-mono font-bold text-blue-900">{item.plate}{item.state ? ` / ${item.state}` : ''}</span></div>
           </div>
         </div>
       );
     }
 
-    if (result.type === 'visitor') {
-      const isExpired = result.status === 'expired';
-      const cardColor = isExpired ? 'red' : 'green';
+    if (item.type === 'visitor') {
+      const isExpired = item.status === 'expired';
+      const c = isExpired ? 'red' : 'green';
       return (
-        <div className={`bg-${cardColor}-50 border-2 border-${cardColor}-300 rounded-xl p-6 mt-6`}>
+        <div key={index} className={`bg-${c}-50 border-2 border-${c}-300 rounded-xl p-6 mt-4`}>
           <div className="flex items-center justify-between mb-4">
             <div className="flex items-center gap-3">
               <span className="text-2xl">{isExpired ? '⛔' : '✅'}</span>
-              <h2 className={`text-xl font-bold text-${cardColor}-800`}>{t('visitor_vehicle')}</h2>
+              <h2 className={`text-xl font-bold text-${c}-800`}>{t('visitor_vehicle')}</h2>
             </div>
             <div className="flex flex-col items-end gap-1">
-              <span className={`inline-block bg-${cardColor}-700 text-white text-xs font-bold px-3 py-1 rounded-full uppercase tracking-wide`}>
+              <span className={`inline-block bg-${c}-700 text-white text-xs font-bold px-3 py-1 rounded-full uppercase tracking-wide`}>
                 VISITOR VEHICLE
               </span>
-              {getStatusBadge(result.status)}
+              {getStatusBadge(item.status)}
             </div>
           </div>
           <div className="grid grid-cols-2 gap-3 text-sm">
-            <div><span className={`text-${cardColor}-600 font-medium`}>{t('unit')}:</span> <span className="font-semibold">{result.address}</span></div>
-            {result.guest_name && (
-              <div><span className={`text-${cardColor}-600 font-medium`}>{t('guest_name')}:</span> <span className="font-semibold">{result.guest_name}</span></div>
+            <div><span className={`text-${c}-600 font-medium`}>{t('unit')}:</span> <span className="font-semibold">{item.address}</span></div>
+            {item.guest_name && (
+              <div><span className={`text-${c}-600 font-medium`}>{t('guest_name')}:</span> <span className="font-semibold">{item.guest_name}</span></div>
             )}
-            <div><span className={`text-${cardColor}-600 font-medium`}>{t('plate')}:</span> <span className="font-mono font-bold">{result.plate} / {result.state}</span></div>
-            <div><span className={`text-${cardColor}-600 font-medium`}>{t('vehicle')}:</span> <span className="font-semibold">{[result.make, result.model, result.color].filter(Boolean).join(' ')}</span></div>
-            {result.valid_from && (
-              <div>
-                <span className={`text-${cardColor}-600 font-medium`}>{t('valid_from')}:</span>{' '}
-                <span className="font-semibold">{formatPDT(result.valid_from, { short: true })}</span>
-              </div>
+            <div><span className={`text-${c}-600 font-medium`}>{t('plate')}:</span> <span className="font-mono font-bold">{item.plate}{item.state ? ` / ${item.state}` : ''}</span></div>
+            <div><span className={`text-${c}-600 font-medium`}>{t('vehicle')}:</span> <span className="font-semibold">{[item.make, item.model, item.color].filter(Boolean).join(' ')}</span></div>
+            {item.valid_from && (
+              <div><span className={`text-${c}-600 font-medium`}>{t('valid_from')}:</span> <span className="font-semibold">{formatPDT(item.valid_from, { short: true })}</span></div>
             )}
-            {result.valid_until && (
-              <div>
-                <span className={`text-${cardColor}-600 font-medium`}>{t('valid_until')}:</span>{' '}
-                <span className="font-semibold">{formatPDT(result.valid_until, { short: true })}</span>
-              </div>
+            {item.valid_until && (
+              <div><span className={`text-${c}-600 font-medium`}>{t('valid_until')}:</span> <span className="font-semibold">{formatPDT(item.valid_until, { short: true })}</span></div>
             )}
           </div>
         </div>
       );
     }
 
-    if (result.type === 'vacation') {
-      const isExpired = result.status === 'expired';
-      const isUpcoming = result.status === 'upcoming';
-      const cardColor = isExpired ? 'red' : isUpcoming ? 'yellow' : 'purple';
+    if (item.type === 'vacation') {
+      const isExpired = item.status === 'expired';
+      const isUpcoming = item.status === 'upcoming';
+      const c = isExpired ? 'red' : isUpcoming ? 'yellow' : 'purple';
       return (
-        <div className={`bg-${cardColor}-50 border-2 border-${cardColor}-300 rounded-xl p-6 mt-6`}>
+        <div key={index} className={`bg-${c}-50 border-2 border-${c}-300 rounded-xl p-6 mt-4`}>
           <div className="flex items-center justify-between mb-4">
             <div className="flex items-center gap-3">
               <span className="text-2xl">🏖️</span>
-              <h2 className={`text-xl font-bold text-${cardColor}-800`}>{t('vacation_vehicle')}</h2>
+              <h2 className={`text-xl font-bold text-${c}-800`}>{t('vacation_vehicle')}</h2>
             </div>
             <div className="flex flex-col items-end gap-1">
-              <span className={`inline-block bg-${cardColor}-700 text-white text-xs font-bold px-3 py-1 rounded-full uppercase tracking-wide`}>
+              <span className={`inline-block bg-${c}-700 text-white text-xs font-bold px-3 py-1 rounded-full uppercase tracking-wide`}>
                 VACATION PARKING
               </span>
-              {getStatusBadge(result.status)}
+              {getStatusBadge(item.status)}
             </div>
           </div>
-          {result.access_code && (
-            <div className={`bg-${cardColor}-100 border border-${cardColor}-200 rounded-lg px-4 py-2 mb-3 text-center`}>
-              <span className={`text-xs font-bold text-${cardColor}-600 uppercase`}>{t('access_code')}: </span>
-              <span className={`font-mono font-bold text-${cardColor}-900 tracking-widest text-lg`}>{result.access_code}</span>
+          {item.access_code && (
+            <div className={`bg-${c}-100 border border-${c}-200 rounded-lg px-4 py-2 mb-3 text-center`}>
+              <span className={`text-xs font-bold text-${c}-600 uppercase`}>{t('access_code')}: </span>
+              <span className={`font-mono font-bold text-${c}-900 tracking-widest text-lg`}>{item.access_code}</span>
             </div>
           )}
           <div className="grid grid-cols-2 gap-3 text-sm">
-            <div><span className={`text-${cardColor}-600 font-medium`}>{t('unit')}:</span> <span className="font-semibold">{result.address}</span></div>
-            <div><span className={`text-${cardColor}-600 font-medium`}>{t('owner')}:</span> <span className="font-semibold">{result.owner_name}</span></div>
-            <div><span className={`text-${cardColor}-600 font-medium`}>{t('vehicle')}:</span> <span className="font-semibold">{[result.year, result.make, result.model].filter(Boolean).join(' ')}</span></div>
-            <div><span className={`text-${cardColor}-600 font-medium`}>{t('color')}:</span> <span className="font-semibold">{result.color}</span></div>
-            <div><span className={`text-${cardColor}-600 font-medium`}>{t('plate')}:</span> <span className="font-mono font-bold">{result.plate} / {result.state}</span></div>
-            {result.valid_from && (
-              <div>
-                <span className={`text-${cardColor}-600 font-medium`}>{t('valid_from')}:</span>{' '}
-                <span className="font-semibold">{formatPDT(result.valid_from, { short: true })}</span>
-              </div>
+            <div><span className={`text-${c}-600 font-medium`}>{t('unit')}:</span> <span className="font-semibold">{item.address}</span></div>
+            <div><span className={`text-${c}-600 font-medium`}>{t('owner')}:</span> <span className="font-semibold">{item.owner_name}</span></div>
+            <div><span className={`text-${c}-600 font-medium`}>{t('vehicle')}:</span> <span className="font-semibold">{[item.year, item.make, item.model].filter(Boolean).join(' ')}</span></div>
+            <div><span className={`text-${c}-600 font-medium`}>{t('color')}:</span> <span className="font-semibold">{item.color}</span></div>
+            <div><span className={`text-${c}-600 font-medium`}>{t('plate')}:</span> <span className="font-mono font-bold">{item.plate}{item.state ? ` / ${item.state}` : ''}</span></div>
+            {item.valid_from && (
+              <div><span className={`text-${c}-600 font-medium`}>{t('valid_from')}:</span> <span className="font-semibold">{formatPDT(item.valid_from, { short: true })}</span></div>
             )}
-            {result.valid_until && (
-              <div>
-                <span className={`text-${cardColor}-600 font-medium`}>{t('valid_until')}:</span>{' '}
-                <span className="font-semibold">{formatPDT(result.valid_until, { short: true })}</span>
-              </div>
+            {item.valid_until && (
+              <div><span className={`text-${c}-600 font-medium`}>{t('valid_until')}:</span> <span className="font-semibold">{formatPDT(item.valid_until, { short: true })}</span></div>
             )}
           </div>
         </div>
@@ -268,31 +246,15 @@ export default function PatrolPage() {
 
   return (
     <div className="min-h-screen bg-gray-100">
-      {/* Header */}
       <header className="bg-white border-b border-gray-200 px-6 py-4 flex items-center justify-between">
         <div className="flex items-center gap-3">
           <span className="text-2xl">🅿️</span>
           <span className="text-lg font-bold text-gray-900">VTG Parking — {t('patrol_lookup')}</span>
         </div>
         <div className="flex items-center gap-2">
-          <a
-            href="/"
-            className="text-sm text-gray-500 hover:text-gray-800 border border-gray-300 px-3 py-1.5 rounded-lg hover:bg-gray-50 transition-colors"
-          >
-            🏠 Home
-          </a>
-          <a
-            href="/admin/dashboard"
-            className="text-sm text-gray-500 hover:text-gray-800 border border-gray-300 px-3 py-1.5 rounded-lg hover:bg-gray-50 transition-colors"
-          >
-            🔐 Admin
-          </a>
-          <button
-            onClick={handleLogout}
-            className="text-sm text-gray-500 hover:text-gray-800 border border-gray-300 px-3 py-1.5 rounded-lg hover:bg-gray-50 transition-colors"
-          >
-            {t('logout')}
-          </button>
+          <a href="/" className="text-sm text-gray-500 hover:text-gray-800 border border-gray-300 px-3 py-1.5 rounded-lg hover:bg-gray-50 transition-colors">🏠 Home</a>
+          <a href="/admin/dashboard" className="text-sm text-gray-500 hover:text-gray-800 border border-gray-300 px-3 py-1.5 rounded-lg hover:bg-gray-50 transition-colors">🔐 Admin</a>
+          <button onClick={handleLogout} className="text-sm text-gray-500 hover:text-gray-800 border border-gray-300 px-3 py-1.5 rounded-lg hover:bg-gray-50 transition-colors">{t('logout')}</button>
         </div>
       </header>
 
@@ -300,18 +262,14 @@ export default function PatrolPage() {
         {/* Tabs */}
         <div className="flex gap-1 mb-6 bg-gray-200 rounded-lg p-1">
           <button
-            onClick={() => { setTab('plate'); setResult(null); setError(''); }}
-            className={`flex-1 py-2 rounded-md text-sm font-medium transition-colors ${
-              tab === 'plate' ? 'bg-white text-gray-900 shadow-sm' : 'text-gray-500 hover:text-gray-700'
-            }`}
+            onClick={() => { setTab('plate'); resetResults(); }}
+            className={`flex-1 py-2 rounded-md text-sm font-medium transition-colors ${tab === 'plate' ? 'bg-white text-gray-900 shadow-sm' : 'text-gray-500 hover:text-gray-700'}`}
           >
             {t('tab_plate')}
           </button>
           <button
-            onClick={() => { setTab('code'); setResult(null); setError(''); }}
-            className={`flex-1 py-2 rounded-md text-sm font-medium transition-colors ${
-              tab === 'code' ? 'bg-white text-gray-900 shadow-sm' : 'text-gray-500 hover:text-gray-700'
-            }`}
+            onClick={() => { setTab('code'); resetResults(); }}
+            className={`flex-1 py-2 rounded-md text-sm font-medium transition-colors ${tab === 'code' ? 'bg-white text-gray-900 shadow-sm' : 'text-gray-500 hover:text-gray-700'}`}
           >
             {t('tab_code')}
           </button>
@@ -341,9 +299,7 @@ export default function PatrolPage() {
                   className="w-full border border-gray-300 rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
                 >
                   <option value="">{t('any_state')}</option>
-                  {US_STATES.map((s) => (
-                    <option key={s} value={s}>{s}</option>
-                  ))}
+                  {US_STATES.map((s) => <option key={s} value={s}>{s}</option>)}
                 </select>
               </div>
               <button
@@ -380,12 +336,21 @@ export default function PatrolPage() {
         </div>
 
         {/* Error */}
-        {error && (
-          <p className="text-red-600 text-sm text-center mt-4">{error}</p>
+        {error && <p className="text-red-600 text-sm text-center mt-4">{error}</p>}
+
+        {/* Not found */}
+        {notFound && (
+          <div className="bg-red-50 border-2 border-red-300 rounded-xl p-6 mt-4">
+            <div className="flex items-center gap-3 mb-2">
+              <span className="text-2xl">❌</span>
+              <h2 className="text-xl font-bold text-red-800">{t('not_found')}</h2>
+            </div>
+            <p className="text-red-600 text-sm">{t('not_found_desc')}</p>
+          </div>
         )}
 
-        {/* Result */}
-        {getResultCard()}
+        {/* Results — one card per match */}
+        {results.map((item, i) => renderCard(item, i))}
       </main>
     </div>
   );
