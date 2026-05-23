@@ -3,6 +3,7 @@
 import { useState } from 'react';
 import { useTranslations } from 'next-intl';
 import { useForm } from 'react-hook-form';
+import BrandName from '@/components/BrandName';
 
 interface LoginFormData {
   username: string;
@@ -47,9 +48,8 @@ export default function PatrolLoginPage() {
     <div className="min-h-screen bg-gray-100 flex items-center justify-center px-4">
       <div className="bg-white rounded-2xl shadow-lg p-8 w-full max-w-md">
         <div className="text-center mb-8">
-          <div className="text-4xl mb-2">🅿️</div>
-          <h1 className="text-2xl font-bold text-gray-900">VTG Parking</h1>
-          <p className="text-gray-500 mt-1 text-sm">{tPatrol('login_subtitle')}</p>
+          <BrandName size="1.5rem" />
+          <p className="text-gray-500 mt-2 text-sm">{tPatrol('login_subtitle')}</p>
         </div>
 
         <h2 className="text-xl font-semibold text-gray-800 mb-6 text-center">{tPatrol('login')}</h2>

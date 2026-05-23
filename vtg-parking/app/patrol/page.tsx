@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react';
 import { useTranslations } from 'next-intl';
 import { formatPDT } from '@/lib/utils';
+import BrandName from '@/components/BrandName';
 
 type SearchTab = 'plate' | 'code';
 
@@ -247,9 +248,9 @@ export default function PatrolPage() {
   return (
     <div className="min-h-screen bg-gray-100">
       <header className="bg-white border-b border-gray-200 px-6 py-4 flex items-center justify-between">
-        <div className="flex items-center gap-3">
-          <span className="text-2xl">🅿️</span>
-          <span className="text-lg font-bold text-gray-900">VTG Parking — {t('patrol_lookup')}</span>
+        <div className="flex flex-col justify-center">
+          <BrandName size="1.1rem" />
+          <span className="text-xs text-gray-500 mt-0.5 leading-none">{t('patrol_lookup')}</span>
         </div>
         <div className="flex items-center gap-2">
           <a href="/" className="text-sm text-gray-500 hover:text-gray-800 border border-gray-300 px-3 py-1.5 rounded-lg hover:bg-gray-50 transition-colors">🏠 Home</a>

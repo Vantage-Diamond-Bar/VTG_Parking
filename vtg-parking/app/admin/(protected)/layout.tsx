@@ -3,6 +3,7 @@ import { getSession } from '@/lib/auth';
 import { getTranslations } from 'next-intl/server';
 import Link from 'next/link';
 import { AdminFetchInterceptor } from '@/components/AdminFetchInterceptor';
+import BrandName from '@/components/BrandName';
 import type { Metadata } from 'next';
 
 export const metadata: Metadata = {
@@ -39,7 +40,7 @@ export default async function AdminProtectedLayout({
       {/* Sidebar */}
       <aside className="w-64 bg-gray-900 text-white flex flex-col flex-shrink-0 h-screen sticky top-0">
         <div className="px-6 py-5 border-b border-gray-700">
-          <span className="text-lg font-bold tracking-tight leading-tight">🅿️ Vantage Community Parking</span>
+          <BrandName color="#5eead4" size="1rem" />
         </div>
 
         <nav className="flex-1 py-4 overflow-y-auto">
