@@ -237,14 +237,14 @@ export default function VisitorPage() {
             <h2 className="text-2xl font-bold text-gray-900 mb-2">{t('success_title')}</h2>
             <p className="text-gray-500 text-sm mb-6">{t('success_desc')}</p>
 
-            <div className="bg-gray-900 rounded-xl p-6 mb-4 relative">
-              <p className="text-gray-400 text-xs uppercase tracking-widest mb-2">{t('access_code_label')}</p>
-              <p className="font-mono text-4xl font-bold text-white tracking-[0.3em] select-all">
+            <div className="bg-teal-50 border-2 border-teal-600 rounded-xl p-6 mb-4 relative">
+              <p className="text-teal-700 text-xs uppercase tracking-widest mb-2">{t('access_code_label')}</p>
+              <p className="font-mono text-4xl font-bold text-teal-950 tracking-[0.3em] select-all">
                 {successData.access_code}
               </p>
               <button
                 onClick={copyCode}
-                className="absolute top-4 right-4 text-xs text-gray-400 hover:text-white border border-gray-600 rounded px-2 py-1 transition-colors"
+                className="absolute top-4 right-4 text-xs text-teal-700 hover:text-teal-900 border border-teal-500 hover:border-teal-700 hover:bg-teal-100 rounded px-2 py-1 transition-colors"
               >
                 {copied ? t('copied') : t('copy')}
               </button>
