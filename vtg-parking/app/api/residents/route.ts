@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { supabaseAdmin } from '@/lib/supabase';
+import { getSessionFromRequest } from '@/lib/auth';
 import { normalizedPlate } from '@/lib/utils';
 
 export async function POST(req: NextRequest) {
@@ -148,12 +149,21 @@ export async function POST(req: NextRequest) {
 }
 
 export async function GET(req: NextRequest) {
+  // Admin-only: residents list is sensitive data
+  const session = getSessionFromRequest(req);
+  if (!session) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+  if (session.role !== 'admin') return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
+
   const { searchParams } = new URL(req.url);
-  const search = searchParams.get('search') || '';
+  const rawSearch = searchParams.get('search') || '';
   const unitId = searchParams.get('unit_id') || '';
   const page = parseInt(searchParams.get('page') || '0', 10);
   const limit = parseInt(searchParams.get('limit') || '20', 10);
   const offset = page * limit;
+
+  // Strip characters that carry special meaning in PostgREST .or() filter strings
+  // (commas separate conditions; parentheses are used in .in.() syntax)
+  const search = rawSearch.replace(/[,()]/g, '');
 
   let query = supabaseAdmin
     .from('resident_vehicles')
@@ -169,9 +179,11 @@ export async function GET(req: NextRequest) {
       .from('units')
       .select('id')
       .ilike('address', `%${search}%`);
+    // matchingUnitIds are UUIDs from DB — safe to join
     const matchingUnitIds = (matchingUnits ?? []).map((u) => u.id);
 
-    const baseOr = `license_plate.ilike.%${search}%,owner_name.ilike.%${search}%,owner_phone.ilike.%${search}%,owner_email.ilike.%${search}%`;
+    const likePattern = `%${search}%`;
+    const baseOr = `license_plate.ilike.${likePattern},owner_name.ilike.${likePattern},owner_phone.ilike.${likePattern},owner_email.ilike.${likePattern}`;
     if (matchingUnitIds.length > 0) {
       query = query.or(`${baseOr},unit_id.in.(${matchingUnitIds.join(',')})`);
     } else {
