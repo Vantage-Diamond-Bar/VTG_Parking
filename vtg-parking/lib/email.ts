@@ -4,6 +4,33 @@ import { supabaseAdmin } from './supabase'
 const resend = new Resend(process.env.RESEND_API_KEY)
 const EMAIL_FROM = process.env.EMAIL_FROM ?? 'parking@vtgcommunity.com'
 
+export async function sendOtpEmail(to: string, otp: string): Promise<void> {
+  const html = `
+    <div style="font-family:sans-serif;max-width:480px;margin:0 auto;">
+      <div style="background:#1e40af;color:white;padding:24px;border-radius:8px 8px 0 0;">
+        <h1 style="margin:0;font-size:18px;">VTG Community Parking</h1>
+        <p style="margin:6px 0 0;opacity:0.9;font-size:14px;">Email Verification Code</p>
+      </div>
+      <div style="background:white;padding:28px 24px;border:1px solid #e5e7eb;border-top:none;border-radius:0 0 8px 8px;">
+        <p style="margin:0 0 20px;color:#374151;">Use the code below to verify your identity. It expires in <strong>10 minutes</strong> and can only be used once.</p>
+        <div style="background:#eff6ff;border:2px solid #3b82f6;border-radius:8px;padding:24px;text-align:center;margin:0 0 20px;">
+          <p style="margin:0 0 6px;font-size:12px;color:#1e40af;font-weight:bold;text-transform:uppercase;letter-spacing:0.08em;">Verification Code</p>
+          <p style="margin:0;font-size:40px;font-family:monospace;font-weight:bold;color:#1e3a8a;letter-spacing:0.3em;">${otp}</p>
+        </div>
+        <p style="margin:0;font-size:12px;color:#9ca3af;">If you did not request this code, please ignore this email.</p>
+        <hr style="border:none;border-top:1px solid #e5e7eb;margin:20px 0;">
+        <p style="font-size:11px;color:#9ca3af;margin:0;">VTG Community Parking Management System</p>
+      </div>
+    </div>
+  `
+  await resend.emails.send({
+    from: EMAIL_FROM,
+    to,
+    subject: 'VTG Community Parking — Verification Code',
+    html,
+  })
+}
+
 export async function sendViolationReport(report: {
   location: string
   violation_type: string

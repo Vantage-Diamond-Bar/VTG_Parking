@@ -155,16 +155,17 @@ create policy "units_public_read" on units for select using (active = true);
 
 -- All other access via service_role key in API routes (bypasses RLS)
 
--- ─── SEED: default admin user ─────────────────────────────────────────────────
--- Password: Admin@2026  (change after first login!)
--- bcrypt hash generated for 'Admin@2026' with cost factor 10
-insert into admin_users (username, password_hash, role, display_name)
-values (
-  'admin',
-  '$2a$10$rQnCMaB5p.m7l1kJxDc0/.JnKqPjE3YaI1AW3jLFBpMCcJXkBjrDm',
-  'admin',
-  'System Administrator'
-);
+-- ─── SEED: initial admin user ─────────────────────────────────────────────────
+-- DO NOT insert a default password here. Generate a bcrypt hash for a strong,
+-- randomly generated password and insert it manually before going live:
+--
+--   node -e "require('bcryptjs').hash('<your-password>', 10).then(console.log)"
+--
+-- Then run:
+--   INSERT INTO admin_users (username, password_hash, role, display_name)
+--   VALUES ('admin', '<hash-from-above>', 'admin', 'System Administrator');
+--
+-- Store the password in your team's password manager immediately.
 
 -- ─── HELPER FUNCTION: update updated_at ───────────────────────────────────────
 create or replace function update_updated_at()

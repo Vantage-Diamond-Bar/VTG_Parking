@@ -43,7 +43,10 @@ type VacationFlowState =
   | 'overdue'
   | 'not_eligible'
   | 'awaiting_email'
-  | 'verifying_email'
+  | 'otp_sending'
+  | 'otp_sent'
+  | 'otp_verifying'
+  | 'otp_invalid'
   | 'email_mismatch'
   | 'loading_vehicles'
   | 'form'
@@ -66,6 +69,8 @@ export default function VacationPage() {
   // ── Step 3: Email verification ───────────────────────────────────────────
   const [emailInput, setEmailInput] = useState('')
   const [verifiedEmail, setVerifiedEmail] = useState('')
+  const [otpCode, setOtpCode] = useState('')
+  const [verificationToken, setVerificationToken] = useState('')
 
   // ── Step 4: Vehicles & owner info ────────────────────────────────────────
   const [vehicles, setVehicles] = useState<Vehicle[]>([])
@@ -106,6 +111,8 @@ export default function VacationPage() {
     setEmailHints([])
     setEmailInput('')
     setVerifiedEmail('')
+    setOtpCode('')
+    setVerificationToken('')
     setVehicles([])
     setOwner(null)
     setSelectedVehicleIds([])
@@ -134,25 +141,22 @@ export default function VacationPage() {
     }
   }
 
-  // ── Email verification ────────────────────────────────────────────────────
-  async function handleVerifyEmail() {
+  // ── Step 1: Send OTP to email ─────────────────────────────────────────────
+  async function handleSendOtp() {
     if (!emailInput.trim()) return
-    setFlowState('verifying_email')
+    setFlowState('otp_sending')
     setError('')
     try {
-      const res = await fetch('/api/visitors/verify-host', {
+      const res = await fetch('/api/auth/send-otp', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ unit_id: unitId, email: emailInput.trim() }),
       })
       const data = await res.json()
-
-      if (data.status === 'ok') {
-        setVerifiedEmail(emailInput.trim())
-        setFlowState('loading_vehicles')
-        await loadVehicles(unitId, emailInput.trim())
-      } else if (data.status === 'overdue') {
-        setFlowState('overdue')
+      if (data.status === 'sent') {
+        setFlowState('otp_sent')
+      } else if (data.status === 'no_vehicles') {
+        setFlowState('no_vehicles')
       } else {
         setFlowState('email_mismatch')
       }
@@ -161,15 +165,39 @@ export default function VacationPage() {
     }
   }
 
-  // ── Load vehicles after email verification ────────────────────────────────
-  async function loadVehicles(uid: string, email: string) {
+  // ── Step 2: Verify OTP code ───────────────────────────────────────────────
+  async function handleVerifyOtp() {
+    setFlowState('otp_verifying')
+    try {
+      const otpRes = await fetch('/api/auth/verify-otp', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ unit_id: unitId, email: emailInput.trim(), otp: otpCode }),
+      })
+      const otpData = await otpRes.json()
+      if (otpData.status !== 'ok') {
+        setFlowState('otp_invalid')
+        return
+      }
+      const token = otpData.verification_token
+      setVerificationToken(token)
+      setVerifiedEmail(emailInput.trim())
+      setFlowState('loading_vehicles')
+      await loadVehicles(unitId, token)
+    } catch {
+      setFlowState('otp_invalid')
+    }
+  }
+
+  // ── Load vehicles after OTP verification ──────────────────────────────────
+  async function loadVehicles(uid: string, token: string) {
     try {
       const res = await fetch(
-        `/api/vacation/unit-vehicles?unit_id=${uid}&email=${encodeURIComponent(email)}`
+        `/api/vacation/unit-vehicles?unit_id=${uid}&token=${encodeURIComponent(token)}`
       )
       const data = await res.json()
 
-      if (!res.ok || data.error === 'email_mismatch') {
+      if (!res.ok || data.error === 'no_vehicles') {
         setFlowState('email_mismatch')
         return
       }
@@ -279,6 +307,8 @@ export default function VacationPage() {
     setEmailHints([])
     setEmailInput('')
     setVerifiedEmail('')
+    setOtpCode('')
+    setVerificationToken('')
     setVehicles([])
     setOwner(null)
     setSelectedVehicleIds([])
@@ -387,8 +417,8 @@ export default function VacationPage() {
             </div>
           )}
 
-          {/* ── Step 3: Email verification ───────────────────────────────── */}
-          {(flowState === 'awaiting_email' || flowState === 'verifying_email' || flowState === 'email_mismatch') && (
+          {/* ── Step 3a: Email input & send OTP ─────────────────────────── */}
+          {(flowState === 'awaiting_email' || flowState === 'otp_sending' || flowState === 'email_mismatch') && (
             <div className="border border-blue-200 bg-blue-50 rounded-lg px-4 py-4 space-y-3">
               <p className="text-sm font-semibold text-blue-900">{t('verify_email_title')}</p>
               <p className="text-xs text-blue-700">{t('verify_email_desc')}</p>
@@ -412,22 +442,60 @@ export default function VacationPage() {
                   type="email"
                   value={emailInput}
                   onChange={(e) => setEmailInput(e.target.value)}
-                  onKeyDown={(e) => e.key === 'Enter' && handleVerifyEmail()}
+                  onKeyDown={(e) => e.key === 'Enter' && handleSendOtp()}
                   placeholder={t('host_email')}
                   className="flex-1 border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
                 />
                 <button
                   type="button"
-                  onClick={handleVerifyEmail}
-                  disabled={!emailInput.trim() || flowState === 'verifying_email'}
+                  onClick={handleSendOtp}
+                  disabled={!emailInput.trim() || flowState === 'otp_sending'}
                   className="bg-blue-600 text-white px-4 py-2 rounded-lg text-sm font-semibold hover:bg-blue-700 transition-colors disabled:opacity-50"
                 >
-                  {flowState === 'verifying_email' ? t('verifying') : t('verify')}
+                  {flowState === 'otp_sending' ? t('sending') : t('send_code')}
                 </button>
               </div>
               {flowState === 'email_mismatch' && (
                 <p className="text-red-600 text-xs">{t('email_mismatch')}</p>
               )}
+            </div>
+          )}
+
+          {/* ── Step 3b: OTP code entry ──────────────────────────────────── */}
+          {(flowState === 'otp_sent' || flowState === 'otp_verifying' || flowState === 'otp_invalid') && (
+            <div className="border border-blue-200 bg-blue-50 rounded-lg px-4 py-4 space-y-3">
+              <p className="text-sm font-semibold text-blue-900">{t('otp_label')}</p>
+              <p className="text-xs text-blue-700">{t('otp_sent_desc')}</p>
+              <div className="flex gap-2">
+                <input
+                  type="text"
+                  inputMode="numeric"
+                  maxLength={6}
+                  value={otpCode}
+                  onChange={(e) => setOtpCode(e.target.value.replace(/\D/g, ''))}
+                  onKeyDown={(e) => e.key === 'Enter' && otpCode.length === 6 && handleVerifyOtp()}
+                  placeholder={t('otp_placeholder')}
+                  className="flex-1 border border-gray-300 rounded-lg px-3 py-2 text-sm font-mono tracking-widest focus:outline-none focus:ring-2 focus:ring-blue-500"
+                />
+                <button
+                  type="button"
+                  onClick={handleVerifyOtp}
+                  disabled={otpCode.length < 6 || flowState === 'otp_verifying'}
+                  className="bg-blue-600 text-white px-4 py-2 rounded-lg text-sm font-semibold hover:bg-blue-700 transition-colors disabled:opacity-50"
+                >
+                  {flowState === 'otp_verifying' ? t('otp_verifying') : t('otp_verify')}
+                </button>
+              </div>
+              {flowState === 'otp_invalid' && (
+                <p className="text-red-600 text-xs">{t('otp_invalid')}</p>
+              )}
+              <button
+                type="button"
+                onClick={handleSendOtp}
+                className="text-xs text-blue-600 hover:underline"
+              >
+                {t('otp_resend')}
+              </button>
             </div>
           )}
 

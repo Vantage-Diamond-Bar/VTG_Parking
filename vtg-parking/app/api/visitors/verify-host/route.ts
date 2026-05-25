@@ -1,13 +1,17 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { supabaseAdmin } from '@/lib/supabase'
 import { VISITOR_QUOTA_LIMIT, countNights, monthBounds, getYearMonth } from '@/lib/utils'
+import { decodeVerificationToken } from '@/lib/auth'
 
 export async function POST(req: NextRequest) {
-  const { unit_id, email } = await req.json()
+  const { verification_token } = await req.json()
 
-  if (!unit_id || !email) {
-    return NextResponse.json({ error: 'unit_id and email required' }, { status: 400 })
+  const tokenData = decodeVerificationToken(verification_token)
+  if (!tokenData) {
+    return NextResponse.json({ status: 'invalid_token' }, { status: 403 })
   }
+
+  const { unit_id } = tokenData
 
   const { data: vehicles, error } = await supabaseAdmin
     .from('resident_vehicles')
@@ -22,15 +26,6 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ status: 'no_vehicles' })
   }
 
-  const emailLower = email.trim().toLowerCase()
-  const matched = vehicles.some(
-    (v) => v.owner_email && v.owner_email.trim().toLowerCase() === emailLower
-  )
-
-  if (!matched) {
-    return NextResponse.json({ status: 'mismatch' })
-  }
-
   const oneYearAgo = new Date()
   oneYearAgo.setFullYear(oneYearAgo.getFullYear() - 1)
   const isOverdue = vehicles.some(
@@ -41,7 +36,7 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ status: 'overdue' })
   }
 
-  // Compute nights_used dynamically from actual visitor_registrations
+  // Compute nights used dynamically from actual visitor_registrations
   const yearMonth = getYearMonth()
   const { start, end } = monthBounds(yearMonth)
 

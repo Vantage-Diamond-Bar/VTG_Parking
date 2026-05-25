@@ -4,6 +4,12 @@ import { getSessionFromRequest } from '@/lib/auth';
 import { formatPDT } from '@/lib/utils';
 import * as XLSX from 'xlsx';
 
+// Prevent CSV/Excel formula injection: cells starting with =, +, -, @ are
+// prefixed with a tab so spreadsheet apps treat them as plain text.
+function sanitizeCell(value: string): string {
+  return /^[=+\-@\t\r]/.test(value) ? `\t${value}` : value;
+}
+
 export async function GET(req: NextRequest) {
   const session = getSessionFromRequest(req);
   if (!session) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
@@ -24,11 +30,11 @@ export async function GET(req: NextRequest) {
   const rows = (data || []).map((v: any) => ({
     'Access Code': v.access_code ?? '',
     'Unit': v.units?.address ?? '',
-    'Guest': v.visitor_name ?? '',
-    'Plate': v.license_plate ?? '',
+    'Guest': sanitizeCell(v.visitor_name ?? ''),
+    'Plate': sanitizeCell(v.license_plate ?? ''),
     'State': v.plate_state ?? '',
-    'Make': v.make ?? '',
-    'Model': v.model ?? '',
+    'Make': sanitizeCell(v.make ?? ''),
+    'Model': sanitizeCell(v.model ?? ''),
     'Color': v.color ?? '',
     'Start': formatPDT(v.start_datetime, { short: true }),
     'End': formatPDT(v.end_datetime, { short: true }),

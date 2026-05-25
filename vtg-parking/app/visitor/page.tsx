@@ -6,7 +6,7 @@ import { useTranslations } from 'next-intl'
 import { US_STATES, CAR_COLORS, CAR_MAKES, VEHICLE_TYPES, VISITOR_QUOTA_LIMIT, getYearMonth, ptInputToISO } from '@/lib/utils'
 import PhoneInput from '@/components/PhoneInput'
 
-type VerifyState = 'idle' | 'loading' | 'no_vehicles' | 'awaiting_email' | 'verifying' | 'mismatch' | 'overdue' | 'verified'
+type VerifyState = 'idle' | 'loading' | 'no_vehicles' | 'awaiting_email' | 'otp_sending' | 'otp_sent' | 'otp_verifying' | 'otp_invalid' | 'mismatch' | 'overdue' | 'verified'
 
 interface Unit {
   id: string
@@ -29,6 +29,8 @@ export default function VisitorPage() {
   const [emailHints, setEmailHints] = useState<string[]>([])
   const [hostEmail, setHostEmail] = useState('')
   const [quota, setQuota] = useState<QuotaData | null>(null)
+  const [verificationToken, setVerificationToken] = useState('')
+  const [otpCode, setOtpCode] = useState('')
   const currentYear = new Date().getFullYear()
   const [selectedMonth, setSelectedMonth] = useState(getYearMonth())
   const [displayQuota, setDisplayQuota] = useState<QuotaData | null>(null)
@@ -93,25 +95,58 @@ export default function VisitorPage() {
       .catch(() => {})
   }, [unitId, selectedMonth, verifyState])
 
-  async function handleVerify() {
-    setVerifyState('verifying')
+  async function handleSendOtp() {
+    setVerifyState('otp_sending')
     try {
-      const res = await fetch('/api/visitors/verify-host', {
+      const res = await fetch('/api/auth/send-otp', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ unit_id: unitId, email: hostEmail }),
       })
       const data = await res.json()
-      if (data.status === 'ok') {
-        setQuota(data.quota)
-        setVerifyState('verified')
-      } else if (data.status === 'overdue') {
-        setVerifyState('overdue')
+      if (data.status === 'sent') {
+        setVerifyState('otp_sent')
+      } else if (data.status === 'no_vehicles') {
+        setVerifyState('no_vehicles')
       } else {
         setVerifyState('mismatch')
       }
     } catch {
       setVerifyState('mismatch')
+    }
+  }
+
+  async function handleVerifyOtp() {
+    setVerifyState('otp_verifying')
+    try {
+      const otpRes = await fetch('/api/auth/verify-otp', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ unit_id: unitId, email: hostEmail, otp: otpCode }),
+      })
+      const otpData = await otpRes.json()
+      if (otpData.status !== 'ok') {
+        setVerifyState('otp_invalid')
+        return
+      }
+      const token = otpData.verification_token
+      const hostRes = await fetch('/api/visitors/verify-host', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ verification_token: token }),
+      })
+      const hostData = await hostRes.json()
+      if (hostData.status === 'ok') {
+        setQuota(hostData.quota)
+        setVerificationToken(token)
+        setVerifyState('verified')
+      } else if (hostData.status === 'overdue') {
+        setVerifyState('overdue')
+      } else {
+        setVerifyState('otp_invalid')
+      }
+    } catch {
+      setVerifyState('otp_invalid')
     }
   }
 
@@ -156,6 +191,7 @@ export default function VisitorPage() {
         vehicle_type: vehicleType || null,
         start_datetime: ptInputToISO(startDatetime),
         end_datetime: ptInputToISO(endDatetime),
+        verification_token: verificationToken,
       }
       const res = await fetch('/api/visitors', {
         method: 'POST',
@@ -197,6 +233,8 @@ export default function VisitorPage() {
     setEmailHints([])
     setHostEmail('')
     setQuota(null)
+    setVerificationToken('')
+    setOtpCode('')
     setVisitorName('')
     setVisitorPhone('')
     setVisitorPhoneCC('+1')
@@ -332,7 +370,7 @@ export default function VisitorPage() {
                     </div>
                   )}
 
-                  {(verifyState === 'awaiting_email' || verifyState === 'verifying' || verifyState === 'mismatch') && (
+                  {(verifyState === 'awaiting_email' || verifyState === 'otp_sending' || verifyState === 'mismatch') && (
                     <div className="border border-blue-200 bg-blue-50 rounded-lg px-4 py-4 space-y-3">
                       <p className="text-sm font-semibold text-blue-900">{t('verify_email_title')}</p>
                       <p className="text-xs text-blue-700">{t('verify_email_desc')}</p>
@@ -358,16 +396,52 @@ export default function VisitorPage() {
                         />
                         <button
                           type="button"
-                          onClick={handleVerify}
-                          disabled={!hostEmail.trim() || verifyState === 'verifying'}
+                          onClick={handleSendOtp}
+                          disabled={!hostEmail.trim() || verifyState === 'otp_sending'}
                           className="bg-blue-600 text-white px-4 py-2 rounded-lg text-sm font-semibold hover:bg-blue-700 transition-colors disabled:opacity-50"
                         >
-                          {verifyState === 'verifying' ? t('verifying') : t('verify')}
+                          {verifyState === 'otp_sending' ? t('sending') : t('send_code')}
                         </button>
                       </div>
                       {verifyState === 'mismatch' && (
                         <p className="text-red-600 text-xs">{t('email_mismatch')}</p>
                       )}
+                    </div>
+                  )}
+
+                  {(verifyState === 'otp_sent' || verifyState === 'otp_verifying' || verifyState === 'otp_invalid') && (
+                    <div className="border border-blue-200 bg-blue-50 rounded-lg px-4 py-4 space-y-3">
+                      <p className="text-sm font-semibold text-blue-900">{t('otp_label')}</p>
+                      <p className="text-xs text-blue-700">{t('otp_sent_desc')}</p>
+                      <div className="flex gap-2">
+                        <input
+                          type="text"
+                          inputMode="numeric"
+                          maxLength={6}
+                          value={otpCode}
+                          onChange={(e) => setOtpCode(e.target.value.replace(/\D/g, ''))}
+                          placeholder={t('otp_placeholder')}
+                          className="flex-1 border border-gray-300 rounded-lg px-3 py-2 text-sm font-mono tracking-widest focus:outline-none focus:ring-2 focus:ring-blue-500"
+                        />
+                        <button
+                          type="button"
+                          onClick={handleVerifyOtp}
+                          disabled={otpCode.length < 6 || verifyState === 'otp_verifying'}
+                          className="bg-blue-600 text-white px-4 py-2 rounded-lg text-sm font-semibold hover:bg-blue-700 transition-colors disabled:opacity-50"
+                        >
+                          {verifyState === 'otp_verifying' ? t('otp_verifying') : t('otp_verify')}
+                        </button>
+                      </div>
+                      {verifyState === 'otp_invalid' && (
+                        <p className="text-red-600 text-xs">{t('otp_invalid')}</p>
+                      )}
+                      <button
+                        type="button"
+                        onClick={handleSendOtp}
+                        className="text-xs text-blue-600 hover:underline"
+                      >
+                        {t('otp_resend')}
+                      </button>
                     </div>
                   )}
 

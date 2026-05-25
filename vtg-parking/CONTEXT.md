@@ -90,12 +90,11 @@ export function ptInputToISO(localStr: string): string
 ### 3.2 Authentication
 
 - **Session cookie name:** `session`
-- **Encoding:** `base64(JSON.stringify({ id, username, role, display_name }))`
-- **NOT a signed JWT** — no signature verification
+- **Encoding:** `base64url(JSON) + "." + HMAC-SHA256(payload, SESSION_SECRET)` — server-signed, tamper-proof
 - Server Components use `getSession()` (reads `next/headers` cookies)
-- API Route Handlers use `getSessionFromRequest(req)` (reads cookie OR `X-Session-Token` header)
-- Login also stores token in `localStorage` as `vtg_admin_token` (used by some client-side fetch calls)
-- Roles: `admin` | `patrol`
+- API Route Handlers use `getSessionFromRequest(req)` (reads httpOnly cookie only — no header fallback)
+- `SESSION_SECRET` env var **must** be set to a random string ≥ 32 chars; the server throws on startup if missing
+- Roles: `admin` | `patrol` — most admin API routes check `session.role === 'admin'` explicitly
 
 ### 3.3 Supabase Clients
 

@@ -44,7 +44,7 @@ interface UnitData {
   quota: { nights_used: number; quota_limit: number }
 }
 
-type PageState = 'idle' | 'checking' | 'new' | 'verify' | 'manage' | 'new_success'
+type PageState = 'idle' | 'checking' | 'new' | 'verify' | 'otp' | 'manage' | 'new_success'
 
 // ─── Helpers ───────────────────────────────────────────────────────────────
 
@@ -81,10 +81,13 @@ export default function RegisterPage() {
   const [verifyEmail, setVerifyEmail] = useState('')
   const [verifyError, setVerifyError] = useState('')
   const [verifying, setVerifying] = useState(false)
+  const [otpCode, setOtpCode] = useState('')
+  const [otpState, setOtpState] = useState<'idle' | 'verifying' | 'invalid'>('idle')
 
   // Manage state
   const [unitData, setUnitData] = useState<UnitData | null>(null)
   const [confirmedEmail, setConfirmedEmail] = useState('')
+  const [verificationToken, setVerificationToken] = useState('')
   const [toast, setToast] = useState('')
   const [toastType, setToastType] = useState<'success' | 'error'>('success')
 
@@ -136,29 +139,29 @@ export default function RegisterPage() {
     }
   }
 
-  // ── Verify existing owner ──────────────────────────────────────────────
+  // ── Step 1: Send OTP ──────────────────────────────────────────────────────
 
-  async function handleVerify() {
+  async function handleSendOtp() {
     const emailVal = verifyEmail.trim()
     if (!emailVal) return
     setVerifying(true)
     setVerifyError('')
     try {
-      const res = await fetch(`/api/residents/unit-data?unit_id=${unitId}&email=${encodeURIComponent(emailVal)}`)
+      const res = await fetch('/api/auth/send-otp', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ unit_id: unitId, email: emailVal }),
+      })
       const json = await res.json()
-      if (!res.ok) {
-        if (json?.error === 'no_vehicles') {
-          setVerifyError('No registrations found for this unit. Please register your vehicle.')
-        } else if (json?.error === 'email_mismatch') {
-          setVerifyError(t('email_mismatch'))
-        } else {
-          setVerifyError(`Server error${json?.detail ? ': ' + json.detail : ''}. Please try again.`)
-        }
-        return
+      if (json.status === 'sent') {
+        setOtpCode('')
+        setOtpState('idle')
+        setPageState('otp')
+      } else if (json.status === 'no_vehicles') {
+        setVerifyError('No registrations found for this unit. Please register your vehicle.')
+      } else {
+        setVerifyError(t('email_mismatch'))
       }
-      setUnitData(json)
-      setConfirmedEmail(emailVal)
-      setPageState('manage')
     } catch {
       setVerifyError('Network error. Please try again.')
     } finally {
@@ -166,13 +169,44 @@ export default function RegisterPage() {
     }
   }
 
+  // ── Step 2: Verify OTP and load unit data ─────────────────────────────────
+
+  async function handleVerifyOtp() {
+    setOtpState('verifying')
+    try {
+      const otpRes = await fetch('/api/auth/verify-otp', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ unit_id: unitId, email: verifyEmail.trim(), otp: otpCode }),
+      })
+      const otpJson = await otpRes.json()
+      if (otpJson.status !== 'ok') {
+        setOtpState('invalid')
+        return
+      }
+      const token = otpJson.verification_token
+      const dataRes = await fetch(`/api/residents/unit-data?unit_id=${unitId}&token=${encodeURIComponent(token)}`)
+      const dataJson = await dataRes.json()
+      if (!dataRes.ok) {
+        setOtpState('invalid')
+        return
+      }
+      setUnitData(dataJson)
+      setConfirmedEmail(verifyEmail.trim())
+      setVerificationToken(token)
+      setPageState('manage')
+    } catch {
+      setOtpState('invalid')
+    }
+  }
+
   // ── Reload unit data ───────────────────────────────────────────────────
 
   const reloadUnitData = useCallback(async () => {
-    if (!unitId || !confirmedEmail) return
-    const res = await fetch(`/api/residents/unit-data?unit_id=${unitId}&email=${encodeURIComponent(confirmedEmail)}`)
+    if (!unitId || !verificationToken) return
+    const res = await fetch(`/api/residents/unit-data?unit_id=${unitId}&token=${encodeURIComponent(verificationToken)}`)
     if (res.ok) setUnitData(await res.json())
-  }, [unitId, confirmedEmail])
+  }, [unitId, verificationToken])
 
   // ── New registration submit ────────────────────────────────────────────
 
@@ -321,7 +355,7 @@ export default function RegisterPage() {
             <p className="text-sm text-gray-400 text-center py-4">{t('checking')}</p>
           )}
 
-          {/* Verify existing owner */}
+          {/* Verify existing owner — step 1: email */}
           {pageState === 'verify' && (
             <div className="bg-blue-50 border border-blue-200 rounded-xl p-5 space-y-4">
               <div>
@@ -339,7 +373,7 @@ export default function RegisterPage() {
                   type="email"
                   value={verifyEmail}
                   onChange={e => { setVerifyEmail(e.target.value); setVerifyError('') }}
-                  onKeyDown={e => e.key === 'Enter' && handleVerify()}
+                  onKeyDown={e => e.key === 'Enter' && handleSendOtp()}
                   className={inputCls}
                   placeholder="your@email.com"
                   autoFocus
@@ -347,11 +381,50 @@ export default function RegisterPage() {
                 {verifyError && <p className="text-red-500 text-xs mt-1">{verifyError}</p>}
               </div>
               <button
-                onClick={handleVerify}
+                onClick={handleSendOtp}
                 disabled={verifying || !verifyEmail.trim()}
                 className="w-full bg-blue-600 text-white py-2.5 rounded-lg font-semibold hover:bg-blue-700 disabled:opacity-50 transition-colors"
               >
-                {verifying ? t('verifying') : t('verify')}
+                {verifying ? t('sending') : t('send_code')}
+              </button>
+            </div>
+          )}
+
+          {/* Verify existing owner — step 2: OTP code */}
+          {pageState === 'otp' && (
+            <div className="bg-blue-50 border border-blue-200 rounded-xl p-5 space-y-4">
+              <div>
+                <h2 className="text-base font-semibold text-blue-900 mb-1">{t('otp_label')}</h2>
+                <p className="text-sm text-blue-700">{t('otp_sent_desc')}</p>
+              </div>
+              <div>
+                <label className={labelCls}>{t('otp_label')}</label>
+                <input
+                  type="text"
+                  inputMode="numeric"
+                  maxLength={6}
+                  value={otpCode}
+                  onChange={e => { setOtpCode(e.target.value.replace(/\D/g, '')); setOtpState('idle') }}
+                  onKeyDown={e => e.key === 'Enter' && otpCode.length === 6 && handleVerifyOtp()}
+                  className={`${inputCls} font-mono tracking-widest`}
+                  placeholder={t('otp_placeholder')}
+                  autoFocus
+                />
+                {otpState === 'invalid' && <p className="text-red-500 text-xs mt-1">{t('otp_invalid')}</p>}
+              </div>
+              <button
+                onClick={handleVerifyOtp}
+                disabled={otpCode.length < 6 || otpState === 'verifying'}
+                className="w-full bg-blue-600 text-white py-2.5 rounded-lg font-semibold hover:bg-blue-700 disabled:opacity-50 transition-colors"
+              >
+                {otpState === 'verifying' ? t('otp_verifying') : t('otp_verify')}
+              </button>
+              <button
+                type="button"
+                onClick={() => { setPageState('verify'); setOtpCode(''); setOtpState('idle') }}
+                className="w-full text-sm text-blue-600 hover:underline"
+              >
+                {t('otp_resend')}
               </button>
             </div>
           )}

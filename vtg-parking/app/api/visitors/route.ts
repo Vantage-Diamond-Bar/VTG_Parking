@@ -1,12 +1,22 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { supabaseAdmin } from '@/lib/supabase';
-import { generateAccessCode, getYearMonth, normalizedPlate, VISITOR_QUOTA_LIMIT, countNights, monthBounds } from '@/lib/utils';
-import { getSessionFromRequest } from '@/lib/auth';
+import { generateAccessCode, getYearMonth, normalizedPlate, VISITOR_QUOTA_LIMIT } from '@/lib/utils';
+import { getSessionFromRequest, verifyVerificationToken } from '@/lib/auth';
 import { sendVisitorBookingEmail } from '@/lib/email';
 
 export async function POST(req: NextRequest) {
   const body = await req.json();
-  const { unit_id, visitor_name, visitor_phone, visitor_phone_country_code, license_plate, plate_state, make, model, color, start_datetime, end_datetime } = body;
+  const {
+    unit_id, visitor_name, visitor_phone, visitor_phone_country_code,
+    license_plate, plate_state, make, model, color,
+    start_datetime, end_datetime,
+    verification_token,
+  } = body;
+
+  // Fix 3: Require a valid host-verification token signed by the server
+  if (!verifyVerificationToken(verification_token, unit_id)) {
+    return NextResponse.json({ error: 'Invalid or expired verification token' }, { status: 403 });
+  }
 
   // 1. Normalize plate
   const plate = normalizedPlate(license_plate);
@@ -22,57 +32,7 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: 'plate_conflict' }, { status: 409 });
   }
 
-  // 3. Check quota per month — cross-month bookings are split and checked against each month
-  function spannedMonths(start: string, end: string): string[] {
-    const months: string[] = [];
-    let y = parseInt(start.slice(0, 4)), m = parseInt(start.slice(5, 7));
-    const ey = parseInt(end.slice(0, 4)), em = parseInt(end.slice(5, 7));
-    while (y < ey || (y === ey && m <= em)) {
-      months.push(`${y}-${String(m).padStart(2, '0')}`);
-      if (++m > 12) { m = 1; y++; }
-    }
-    return months;
-  }
-
-  const year_month = start_datetime ? start_datetime.slice(0, 7) : getYearMonth();
-  const months = spannedMonths(
-    start_datetime ? start_datetime.slice(0, 7) : year_month,
-    end_datetime   ? end_datetime.slice(0, 7)   : year_month
-  );
-
-  let currentNightsUsed = 0;
-  let newNights = 0;
-
-  for (const month of months) {
-    const { start: mStart, end: mEnd } = monthBounds(month);
-    const { data: mRegs } = await supabaseAdmin
-      .from('visitor_registrations')
-      .select('start_datetime, end_datetime')
-      .eq('unit_id', unit_id)
-      .lt('start_datetime', mEnd)
-      .gt('end_datetime', mStart);
-
-    const usedInMonth = (mRegs ?? []).reduce((sum, r) => {
-      const cs = r.start_datetime > mStart ? r.start_datetime : mStart;
-      const ce = r.end_datetime   < mEnd   ? r.end_datetime   : mEnd;
-      return sum + countNights(cs, ce);
-    }, 0);
-
-    const cs = start_datetime > mStart ? start_datetime : mStart;
-    const ce = end_datetime   < mEnd   ? end_datetime   : mEnd;
-    const newInMonth = countNights(cs, ce);
-
-    if (usedInMonth + newInMonth > VISITOR_QUOTA_LIMIT) {
-      return NextResponse.json({ error: 'quota_exceeded' }, { status: 429 });
-    }
-
-    if (month === year_month) {
-      currentNightsUsed = usedInMonth;
-      newNights = newInMonth;
-    }
-  }
-
-  // 4. Generate unique access code
+  // 3. Generate unique access code
   let access_code = '';
   for (let i = 0; i < 5; i++) {
     const candidate = generateAccessCode();
@@ -92,39 +52,37 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: 'Failed to generate unique access code' }, { status: 500 });
   }
 
-  // 5. Insert visitor registration
-  const { data: registration, error: insertError } = await supabaseAdmin
-    .from('visitor_registrations')
-    .insert({
-      unit_id,
-      visitor_name,
-      visitor_phone: visitor_phone ?? null,
-      visitor_phone_country_code: visitor_phone_country_code ?? null,
-      license_plate: plate,
-      plate_state,
-      make,
-      model,
-      color,
-      start_datetime,
-      end_datetime,
-      access_code,
-    })
-    .select()
-    .single();
+  // 4. Fix 4: Atomically check quota and insert via DB stored procedure.
+  //    pg_advisory_xact_lock inside the function serializes concurrent requests for the same unit.
+  const { data: rpcResult, error: rpcError } = await supabaseAdmin.rpc('book_visitor_registration', {
+    p_unit_id: unit_id,
+    p_visitor_name: visitor_name ?? null,
+    p_visitor_phone: visitor_phone ?? null,
+    p_visitor_phone_country_code: visitor_phone_country_code ?? null,
+    p_license_plate: plate,
+    p_plate_state: plate_state,
+    p_make: make ?? null,
+    p_model: model ?? null,
+    p_color: color ?? null,
+    p_start_datetime: start_datetime,
+    p_end_datetime: end_datetime,
+    p_access_code: access_code,
+    p_quota_limit: VISITOR_QUOTA_LIMIT,
+  });
 
-  if (insertError) {
-    return NextResponse.json({ error: insertError.message }, { status: 500 });
+  if (rpcError) {
+    return NextResponse.json({ error: rpcError.message }, { status: 500 });
   }
 
-  // 6. Upsert visitor monthly quota with actual night count
-  await supabaseAdmin
-    .from('visitor_monthly_quota')
-    .upsert(
-      { unit_id, year_month, nights_used: currentNightsUsed + newNights },
-      { onConflict: 'unit_id,year_month' }
-    );
+  if (rpcResult?.error === 'quota_exceeded') {
+    return NextResponse.json({ error: 'quota_exceeded' }, { status: 429 });
+  }
 
-  // 7. Send booking confirmation email to host unit's registered email
+  if (!rpcResult?.success) {
+    return NextResponse.json({ error: 'Registration failed' }, { status: 500 });
+  }
+
+  // 5. Send booking confirmation email to host unit's registered email
   try {
     const { data: hostVehicle } = await supabaseAdmin
       .from('resident_vehicles')
@@ -155,7 +113,8 @@ export async function POST(req: NextRequest) {
     }
   } catch {}
 
-  // 8. Check for abuse: same plate used by 2+ units this month
+  // 6. Check for abuse: same plate used by 2+ units this month
+  const year_month = start_datetime ? start_datetime.slice(0, 7) : getYearMonth();
   const abuseMonthStart = `${year_month}-01`;
   const { data: sameplateLogs } = await supabaseAdmin
     .from('visitor_registrations')
@@ -186,7 +145,11 @@ export async function POST(req: NextRequest) {
 }
 
 export async function GET(req: NextRequest) {
-  // Page is protected by admin layout; no per-route auth needed here
+  // Require admin role — this endpoint returns all visitor PII
+  const session = getSessionFromRequest(req);
+  if (!session) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+  if (session.role !== 'admin') return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
+
   const { searchParams } = new URL(req.url);
   const unit_id = searchParams.get('unit_id');
   const from = searchParams.get('from');

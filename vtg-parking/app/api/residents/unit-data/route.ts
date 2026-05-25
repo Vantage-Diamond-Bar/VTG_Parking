@@ -3,15 +3,23 @@ export const dynamic = 'force-dynamic';
 import { NextRequest, NextResponse } from 'next/server';
 import { supabaseAdmin } from '@/lib/supabase';
 import { getYearMonth, monthBounds, countNights, VISITOR_QUOTA_LIMIT } from '@/lib/utils';
+import { decodeVerificationToken } from '@/lib/auth';
 
 export async function GET(req: NextRequest) {
   const { searchParams } = new URL(req.url);
   const unit_id = searchParams.get('unit_id');
-  const email = searchParams.get('email');
+  const token = searchParams.get('token');
 
-  if (!unit_id || !email) {
-    return NextResponse.json({ error: 'unit_id and email are required' }, { status: 400 });
+  if (!unit_id || !token) {
+    return NextResponse.json({ error: 'unit_id and token are required' }, { status: 400 });
   }
+
+  const tokenData = decodeVerificationToken(token);
+  if (!tokenData || tokenData.unit_id !== unit_id) {
+    return NextResponse.json({ error: 'Unauthorized' }, { status: 403 });
+  }
+
+  const normalizedEmail = tokenData.email;
 
   // Step 1: Fetch all resident_vehicles for unit_id
   const { data: vehicles, error: vehiclesError } = await supabaseAdmin
@@ -28,8 +36,7 @@ export async function GET(req: NextRequest) {
     return NextResponse.json({ error: 'no_vehicles' }, { status: 404 });
   }
 
-  // Step 2: Verify email matches at least one vehicle's owner_email (case-insensitive)
-  const normalizedEmail = email.trim().toLowerCase();
+  // Confirm the verified email still matches (token could theoretically be replayed after email change)
   const emailMatches = vehicles.some(
     (v) => v.owner_email?.trim().toLowerCase() === normalizedEmail
   );

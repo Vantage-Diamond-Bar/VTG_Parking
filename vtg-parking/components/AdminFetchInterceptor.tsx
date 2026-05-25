@@ -1,18 +1,7 @@
 'use client'
 
-import { useEffect } from 'react'
-
+// Auth is handled by the httpOnly session cookie, which browsers attach automatically
+// to all same-origin requests. No client-side token injection needed.
 export function AdminFetchInterceptor() {
-  useEffect(() => {
-    const original = window.fetch
-    window.fetch = (input, init) => {
-      const token = localStorage.getItem('vtg_admin_token')
-      if (token) {
-        init = { ...init, headers: { ...(init?.headers as Record<string, string>), 'X-Session-Token': token } }
-      }
-      return original(input, init)
-    }
-    return () => { window.fetch = original }
-  }, [])
   return null
 }
