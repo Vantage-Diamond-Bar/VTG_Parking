@@ -63,8 +63,8 @@ async function recomputeQuota(unit_id: string, months: string[]) {
 
 // ── PATCH ─────────────────────────────────────────────────────────────────────
 
-export async function PATCH(req: NextRequest, { params }: { params: { id: string } }) {
-  const { id } = params;
+export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
+  const { id } = await params;
   const { searchParams } = new URL(req.url);
   const unit_id = searchParams.get('unit_id');
   const token   = searchParams.get('token');
@@ -168,8 +168,8 @@ export async function PATCH(req: NextRequest, { params }: { params: { id: string
 
 // ── DELETE ────────────────────────────────────────────────────────────────────
 
-export async function DELETE(req: NextRequest, { params }: { params: { id: string } }) {
-  const { id } = params;
+export async function DELETE(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
+  const { id } = await params;
   const { searchParams } = new URL(req.url);
   const unit_id = searchParams.get('unit_id');
   const token   = searchParams.get('token');
