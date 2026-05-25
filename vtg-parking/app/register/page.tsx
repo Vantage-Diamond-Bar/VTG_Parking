@@ -899,7 +899,9 @@ function ManageView({ t, unitId, confirmedEmail, verificationToken, unitData, un
         showToast('Visitor registration updated.')
         await Promise.all([loadVisitorRegs(), loadQuota()])
       } else {
-        const msg = json.error === 'plate_is_resident' ? 'That plate belongs to a registered resident vehicle.'
+        const msg =
+          json.error === 'plate_is_resident' ? 'That plate belongs to a registered resident vehicle.'
+          : json.error === 'quota_exceeded'  ? `Monthly visitor quota would be exceeded (${json.month}). Please choose different dates.`
           : (json.error ?? 'Failed to update.')
         showToast(msg, 'error')
       }

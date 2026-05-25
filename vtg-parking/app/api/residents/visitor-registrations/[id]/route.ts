@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { supabaseAdmin } from '@/lib/supabase';
 import { decodeVerificationToken } from '@/lib/auth';
-import { normalizedPlate, ptInputToISO, PT_ZONE, countNights } from '@/lib/utils';
+import { normalizedPlate, ptInputToISO, PT_ZONE, countNights, VISITOR_QUOTA_LIMIT } from '@/lib/utils';
 
 // ── Timezone helpers ──────────────────────────────────────────────────────────
 
@@ -26,6 +26,48 @@ function affectedMonths(startISO: string, endISO: string): string[] {
     cursor.setUTCDate(cursor.getUTCDate() + 1);
   }
   return Array.from(months);
+}
+
+// Returns the first PT month that would exceed the quota after applying proposed [newStart, newEnd],
+// excluding the registration being edited (exclude_id) from the existing totals.
+async function checkQuotaExceeded(
+  unit_id: string,
+  exclude_id: string,
+  newStart: string,
+  newEnd: string
+): Promise<string | null> {
+  const months = affectedMonths(newStart, newEnd);
+  for (const yearMonth of months) {
+    const [y, mo] = yearMonth.split('-').map(Number);
+    const nextMo = mo === 12 ? 1 : mo + 1;
+    const nextY  = mo === 12 ? y + 1 : y;
+    const monthStart = ptInputToISO(`${yearMonth}-01T00:00`);
+    const monthEnd   = ptInputToISO(`${String(nextY)}-${String(nextMo).padStart(2, '0')}-01T00:00`);
+
+    // All other registrations for this unit overlapping this month
+    const { data: others } = await supabaseAdmin
+      .from('visitor_registrations')
+      .select('start_datetime, end_datetime')
+      .eq('unit_id', unit_id)
+      .neq('id', exclude_id)
+      .lt('start_datetime', monthEnd)
+      .gt('end_datetime', monthStart);
+
+    let total = 0;
+    for (const r of others ?? []) {
+      const s = r.start_datetime < monthStart ? monthStart : r.start_datetime;
+      const e = r.end_datetime   > monthEnd   ? monthEnd   : r.end_datetime;
+      total += countNights(s, e);
+    }
+
+    // Add nights contributed by the proposed new range in this month
+    const ps = newStart < monthStart ? monthStart : newStart;
+    const pe = newEnd   > monthEnd   ? monthEnd   : newEnd;
+    total += countNights(ps, pe);
+
+    if (total > VISITOR_QUOTA_LIMIT) return yearMonth;
+  }
+  return null;
 }
 
 // Recompute visitor_monthly_quota for given unit + months from live registration data.
@@ -146,6 +188,15 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
     updates.end_datetime   = end_datetime;
   }
 
+  // Quota guard: simulate the new range and reject if any month would exceed the limit.
+  // For active registrations start_datetime is unchanged; for upcoming both may change.
+  const proposedStart = updates.start_datetime ?? oldStart;
+  const proposedEnd   = updates.end_datetime;
+  const exceededMonth = await checkQuotaExceeded(unit_id, id, proposedStart, proposedEnd);
+  if (exceededMonth) {
+    return NextResponse.json({ error: 'quota_exceeded', month: exceededMonth }, { status: 409 });
+  }
+
   const { error: updateErr } = await supabaseAdmin
     .from('visitor_registrations')
     .update(updates)
@@ -155,11 +206,9 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
   if (updateErr) return NextResponse.json({ error: updateErr.message }, { status: 500 });
 
   // Recompute quota for all months touched by old or new range
-  const newStart = updates.start_datetime ?? oldStart;
-  const newEnd   = updates.end_datetime;
-  const months   = Array.from(new Set([
+  const months = Array.from(new Set([
     ...affectedMonths(oldStart, oldEnd),
-    ...affectedMonths(newStart, newEnd),
+    ...affectedMonths(proposedStart, proposedEnd),
   ]));
   await recomputeQuota(unit_id, months);
 
