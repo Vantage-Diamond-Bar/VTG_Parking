@@ -3,7 +3,7 @@
 import { useState, useEffect, useCallback } from 'react'
 import Link from 'next/link'
 import { useTranslations } from 'next-intl'
-import { US_STATES, CAR_COLORS, CAR_MAKES, VEHICLE_TYPES, VISITOR_QUOTA_LIMIT, getYearMonth } from '@/lib/utils'
+import { US_STATES, CAR_COLORS, CAR_MAKES, VEHICLE_TYPES, VISITOR_QUOTA_LIMIT, getYearMonth, ptInputToISO, formatPDT } from '@/lib/utils'
 import PhoneInput from '@/components/PhoneInput'
 
 // ─── Types ─────────────────────────────────────────────────────────────────
@@ -44,6 +44,22 @@ interface UnitData {
   unit_address: string
   violations: ViolationRecord[]
   quota: { nights_used: number; quota_limit: number }
+}
+
+interface VisitorReg {
+  id: string
+  access_code: string
+  visitor_name?: string | null
+  visitor_phone?: string | null
+  visitor_phone_country_code?: string | null
+  license_plate: string
+  plate_state?: string | null
+  make?: string | null
+  model?: string | null
+  color?: string | null
+  start_datetime: string
+  end_datetime: string
+  status: 'upcoming' | 'active' | 'expired'
 }
 
 type PageState = 'idle' | 'checking' | 'new' | 'verify' | 'otp' | 'manage' | 'new_success'
@@ -323,6 +339,7 @@ export default function RegisterPage() {
         t={t}
         unitId={unitId}
         confirmedEmail={confirmedEmail}
+        verificationToken={verificationToken}
         unitData={unitData}
         units={units}
         toast={toast}
@@ -643,8 +660,19 @@ function VehicleFormCard({ vehicle, index, showRemove, fieldErrors, t, inputCls,
 
 // ─── Management View ──────────────────────────────────────────────────────
 
-function ManageView({ t, unitId, confirmedEmail, unitData, units, toast, toastType, showToast, onReload, inputCls, labelCls, sectionCls }: {
-  t: any; unitId: string; confirmedEmail: string; unitData: UnitData
+// Convert a UTC ISO string to a datetime-local input value in Pacific Time
+function isoToPTInput(isoStr: string): string {
+  const d = new Date(isoStr)
+  const fmt = new Intl.DateTimeFormat('sv-SE', {
+    timeZone: 'America/Los_Angeles',
+    year: 'numeric', month: '2-digit', day: '2-digit',
+    hour: '2-digit', minute: '2-digit', hour12: false,
+  })
+  return fmt.format(d).replace(' ', 'T').slice(0, 16)
+}
+
+function ManageView({ t, unitId, confirmedEmail, verificationToken, unitData, units, toast, toastType, showToast, onReload, inputCls, labelCls, sectionCls }: {
+  t: any; unitId: string; confirmedEmail: string; verificationToken: string; unitData: UnitData
   units: Unit[]; toast: string; toastType: 'success' | 'error'; showToast: (m: string, type?: 'success' | 'error') => void; onReload: () => void
   inputCls: string; labelCls: string; sectionCls: string
 }) {
@@ -685,6 +713,15 @@ function ManageView({ t, unitId, confirmedEmail, unitData, units, toast, toastTy
   const [withdrawTarget, setWithdrawTarget] = useState<string | null>(null)
   const [withdrawing, setWithdrawing] = useState(false)
 
+  // Visitor registrations
+  const [visitorRegs, setVisitorRegs] = useState<VisitorReg[]>([])
+  const [visitorRegsLoading, setVisitorRegsLoading] = useState(false)
+  const [editingVisitorId, setEditingVisitorId] = useState<string | null>(null)
+  const [visitorEdits, setVisitorEdits] = useState<Record<string, string>>({})
+  const [visitorSaving, setVisitorSaving] = useState(false)
+  const [deleteVisitorTarget, setDeleteVisitorTarget] = useState<string | null>(null)
+  const [deletingVisitor, setDeletingVisitor] = useState(false)
+
   // Doc preview lightbox
   const [docPreviewUrl, setDocPreviewUrl] = useState<string | null>(null)
 
@@ -708,6 +745,8 @@ function ManageView({ t, unitId, confirmedEmail, unitData, units, toast, toastTy
       .catch(() => {})
       .finally(() => setQuotaLoading(false))
   }, [unitId, selectedMonth])
+
+  useEffect(() => { loadVisitorRegs() }, [unitId, verificationToken]) // eslint-disable-line react-hooks/exhaustive-deps
 
   async function saveOwner() {
     setOwnerSaving(true)
@@ -796,6 +835,94 @@ function ManageView({ t, unitId, confirmedEmail, unitData, units, toast, toastTy
       })
       if (res.ok) { setWithdrawTarget(null); showToast('Application withdrawn successfully.'); await onReload() }
     } finally { setWithdrawing(false) }
+  }
+
+  async function loadVisitorRegs() {
+    if (!verificationToken) return
+    setVisitorRegsLoading(true)
+    try {
+      const res = await fetch(`/api/residents/visitor-registrations?unit_id=${unitId}&token=${encodeURIComponent(verificationToken)}`)
+      if (res.ok) {
+        const json = await res.json()
+        setVisitorRegs(json.registrations ?? [])
+      }
+    } finally {
+      setVisitorRegsLoading(false)
+    }
+  }
+
+  function startEditVisitor(reg: VisitorReg) {
+    setEditingVisitorId(reg.id)
+    setVisitorEdits({
+      visitor_name: reg.visitor_name ?? '',
+      license_plate: reg.license_plate,
+      plate_state: reg.plate_state ?? '',
+      make: reg.make ?? '',
+      model: reg.model ?? '',
+      color: reg.color ?? '',
+      start_datetime: isoToPTInput(reg.start_datetime),
+      end_datetime: isoToPTInput(reg.end_datetime),
+    })
+  }
+
+  function startEditVisitorCheckout(reg: VisitorReg) {
+    setEditingVisitorId(reg.id)
+    setVisitorEdits({ end_datetime: isoToPTInput(reg.end_datetime) })
+  }
+
+  async function saveVisitorReg(reg: VisitorReg) {
+    setVisitorSaving(true)
+    try {
+      const isActive = reg.status === 'active'
+      const body: Record<string, any> = isActive
+        ? { end_datetime: ptInputToISO(visitorEdits.end_datetime) }
+        : {
+            visitor_name: visitorEdits.visitor_name || null,
+            license_plate: visitorEdits.license_plate,
+            plate_state: visitorEdits.plate_state || null,
+            make: visitorEdits.make || null,
+            model: visitorEdits.model || null,
+            color: visitorEdits.color || null,
+            start_datetime: ptInputToISO(visitorEdits.start_datetime),
+            end_datetime: ptInputToISO(visitorEdits.end_datetime),
+          }
+      const res = await fetch(
+        `/api/residents/visitor-registrations/${reg.id}?unit_id=${unitId}&token=${encodeURIComponent(verificationToken)}`,
+        { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) }
+      )
+      const json = await res.json()
+      if (res.ok) {
+        setEditingVisitorId(null)
+        showToast('Visitor registration updated.')
+        await loadVisitorRegs()
+      } else {
+        const msg = json.error === 'plate_is_resident' ? 'That plate belongs to a registered resident vehicle.'
+          : (json.error ?? 'Failed to update.')
+        showToast(msg, 'error')
+      }
+    } finally {
+      setVisitorSaving(false)
+    }
+  }
+
+  async function deleteVisitorReg(id: string) {
+    setDeletingVisitor(true)
+    try {
+      const res = await fetch(
+        `/api/residents/visitor-registrations/${id}?unit_id=${unitId}&token=${encodeURIComponent(verificationToken)}`,
+        { method: 'DELETE' }
+      )
+      if (res.ok) {
+        setDeleteVisitorTarget(null)
+        showToast('Visitor registration deleted.')
+        await loadVisitorRegs()
+      } else {
+        const json = await res.json()
+        showToast(json.error ?? 'Failed to delete.', 'error')
+      }
+    } finally {
+      setDeletingVisitor(false)
+    }
   }
 
   function validateAddVehicle(): boolean {
@@ -1195,6 +1322,140 @@ function ManageView({ t, unitId, confirmedEmail, unitData, units, toast, toastTy
           </div>
         </div>
 
+        {/* ── Visitor Registrations ─────────────────────────── */}
+        <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-6 mb-5">
+          <h2 className={sectionCls}>My Visitor Registrations</h2>
+          {visitorRegsLoading ? (
+            <p className="text-sm text-gray-500">Loading…</p>
+          ) : visitorRegs.length === 0 ? (
+            <p className="text-sm text-gray-500">No visitor registrations this month or upcoming.</p>
+          ) : (
+            <div className="space-y-3">
+              {visitorRegs.map((reg) => {
+                const isExpired  = reg.status === 'expired'
+                const isActive   = reg.status === 'active'
+                const isUpcoming = reg.status === 'upcoming'
+                const isEditing  = editingVisitorId === reg.id
+
+                const cardCls = isExpired
+                  ? 'border border-gray-200 bg-gray-50 rounded-xl p-4 opacity-70'
+                  : isActive
+                    ? 'border border-amber-300 bg-amber-50 rounded-xl p-4'
+                    : 'border border-gray-200 rounded-xl p-4'
+
+                return (
+                  <div key={reg.id} className={cardCls}>
+                    {isEditing ? (
+                      <div className="space-y-3">
+                        {isActive && (
+                          <p className="text-xs text-amber-700 bg-amber-100 border border-amber-200 rounded-lg px-3 py-2">
+                            ⚠️ This registration has already started. You can only change the checkout time.
+                          </p>
+                        )}
+                        {isUpcoming && (
+                          <div className="grid grid-cols-2 gap-3">
+                            <div>
+                              <label className={labelCls}>Guest Name (optional)</label>
+                              <input type="text" value={visitorEdits.visitor_name ?? ''} onChange={e => setVisitorEdits(d => ({ ...d, visitor_name: e.target.value }))} className={inputCls} />
+                            </div>
+                            <div>
+                              <label className={labelCls}>Color</label>
+                              <select value={visitorEdits.color ?? ''} onChange={e => setVisitorEdits(d => ({ ...d, color: e.target.value }))} className={inputCls}>
+                                <option value="">—</option>
+                                {CAR_COLORS.map(c => <option key={c} value={c}>{c}</option>)}
+                              </select>
+                            </div>
+                            <div>
+                              <label className={labelCls}>License Plate</label>
+                              <input type="text" value={visitorEdits.license_plate ?? ''} onChange={e => setVisitorEdits(d => ({ ...d, license_plate: e.target.value.toUpperCase().replace(/\s/g, '') }))} className={inputCls} />
+                            </div>
+                            <div>
+                              <label className={labelCls}>State</label>
+                              <select value={visitorEdits.plate_state ?? ''} onChange={e => setVisitorEdits(d => ({ ...d, plate_state: e.target.value }))} className={inputCls}>
+                                <option value="">—</option>
+                                {US_STATES.map(s => <option key={s} value={s}>{s}</option>)}
+                              </select>
+                            </div>
+                            <div>
+                              <label className={labelCls}>Make</label>
+                              <select value={visitorEdits.make ?? ''} onChange={e => setVisitorEdits(d => ({ ...d, make: e.target.value }))} className={inputCls}>
+                                <option value="">—</option>
+                                {CAR_MAKES.map(m => <option key={m} value={m}>{m}</option>)}
+                              </select>
+                            </div>
+                            <div>
+                              <label className={labelCls}>Model</label>
+                              <input type="text" value={visitorEdits.model ?? ''} onChange={e => setVisitorEdits(d => ({ ...d, model: e.target.value }))} className={inputCls} />
+                            </div>
+                            <div>
+                              <label className={labelCls}>Check-in (PT)</label>
+                              <input type="datetime-local" value={visitorEdits.start_datetime ?? ''} onChange={e => setVisitorEdits(d => ({ ...d, start_datetime: e.target.value }))} className={inputCls} />
+                            </div>
+                          </div>
+                        )}
+                        <div>
+                          <label className={labelCls}>Checkout (PT)</label>
+                          <input type="datetime-local" value={visitorEdits.end_datetime ?? ''} onChange={e => setVisitorEdits(d => ({ ...d, end_datetime: e.target.value }))} className={inputCls} />
+                        </div>
+                        <div className="flex gap-3">
+                          <button onClick={() => saveVisitorReg(reg)} disabled={visitorSaving}
+                            className="bg-blue-600 text-white text-sm px-4 py-2 rounded-lg hover:bg-blue-700 disabled:opacity-50">{visitorSaving ? '...' : t('save')}</button>
+                          <button onClick={() => setEditingVisitorId(null)} className="text-sm border border-gray-300 px-4 py-2 rounded-lg hover:bg-gray-50">{t('cancel_edit')}</button>
+                        </div>
+                      </div>
+                    ) : (
+                      <div>
+                        <div className="flex items-start justify-between mb-1">
+                          <div>
+                            <div className="font-semibold text-sm text-gray-900">
+                              {reg.visitor_name ? `${reg.visitor_name} · ` : ''}{reg.license_plate}{reg.plate_state ? ` / ${reg.plate_state}` : ''}
+                            </div>
+                            {(reg.make || reg.model || reg.color) && (
+                              <div className="text-xs text-gray-500">{[reg.color, reg.make, reg.model].filter(Boolean).join(' ')}</div>
+                            )}
+                            <div className="text-xs text-gray-500 mt-0.5">
+                              {formatPDT(reg.start_datetime, { short: true })} → {formatPDT(reg.end_datetime, { short: true })}
+                            </div>
+                            <div className="text-xs text-gray-400 mt-0.5">Code: <span className="font-mono tracking-widest">{reg.access_code}</span></div>
+                          </div>
+                          <div className="flex flex-col items-end gap-1.5 ml-2 shrink-0">
+                            {isExpired && (
+                              <span className="text-xs text-gray-400 font-medium">Expired</span>
+                            )}
+                            {isActive && (
+                              <span className="text-xs font-semibold text-amber-700 bg-amber-100 px-2 py-0.5 rounded-full">Active</span>
+                            )}
+                            {isUpcoming && (
+                              <span className="text-xs font-semibold text-blue-700 bg-blue-100 px-2 py-0.5 rounded-full">Upcoming</span>
+                            )}
+                            {!isExpired && (
+                              <div className="flex gap-1.5">
+                                <button
+                                  onClick={() => isActive ? startEditVisitorCheckout(reg) : startEditVisitor(reg)}
+                                  className="text-xs border border-gray-300 text-gray-600 px-3 py-1 rounded-lg hover:bg-gray-50"
+                                >{t('edit')}</button>
+                                {isUpcoming && (
+                                  <button
+                                    onClick={() => setDeleteVisitorTarget(reg.id)}
+                                    className="text-xs border border-red-200 text-red-600 px-3 py-1 rounded-lg hover:bg-red-50"
+                                  >{t('delete')}</button>
+                                )}
+                              </div>
+                            )}
+                          </div>
+                        </div>
+                        {isActive && (
+                          <p className="text-xs text-amber-600 mt-1">Registration in progress — only checkout time can be changed.</p>
+                        )}
+                      </div>
+                    )}
+                  </div>
+                )
+              })}
+            </div>
+          )}
+        </div>
+
         {/* ── Violation History ──────────────────────────────── */}
         <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-6 mb-5">
           <h2 className={sectionCls}>{t('section_violations')}</h2>
@@ -1271,6 +1532,21 @@ function ManageView({ t, unitId, confirmedEmail, unitData, units, toast, toastTy
               <button onClick={() => setDeleteTarget(null)} className="text-sm border border-gray-300 px-4 py-2 rounded-lg hover:bg-gray-50">{t('cancel_edit')}</button>
               <button onClick={() => handleDelete(deleteTarget)} disabled={deleting}
                 className="text-sm bg-red-600 text-white px-4 py-2 rounded-lg hover:bg-red-700 disabled:opacity-50">{deleting ? '...' : t('delete')}</button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Delete visitor registration confirm modal */}
+      {deleteVisitorTarget && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-xl shadow-xl w-full max-w-sm p-6">
+            <h2 className="text-lg font-semibold text-gray-900 mb-2">Delete Visitor Registration</h2>
+            <p className="text-sm text-gray-600 mb-6">Are you sure you want to delete this visitor registration? This cannot be undone.</p>
+            <div className="flex justify-end gap-3">
+              <button onClick={() => setDeleteVisitorTarget(null)} className="text-sm border border-gray-300 px-4 py-2 rounded-lg hover:bg-gray-50">{t('cancel_edit')}</button>
+              <button onClick={() => deleteVisitorReg(deleteVisitorTarget)} disabled={deletingVisitor}
+                className="text-sm bg-red-600 text-white px-4 py-2 rounded-lg hover:bg-red-700 disabled:opacity-50">{deletingVisitor ? '...' : t('delete')}</button>
             </div>
           </div>
         </div>
