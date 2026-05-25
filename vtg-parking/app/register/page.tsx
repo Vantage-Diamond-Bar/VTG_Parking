@@ -737,14 +737,17 @@ function ManageView({ t, unitId, confirmedEmail, verificationToken, unitData, un
   const [displayQuota, setDisplayQuota] = useState({ nights_used: unitData.quota.nights_used ?? 0, quota_limit: unitData.quota.quota_limit ?? VISITOR_QUOTA_LIMIT })
   const [quotaLoading, setQuotaLoading] = useState(false)
 
-  useEffect(() => {
+  async function loadQuota(month = selectedMonth) {
     setQuotaLoading(true)
-    fetch(`/api/visitors/quota?unit_id=${unitId}&year_month=${selectedMonth}`)
-      .then(r => r.json())
-      .then(d => { if (d.nights_used !== undefined) setDisplayQuota({ nights_used: d.nights_used, quota_limit: d.quota_limit ?? VISITOR_QUOTA_LIMIT }) })
-      .catch(() => {})
-      .finally(() => setQuotaLoading(false))
-  }, [unitId, selectedMonth])
+    try {
+      const r = await fetch(`/api/visitors/quota?unit_id=${unitId}&year_month=${month}`)
+      const d = await r.json()
+      if (d.nights_used !== undefined) setDisplayQuota({ nights_used: d.nights_used, quota_limit: d.quota_limit ?? VISITOR_QUOTA_LIMIT })
+    } catch {}
+    finally { setQuotaLoading(false) }
+  }
+
+  useEffect(() => { loadQuota() }, [unitId, selectedMonth]) // eslint-disable-line react-hooks/exhaustive-deps
 
   useEffect(() => { loadVisitorRegs() }, [unitId, verificationToken]) // eslint-disable-line react-hooks/exhaustive-deps
 
@@ -894,7 +897,7 @@ function ManageView({ t, unitId, confirmedEmail, verificationToken, unitData, un
       if (res.ok) {
         setEditingVisitorId(null)
         showToast('Visitor registration updated.')
-        await loadVisitorRegs()
+        await Promise.all([loadVisitorRegs(), loadQuota()])
       } else {
         const msg = json.error === 'plate_is_resident' ? 'That plate belongs to a registered resident vehicle.'
           : (json.error ?? 'Failed to update.')
@@ -915,7 +918,7 @@ function ManageView({ t, unitId, confirmedEmail, verificationToken, unitData, un
       if (res.ok) {
         setDeleteVisitorTarget(null)
         showToast('Visitor registration deleted.')
-        await loadVisitorRegs()
+        await Promise.all([loadVisitorRegs(), loadQuota()])
       } else {
         const json = await res.json()
         showToast(json.error ?? 'Failed to delete.', 'error')
