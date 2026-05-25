@@ -259,6 +259,30 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ success: true, oversized_pending: isOversized });
   }
 
+  if (action === 'withdraw_pending') {
+    const { vehicle_id } = body;
+    if (!vehicle_id) return NextResponse.json({ error: 'vehicle_id is required' }, { status: 400 });
+
+    const { data: vehicle, error: fetchError } = await supabaseAdmin
+      .from('resident_vehicles')
+      .select('id, approval_status')
+      .eq('id', vehicle_id)
+      .eq('unit_id', unit_id)
+      .single();
+
+    if (fetchError || !vehicle) return NextResponse.json({ error: 'Vehicle not found' }, { status: 404 });
+    if (vehicle.approval_status !== 'pending') return NextResponse.json({ error: 'Only pending applications can be withdrawn' }, { status: 409 });
+
+    const { error: deleteError } = await supabaseAdmin
+      .from('resident_vehicles')
+      .delete()
+      .eq('id', vehicle_id)
+      .eq('unit_id', unit_id);
+
+    if (deleteError) return NextResponse.json({ error: 'Failed to withdraw application' }, { status: 500 });
+    return NextResponse.json({ success: true });
+  }
+
   if (action === 'delete_vehicle') {
     const { vehicle_id } = body;
 

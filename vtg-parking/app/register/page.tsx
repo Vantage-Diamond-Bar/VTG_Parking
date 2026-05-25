@@ -676,6 +676,15 @@ function ManageView({ t, unitId, confirmedEmail, unitData, units, toast, toastTy
   const [deleteTarget, setDeleteTarget] = useState<string | null>(null)
   const [deleting, setDeleting] = useState(false)
 
+  // Pending vehicle edit
+  const [editingPendingId, setEditingPendingId] = useState<string | null>(null)
+  const [pendingEdits, setPendingEdits] = useState<Record<string, any>>({})
+  const [pendingSaving, setPendingSaving] = useState(false)
+
+  // Withdraw confirm
+  const [withdrawTarget, setWithdrawTarget] = useState<string | null>(null)
+  const [withdrawing, setWithdrawing] = useState(false)
+
   // Doc preview lightbox
   const [docPreviewUrl, setDocPreviewUrl] = useState<string | null>(null)
 
@@ -756,6 +765,37 @@ function ManageView({ t, unitId, confirmedEmail, unitData, units, toast, toastTy
       })
       if (res.ok) { setDeleteTarget(null); showToast(t('vehicle_deleted')); await onReload() }
     } finally { setDeleting(false) }
+  }
+
+  function startEditPending(p: OversizedPending) {
+    setEditingPendingId(p.id)
+    setPendingEdits({ year: String(p.year), make: p.make, model: p.model, color: p.color, license_plate: p.license_plate, plate_state: p.plate_state })
+  }
+
+  async function savePending(vehicleId: string) {
+    setPendingSaving(true)
+    try {
+      const res = await fetch('/api/residents/manage', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action: 'update_vehicle', unit_id: unitId, email: confirmedEmail, vehicle_id: vehicleId, ...pendingEdits, is_oversized: true }),
+      })
+      const json = await res.json()
+      if (res.ok) { setEditingPendingId(null); showToast(t('vehicle_updated')); await onReload() }
+      else showToast(json.error === 'plate_conflict' ? t('error_plate_conflict') : (json.error ?? 'Failed to update'), 'error')
+    } finally { setPendingSaving(false) }
+  }
+
+  async function handleWithdraw(vehicleId: string) {
+    setWithdrawing(true)
+    try {
+      const res = await fetch('/api/residents/manage', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action: 'withdraw_pending', unit_id: unitId, email: confirmedEmail, vehicle_id: vehicleId }),
+      })
+      if (res.ok) { setWithdrawTarget(null); showToast('Application withdrawn successfully.'); await onReload() }
+    } finally { setWithdrawing(false) }
   }
 
   function validateAddVehicle(): boolean {
@@ -1018,14 +1058,66 @@ function ManageView({ t, unitId, confirmedEmail, unitData, units, toast, toastTy
             {/* Pending oversized applications */}
             {oversizedPending.map((p) => (
               <div key={p.id} className="border border-amber-300 bg-amber-50 rounded-xl p-4">
-                <div className="flex items-start justify-between">
-                  <div>
-                    <div className="font-semibold text-amber-900">{p.year} {p.color} {p.make} {p.model}</div>
-                    <div className="text-sm font-mono text-amber-700">{p.license_plate}{p.plate_state ? ` · ${p.plate_state}` : ''}</div>
+                {editingPendingId === p.id ? (
+                  <div className="space-y-3">
+                    <div className="grid grid-cols-2 gap-3">
+                      <div>
+                        <label className={labelCls}>{t('year')}</label>
+                        <input type="number" value={pendingEdits.year ?? ''} onChange={e => setPendingEdits(d => ({ ...d, year: e.target.value }))} className={inputCls} />
+                      </div>
+                      <div>
+                        <label className={labelCls}>{t('color')}</label>
+                        <select value={pendingEdits.color ?? ''} onChange={e => setPendingEdits(d => ({ ...d, color: e.target.value }))} className={inputCls}>
+                          {CAR_COLORS.map(c => <option key={c} value={c}>{c}</option>)}
+                        </select>
+                      </div>
+                    </div>
+                    <div className="grid grid-cols-2 gap-3">
+                      <div>
+                        <label className={labelCls}>{t('make')}</label>
+                        <select value={pendingEdits.make ?? ''} onChange={e => setPendingEdits(d => ({ ...d, make: e.target.value }))} className={inputCls}>
+                          {CAR_MAKES.map(m => <option key={m} value={m}>{m}</option>)}
+                        </select>
+                      </div>
+                      <div>
+                        <label className={labelCls}>{t('model')}</label>
+                        <input type="text" value={pendingEdits.model ?? ''} onChange={e => setPendingEdits(d => ({ ...d, model: e.target.value }))} className={inputCls} />
+                      </div>
+                    </div>
+                    <div className="grid grid-cols-2 gap-3">
+                      <div>
+                        <label className={labelCls}>{t('license_plate')}</label>
+                        <input type="text" value={pendingEdits.license_plate ?? ''} onChange={e => setPendingEdits(d => ({ ...d, license_plate: e.target.value.toUpperCase().replace(/\s/g, '') }))} className={inputCls} />
+                      </div>
+                      <div>
+                        <label className={labelCls}>{t('plate_state')}</label>
+                        <select value={pendingEdits.plate_state ?? ''} onChange={e => setPendingEdits(d => ({ ...d, plate_state: e.target.value }))} className={inputCls}>
+                          {US_STATES.map(s => <option key={s} value={s}>{s}</option>)}
+                        </select>
+                      </div>
+                    </div>
+                    <div className="flex gap-3">
+                      <button onClick={() => savePending(p.id)} disabled={pendingSaving}
+                        className="bg-blue-600 text-white text-sm px-4 py-2 rounded-lg hover:bg-blue-700 disabled:opacity-50">{pendingSaving ? '...' : t('save')}</button>
+                      <button onClick={() => setEditingPendingId(null)} className="text-sm border border-gray-300 px-4 py-2 rounded-lg hover:bg-gray-50">{t('cancel_edit')}</button>
+                    </div>
                   </div>
-                  <span className="text-xs font-semibold bg-amber-200 text-amber-800 px-3 py-1 rounded-full whitespace-nowrap">⏳ Pending Garage Check</span>
-                </div>
-                <p className="text-xs text-amber-700 mt-2">This oversized vehicle is awaiting admin garage inspection approval. You will be notified once a decision is made.</p>
+                ) : (
+                  <div>
+                    <div className="flex items-start justify-between mb-2">
+                      <div>
+                        <div className="font-semibold text-amber-900">{p.year} {p.color} {p.make} {p.model}</div>
+                        <div className="text-sm font-mono text-amber-700">{p.license_plate}{p.plate_state ? ` · ${p.plate_state}` : ''}</div>
+                      </div>
+                      <div className="flex gap-2 shrink-0 ml-2">
+                        <button onClick={() => startEditPending(p)} className="text-xs border border-gray-300 text-gray-600 px-3 py-1 rounded-lg hover:bg-gray-50">{t('edit')}</button>
+                        <button onClick={() => setWithdrawTarget(p.id)} className="text-xs border border-red-200 text-red-600 px-3 py-1 rounded-lg hover:bg-red-50">Withdraw</button>
+                      </div>
+                    </div>
+                    <span className="inline-block text-xs font-semibold bg-amber-200 text-amber-800 px-3 py-1 rounded-full mb-2">⏳ Pending Garage Check</span>
+                    <p className="text-xs text-amber-700">This oversized vehicle is awaiting admin garage inspection approval. You will be notified once a decision is made.</p>
+                  </div>
+                )}
               </div>
             ))}
 
@@ -1179,6 +1271,21 @@ function ManageView({ t, unitId, confirmedEmail, unitData, units, toast, toastTy
               <button onClick={() => setDeleteTarget(null)} className="text-sm border border-gray-300 px-4 py-2 rounded-lg hover:bg-gray-50">{t('cancel_edit')}</button>
               <button onClick={() => handleDelete(deleteTarget)} disabled={deleting}
                 className="text-sm bg-red-600 text-white px-4 py-2 rounded-lg hover:bg-red-700 disabled:opacity-50">{deleting ? '...' : t('delete')}</button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Withdraw pending application confirm modal */}
+      {withdrawTarget && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-xl shadow-xl w-full max-w-sm p-6">
+            <h2 className="text-lg font-semibold text-gray-900 mb-2">Withdraw Application</h2>
+            <p className="text-sm text-gray-600 mb-6">Are you sure you want to withdraw this oversized vehicle application? This action cannot be undone.</p>
+            <div className="flex justify-end gap-3">
+              <button onClick={() => setWithdrawTarget(null)} className="text-sm border border-gray-300 px-4 py-2 rounded-lg hover:bg-gray-50">{t('cancel_edit')}</button>
+              <button onClick={() => handleWithdraw(withdrawTarget)} disabled={withdrawing}
+                className="text-sm bg-red-600 text-white px-4 py-2 rounded-lg hover:bg-red-700 disabled:opacity-50">{withdrawing ? '...' : 'Withdraw'}</button>
             </div>
           </div>
         </div>
