@@ -122,6 +122,12 @@ export async function GET(req: NextRequest) {
       vehicle_type: v.vehicle_type,
       status: v.approval_status,
       created_at: v.created_at,
+      // Owner contact fields — needed when all vehicles are pending (no approved firstVehicle)
+      owner_name: v.owner_name,
+      owner_phone: v.owner_phone,
+      owner_phone_country_code: v.owner_phone_country_code,
+      owner_email: v.owner_email,
+      registrant_type: v.registrant_type,
     }));
 
   return NextResponse.json({

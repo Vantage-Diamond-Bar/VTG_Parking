@@ -34,6 +34,8 @@ interface ViolationRecord {
 interface OversizedPending {
   id: string; year: number; make: string; model: string; color: string
   license_plate: string; plate_state: string; vehicle_type?: string; status: string; created_at: string
+  owner_name?: string; owner_phone?: string; owner_phone_country_code?: string | null
+  owner_email?: string; registrant_type?: string
 }
 
 interface UnitData {
@@ -650,7 +652,8 @@ function ManageView({ t, unitId, confirmedEmail, unitData, units, toast, toastTy
   const unitAddress = unitData.unit_address
   const vehicles = unitData.vehicles
   const oversizedPending = unitData.oversized_pending ?? []
-  const firstVehicle = vehicles[0]
+  // Fall back to first pending oversized vehicle for contact info when there are no approved vehicles yet
+  const firstVehicle: ResidentVehicle | OversizedPending | undefined = vehicles[0] ?? oversizedPending[0]
 
   // Owner edit state
   const [editingOwner, setEditingOwner] = useState(false)
