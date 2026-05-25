@@ -37,7 +37,7 @@ export async function GET(req: NextRequest) {
         .from('resident_vehicles')
         .select('*, units(address)')
         .ilike('license_plate', plate)
-        .eq('approval_status', 'approved')
+        .in('approval_status', ['approved', 'pending'])
         .maybeSingle(),
       supabaseAdmin
         .from('vacation_parking_requests')
@@ -61,6 +61,8 @@ export async function GET(req: NextRequest) {
         color: r.color,
         plate: r.license_plate,
         state: r.plate_state,
+        approval_status: r.approval_status,
+        is_oversized: r.is_oversized,
       });
     }
 

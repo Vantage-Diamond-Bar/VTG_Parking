@@ -23,6 +23,8 @@ interface ResultItem {
   access_code?: string;
   status?: 'active' | 'expired' | 'upcoming';
   message?: string;
+  approval_status?: string;
+  is_oversized?: boolean;
 }
 
 const US_STATES = [
@@ -144,6 +146,32 @@ export default function PatrolPage() {
 
   const renderCard = (item: ResultItem, index: number) => {
     if (item.type === 'resident') {
+      if (item.approval_status === 'pending') {
+        return (
+          <div key={index} className="bg-orange-50 border-2 border-orange-400 rounded-xl p-6 mt-4">
+            <div className="flex items-center justify-between mb-3">
+              <div className="flex items-center gap-3">
+                <span className="text-2xl">🚛</span>
+                <h2 className="text-xl font-bold text-orange-800">{t('resident_vehicle')}</h2>
+              </div>
+              <span className="inline-block bg-orange-600 text-white text-xs font-bold px-3 py-1 rounded-full uppercase tracking-wide">
+                RESIDENT VEHICLE
+              </span>
+            </div>
+            <div className="bg-orange-400 text-white rounded-lg px-4 py-3 mb-4 flex items-center gap-2">
+              <span className="text-lg">⚠️</span>
+              <span className="font-bold text-sm uppercase tracking-wide">OVERSIZED — SUBJECT TO APPROVAL</span>
+            </div>
+            <div className="grid grid-cols-2 gap-3 text-sm">
+              <div><span className="text-orange-700 font-medium">{t('unit')}:</span> <span className="font-semibold">{item.address}</span></div>
+              <div><span className="text-orange-700 font-medium">{t('owner')}:</span> <span className="font-semibold">{item.owner_name}</span></div>
+              <div><span className="text-orange-700 font-medium">{t('vehicle')}:</span> <span className="font-semibold">{[item.year, item.make, item.model].filter(Boolean).join(' ')}</span></div>
+              <div><span className="text-orange-700 font-medium">{t('color')}:</span> <span className="font-semibold">{item.color}</span></div>
+              <div><span className="text-orange-700 font-medium">{t('plate')}:</span> <span className="font-mono font-bold text-orange-900">{item.plate}{item.state ? ` / ${item.state}` : ''}</span></div>
+            </div>
+          </div>
+        );
+      }
       return (
         <div key={index} className="bg-blue-50 border-2 border-blue-300 rounded-xl p-6 mt-4">
           <div className="flex items-center justify-between mb-4">
