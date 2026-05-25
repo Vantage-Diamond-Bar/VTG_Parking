@@ -14,6 +14,7 @@ export async function GET(req: NextRequest) {
     .from('resident_vehicles')
     .select('owner_email')
     .eq('unit_id', unit_id)
+    .eq('approval_status', 'approved')
 
   if (error) {
     return NextResponse.json({ error: error.message }, { status: 500 })

@@ -46,11 +46,11 @@ async function getStats(): Promise<Stats | null> {
   const year_month = getPTYearMonth();
   const monthStart = `${year_month}-01`;
   const [residentsResult, visitorsResult, violationsResult, vacationResult, oversizedResult] = await Promise.all([
-    supabaseAdmin.from('resident_vehicles').select('id', { count: 'exact', head: true }),
+    supabaseAdmin.from('resident_vehicles').select('id', { count: 'exact', head: true }).eq('approval_status', 'approved'),
     supabaseAdmin.from('visitor_registrations').select('id', { count: 'exact', head: true }).gte('created_at', monthStart),
     supabaseAdmin.from('violation_reports').select('id', { count: 'exact', head: true }).gte('submitted_at', monthStart),
     supabaseAdmin.from('vacation_parking_requests').select('id', { count: 'exact', head: true }).eq('status', 'pending'),
-    supabaseAdmin.from('oversized_applications').select('id', { count: 'exact', head: true }).eq('status', 'pending'),
+    supabaseAdmin.from('resident_vehicles').select('id', { count: 'exact', head: true }).eq('is_oversized', true).eq('approval_status', 'pending'),
   ]);
   return {
     total_residents: residentsResult.count ?? 0,

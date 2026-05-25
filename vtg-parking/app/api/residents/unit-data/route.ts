@@ -21,7 +21,7 @@ export async function GET(req: NextRequest) {
 
   const normalizedEmail = tokenData.email;
 
-  // Step 1: Fetch all resident_vehicles for unit_id
+  // Step 1: Fetch all resident_vehicles for unit_id (approved + pending)
   const { data: vehicles, error: vehiclesError } = await supabaseAdmin
     .from('resident_vehicles')
     .select('*')
@@ -36,7 +36,7 @@ export async function GET(req: NextRequest) {
     return NextResponse.json({ error: 'no_vehicles' }, { status: 404 });
   }
 
-  // Confirm the verified email still matches (token could theoretically be replayed after email change)
+  // Confirm the verified email still matches (any status — pending owners can view their data too)
   const emailMatches = vehicles.some(
     (v) => v.owner_email?.trim().toLowerCase() === normalizedEmail
   );
@@ -106,21 +106,26 @@ export async function GET(req: NextRequest) {
     // non-fatal
   }
 
-  // Step 6: Fetch pending oversized applications for this unit
-  let oversized_pending: any[] = [];
-  try {
-    const { data: pendingApps } = await supabaseAdmin
-      .from('oversized_applications')
-      .select('id, year, make, model, color, license_plate, plate_state, vehicle_type, status, created_at')
-      .eq('unit_id', unit_id)
-      .eq('status', 'pending');
-    oversized_pending = pendingApps ?? [];
-  } catch {
-    // Table may not exist yet — non-fatal
-  }
+  // Step 6: Split vehicles by approval_status
+  // Approved vehicles are the active registrations; pending are awaiting garage check.
+  const approvedVehicles = vehicles.filter((v) => v.approval_status === 'approved');
+  const oversized_pending = vehicles
+    .filter((v) => v.approval_status === 'pending')
+    .map((v) => ({
+      id: v.id,
+      year: v.year,
+      make: v.make,
+      model: v.model,
+      color: v.color,
+      license_plate: v.license_plate,
+      plate_state: v.plate_state,
+      vehicle_type: v.vehicle_type,
+      status: v.approval_status,
+      created_at: v.created_at,
+    }));
 
   return NextResponse.json({
-    vehicles,
+    vehicles: approvedVehicles,
     oversized_pending,
     unit_address,
     violations,

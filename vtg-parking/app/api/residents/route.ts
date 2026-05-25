@@ -11,24 +11,13 @@ export async function POST(req: NextRequest) {
   for (const vehicle of vehicles) {
     const plate = normalizedPlate(vehicle.license_plate);
 
-    // Check for plate conflict in resident_vehicles
+    // Plate conflict: resident_vehicles now holds both pending and approved
     const { data: existing } = await supabaseAdmin
       .from('resident_vehicles')
       .select('id')
       .ilike('license_plate', plate)
       .maybeSingle();
     if (existing) return NextResponse.json({ error: 'plate_conflict', plate }, { status: 409 });
-
-    // For oversized vehicles, also check if there's a pending application for this plate
-    if (vehicle.is_oversized === true) {
-      const { data: pendingApp } = await supabaseAdmin
-        .from('oversized_applications')
-        .select('id')
-        .ilike('license_plate', plate)
-        .eq('status', 'pending')
-        .maybeSingle();
-      if (pendingApp) return NextResponse.json({ error: 'plate_conflict', plate }, { status: 409 });
-    }
 
     // Use pre-uploaded URL if provided; otherwise fall back to base64 upload
     let registration_doc_url: string | null = vehicle.registration_doc_url ?? null;
@@ -50,101 +39,38 @@ export async function POST(req: NextRequest) {
     vehicle._registration_doc_url = registration_doc_url;
   }
 
-  // Second pass: route each vehicle to the right destination
-  const regularRows: object[] = [];
-  const oversizedPendingRows: object[] = [];
+  // Second pass: all vehicles go to resident_vehicles.
+  // Oversized vehicles enter as 'pending' (awaiting admin garage check).
+  // Regular vehicles enter as 'approved' immediately.
+  const rows = vehicles.map((v: any) => ({
+    unit_id,
+    owner_name,
+    owner_phone,
+    owner_phone_country_code: owner_phone_country_code ?? null,
+    owner_email,
+    registrant_type: registrant_type ?? 'owner',
+    opt_in_sms: opt_in_sms ?? false,
+    opt_in_email: opt_in_email ?? true,
+    year: v.year,
+    make: v.make,
+    model: v.model,
+    color: v.color,
+    license_plate: v._normalized_plate,
+    plate_state: v.plate_state ?? null,
+    registration_doc_url: v._registration_doc_url ?? null,
+    is_oversized: v.is_oversized === true,
+    vehicle_type: v.vehicle_type ?? null,
+    approval_status: v.is_oversized === true ? 'pending' : 'approved',
+  }));
 
-  for (const v of vehicles) {
-    if (v.is_oversized === true) {
-      // Check if there is already an approved application for this plate (renewal bypass)
-      const { data: approvedApp } = await supabaseAdmin
-        .from('oversized_applications')
-        .select('id')
-        .ilike('license_plate', v._normalized_plate)
-        .eq('status', 'approved')
-        .maybeSingle();
+  const { error } = await supabaseAdmin.from('resident_vehicles').insert(rows);
+  if (error) return NextResponse.json({ error: error.message }, { status: 500 });
 
-      if (approvedApp) {
-        // Renewal bypass — insert directly to resident_vehicles with is_oversized: true
-        regularRows.push({
-          unit_id,
-          owner_name,
-          owner_phone,
-          owner_phone_country_code: owner_phone_country_code ?? null,
-          owner_email,
-          registrant_type: registrant_type ?? 'owner',
-          opt_in_sms: opt_in_sms ?? false,
-          opt_in_email: opt_in_email ?? true,
-          year: v.year,
-          make: v.make,
-          model: v.model,
-          color: v.color,
-          license_plate: v._normalized_plate,
-          plate_state: v.plate_state,
-          registration_doc_url: v._registration_doc_url,
-          is_oversized: true,
-          vehicle_type: v.vehicle_type ?? null,
-        });
-      } else {
-        // No approved application — create a pending oversized_application record
-        oversizedPendingRows.push({
-          unit_id,
-          owner_name,
-          owner_phone: owner_phone ?? null,
-          owner_phone_country_code: owner_phone_country_code ?? null,
-          owner_email: owner_email ?? null,
-          registrant_type: registrant_type ?? 'owner',
-          year: v.year,
-          make: v.make,
-          model: v.model,
-          color: v.color,
-          license_plate: v._normalized_plate,
-          plate_state: v.plate_state ?? null,
-          registration_doc_url: v._registration_doc_url ?? null,
-          vehicle_type: v.vehicle_type ?? null,
-          status: 'pending',
-        });
-      }
-    } else {
-      // Regular (non-oversized) vehicle — insert directly to resident_vehicles
-      regularRows.push({
-        unit_id,
-        owner_name,
-        owner_phone,
-        owner_phone_country_code: owner_phone_country_code ?? null,
-        owner_email,
-        registrant_type: registrant_type ?? 'owner',
-        opt_in_sms: opt_in_sms ?? false,
-        opt_in_email: opt_in_email ?? true,
-        year: v.year,
-        make: v.make,
-        model: v.model,
-        color: v.color,
-        license_plate: v._normalized_plate,
-        plate_state: v.plate_state,
-        registration_doc_url: v._registration_doc_url,
-        is_oversized: false,
-        vehicle_type: v.vehicle_type ?? null,
-      });
-    }
-  }
-
-  // Insert regular vehicles
-  if (regularRows.length > 0) {
-    const { error } = await supabaseAdmin.from('resident_vehicles').insert(regularRows);
-    if (error) return NextResponse.json({ error: error.message }, { status: 500 });
-  }
-
-  // Insert oversized pending applications
-  if (oversizedPendingRows.length > 0) {
-    const { error } = await supabaseAdmin.from('oversized_applications').insert(oversizedPendingRows);
-    if (error) return NextResponse.json({ error: error.message }, { status: 500 });
-  }
-
+  const oversized_pending_count = rows.filter((r: any) => r.approval_status === 'pending').length;
   return NextResponse.json({
     success: true,
-    regular_count: regularRows.length,
-    oversized_pending_count: oversizedPendingRows.length,
+    regular_count: rows.length - oversized_pending_count,
+    oversized_pending_count,
   });
 }
 

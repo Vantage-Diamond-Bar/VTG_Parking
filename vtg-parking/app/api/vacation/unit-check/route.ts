@@ -13,6 +13,7 @@ export async function GET(req: NextRequest) {
     .from('resident_vehicles')
     .select('id, year, make, model, color, license_plate, plate_state, is_oversized, registration_doc_url, created_at, owner_email')
     .eq('unit_id', unit_id)
+    .eq('approval_status', 'approved')
 
   if (!vehicles || vehicles.length === 0) {
     return NextResponse.json({ has_vehicles: false, has_overdue: false, is_eligible: false })

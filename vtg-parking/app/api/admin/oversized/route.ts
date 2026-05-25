@@ -14,18 +14,22 @@ export async function GET(req: NextRequest) {
   const offset = page * limit;
 
   let query = supabaseAdmin
-    .from('oversized_applications')
+    .from('resident_vehicles')
     .select('*, units(address)', { count: 'exact' })
+    .eq('is_oversized', true)
     .order('created_at', { ascending: false })
     .range(offset, offset + limit - 1);
 
   if (status && status !== 'all') {
-    query = query.eq('status', status);
+    query = query.eq('approval_status', status);
   }
 
   const { data, error, count } = await query;
 
   if (error) return NextResponse.json({ error: error.message }, { status: 500 });
 
-  return NextResponse.json({ data, total: count, page, limit });
+  // Map approval_status → status for frontend compatibility
+  const mapped = (data ?? []).map((row) => ({ ...row, status: row.approval_status }));
+
+  return NextResponse.json({ data: mapped, total: count, page, limit });
 }

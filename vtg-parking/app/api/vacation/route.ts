@@ -15,12 +15,13 @@ export async function POST(req: NextRequest) {
     .from('resident_vehicles')
     .select('id, is_oversized')
     .eq('unit_id', unit_id)
+    .eq('approval_status', 'approved')
     .ilike('license_plate', license_plate)
     .maybeSingle()
 
   const isRegistered = matchedVehicle !== null
 
-  // Enhanced eligibility: registered AND (oversized OR unit has 3+ vehicles)
+  // Enhanced eligibility: registered AND (oversized OR unit has 3+ approved vehicles)
   let isEligible = false
   if (isRegistered) {
     if (matchedVehicle.is_oversized) {
@@ -30,17 +31,19 @@ export async function POST(req: NextRequest) {
         .from('resident_vehicles')
         .select('id', { count: 'exact', head: true })
         .eq('unit_id', unit_id)
+        .eq('approval_status', 'approved')
       isEligible = (count ?? 0) >= 3
     }
   }
 
-  // Block submission if unit has overdue registrations
+  // Block submission if unit has overdue approved registrations
   const oneYearAgo = new Date()
   oneYearAgo.setFullYear(oneYearAgo.getFullYear() - 1)
   const { data: unitVehicles } = await supabaseAdmin
     .from('resident_vehicles')
     .select('created_at')
     .eq('unit_id', unit_id)
+    .eq('approval_status', 'approved')
   const hasOverdue = (unitVehicles ?? []).some(
     (v) => new Date(v.created_at) < oneYearAgo
   )

@@ -232,78 +232,31 @@ export async function POST(req: NextRequest) {
       registration_doc_url = publicUrlData.publicUrl;
     }
 
-    // Route based on oversized flag
-    if (is_oversized === true) {
-      // Check for pending application conflict
-      const { data: pendingApp } = await supabaseAdmin
-        .from('oversized_applications')
-        .select('id')
-        .ilike('license_plate', plate)
-        .eq('status', 'pending')
-        .maybeSingle();
-      if (pendingApp) {
-        return NextResponse.json({ error: 'plate_conflict' }, { status: 409 });
-      }
+    // All vehicles go to resident_vehicles.
+    // Oversized enters as 'pending' (awaiting admin garage check); regular as 'approved'.
+    const isOversized = is_oversized === true;
+    const { error: insertError } = await supabaseAdmin.from('resident_vehicles').insert({
+      unit_id,
+      year,
+      make,
+      model,
+      color,
+      license_plate: plate,
+      plate_state: plate_state ?? null,
+      is_oversized: isOversized,
+      vehicle_type: body.vehicle_type ?? null,
+      registration_doc_url,
+      owner_name,
+      owner_phone,
+      owner_phone_country_code: owner_phone_country_code ?? null,
+      owner_email,
+      registrant_type,
+      approval_status: isOversized ? 'pending' : 'approved',
+    });
 
-      // Check if there's already an approved application (renewal bypass)
-      const { data: approvedApp } = await supabaseAdmin
-        .from('oversized_applications')
-        .select('id')
-        .ilike('license_plate', plate)
-        .eq('status', 'approved')
-        .maybeSingle();
+    if (insertError) return NextResponse.json({ error: 'Failed to add vehicle' }, { status: 500 });
 
-      if (approvedApp) {
-        // Insert directly to resident_vehicles with is_oversized: true
-        const { error: insertError } = await supabaseAdmin.from('resident_vehicles').insert({
-          unit_id, year, make, model, color,
-          license_plate: plate, plate_state,
-          is_oversized: true,
-          registration_doc_url,
-          owner_name, owner_phone, owner_phone_country_code: owner_phone_country_code ?? null, owner_email, registrant_type,
-        });
-        if (insertError) return NextResponse.json({ error: 'Failed to add vehicle' }, { status: 500 });
-      } else {
-        // Create a pending oversized application
-        const { error: appError } = await supabaseAdmin.from('oversized_applications').insert({
-          unit_id,
-          owner_name, owner_phone: owner_phone ?? null, owner_phone_country_code: owner_phone_country_code ?? null, owner_email: owner_email ?? null,
-          registrant_type: registrant_type ?? 'owner',
-          year, make, model, color,
-          license_plate: plate,
-          plate_state: plate_state ?? null,
-          registration_doc_url: registration_doc_url ?? null,
-          vehicle_type: body.vehicle_type ?? null,
-          status: 'pending',
-        });
-        if (appError) return NextResponse.json({ error: 'Failed to create oversized application' }, { status: 500 });
-        return NextResponse.json({ success: true, oversized_pending: true });
-      }
-    } else {
-      // Insert regular vehicle row
-      const { error: insertError } = await supabaseAdmin.from('resident_vehicles').insert({
-        unit_id,
-        year,
-        make,
-        model,
-        color,
-        license_plate: plate,
-        plate_state,
-        is_oversized: false,
-        registration_doc_url,
-        owner_name,
-        owner_phone,
-        owner_phone_country_code: owner_phone_country_code ?? null,
-        owner_email,
-        registrant_type,
-      });
-
-      if (insertError) {
-        return NextResponse.json({ error: 'Failed to add vehicle' }, { status: 500 });
-      }
-    }
-
-    return NextResponse.json({ success: true });
+    return NextResponse.json({ success: true, oversized_pending: isOversized });
   }
 
   if (action === 'delete_vehicle') {

@@ -18,46 +18,21 @@ export async function PATCH(
     return NextResponse.json({ error: 'Invalid status' }, { status: 400 });
   }
 
-  // Fetch the application
-  const { data: application } = await supabaseAdmin
-    .from('oversized_applications')
+  // Fetch the vehicle from resident_vehicles
+  const { data: vehicle } = await supabaseAdmin
+    .from('resident_vehicles')
     .select('*, units(address)')
     .eq('id', id)
+    .eq('is_oversized', true)
     .single();
 
-  if (!application) return NextResponse.json({ error: 'Not found' }, { status: 404 });
+  if (!vehicle) return NextResponse.json({ error: 'Not found' }, { status: 404 });
 
-  if (status === 'approved') {
-    // Insert the vehicle into resident_vehicles with is_oversized: true
-    const { error: insertError } = await supabaseAdmin.from('resident_vehicles').insert({
-      unit_id: application.unit_id,
-      owner_name: application.owner_name,
-      owner_phone: application.owner_phone ?? null,
-      owner_phone_country_code: application.owner_phone_country_code ?? null,
-      owner_email: application.owner_email ?? null,
-      registrant_type: application.registrant_type ?? 'owner',
-      opt_in_sms: false,
-      opt_in_email: true,
-      year: application.year,
-      make: application.make,
-      model: application.model,
-      color: application.color,
-      license_plate: application.license_plate,
-      plate_state: application.plate_state ?? null,
-      registration_doc_url: application.registration_doc_url ?? null,
-      is_oversized: true,
-    });
-
-    if (insertError) {
-      return NextResponse.json({ error: insertError.message }, { status: 500 });
-    }
-  }
-
-  // Update the oversized_applications record
+  // Update approval_status in-place — no separate insert needed
   const { error: updateError } = await supabaseAdmin
-    .from('oversized_applications')
+    .from('resident_vehicles')
     .update({
-      status,
+      approval_status: status,
       admin_notes: admin_notes ?? null,
       reviewed_at: new Date().toISOString(),
       reviewed_by: session.username,
@@ -67,22 +42,22 @@ export async function PATCH(
   if (updateError) return NextResponse.json({ error: updateError.message }, { status: 500 });
 
   // Send decision email to applicant
-  if (application.owner_email) {
+  if (vehicle.owner_email) {
     sendOversizedDecision({
-      applicantEmail: application.owner_email,
-      ownerName: application.owner_name,
-      unitAddress: (application.units as any)?.address ?? '',
+      applicantEmail: vehicle.owner_email,
+      ownerName: vehicle.owner_name,
+      unitAddress: (vehicle.units as any)?.address ?? '',
       vehicle: {
-        year: application.year,
-        make: application.make,
-        model: application.model,
-        color: application.color,
-        license_plate: application.license_plate,
-        plate_state: application.plate_state,
+        year: vehicle.year,
+        make: vehicle.make,
+        model: vehicle.model,
+        color: vehicle.color,
+        license_plate: vehicle.license_plate,
+        plate_state: vehicle.plate_state,
       },
       status,
       admin_notes: admin_notes ?? null,
-    })
+    });
   }
 
   return NextResponse.json({ success: true });

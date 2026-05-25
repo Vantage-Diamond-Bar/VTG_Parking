@@ -35,6 +35,7 @@ interface ResidentVehicle {
   plate_state: string | null;
   year: number | null;
   is_oversized: boolean;
+  approval_status: string;
 }
 
 type TabStatus = 'pending' | 'approved' | 'rejected' | 'all';
@@ -327,18 +328,25 @@ export default function AdminOversizedPage() {
                   <p className="text-xs text-gray-500">No other vehicles registered to this unit.</p>
                 ) : (
                   <div className="border border-gray-200 rounded-lg divide-y divide-gray-100 text-xs">
-                    {unitVehicles.map((v) => (
+                    {unitVehicles.filter((v) => v.id !== selected?.id).map((v) => (
                       <div key={v.id} className="px-3 py-2.5 flex items-center justify-between gap-3">
                         <div>
                           <span className="font-mono font-semibold">{v.license_plate}</span>
                           {v.plate_state && <span className="text-gray-500 ml-1">/ {v.plate_state}</span>}
                           <span className="text-gray-500 ml-2">{v.year ?? ''} {v.make} {v.model} · {v.color}</span>
                         </div>
-                        {v.is_oversized && (
-                          <span className="bg-orange-100 text-orange-700 px-2 py-0.5 rounded text-xs font-medium">
-                            Oversized
-                          </span>
-                        )}
+                        <div className="flex gap-1.5 shrink-0">
+                          {v.approval_status === 'pending' && (
+                            <span className="bg-yellow-100 text-yellow-800 px-2 py-0.5 rounded text-xs font-medium">
+                              Pending
+                            </span>
+                          )}
+                          {v.is_oversized && (
+                            <span className="bg-orange-100 text-orange-700 px-2 py-0.5 rounded text-xs font-medium">
+                              Oversized
+                            </span>
+                          )}
+                        </div>
                       </div>
                     ))}
                   </div>
