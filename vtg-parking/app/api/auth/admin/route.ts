@@ -36,7 +36,7 @@ export async function POST(req: NextRequest) {
   }
 
   const adminEmail = adminRow.email.trim().toLowerCase();
-  const otpKey    = `admin:${user.id}`;   // namespace admin OTPs from resident OTPs
+  const otpKey    = user.id;   // unit_id column is UUID — use admin user's UUID directly
   const now       = new Date().toISOString();
 
   // ── Step 2: OTP provided — verify it ─────────────────────────────────────
