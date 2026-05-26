@@ -1,14 +1,21 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { supabaseAdmin } from '@/lib/supabase'
+import { decodeVerificationToken } from '@/lib/auth'
 
 export async function POST(req: NextRequest) {
   const body = await req.json()
   const {
-    unit_id, registrant_type, first_name, last_name, phone, phone_country_code, email, reason,
+    token, unit_id, registrant_type, first_name, last_name, phone, phone_country_code, email, reason,
     emergency_first_name, emergency_last_name, emergency_phone, emergency_phone_country_code,
     start_datetime, end_datetime,
     year, make, model, color, license_plate, plate_state,
   } = body
+
+  // Verify caller owns this unit via signed token
+  const tokenData = decodeVerificationToken(token)
+  if (!tokenData || tokenData.unit_id !== unit_id) {
+    return NextResponse.json({ error: 'unauthorized' }, { status: 403 })
+  }
 
   // Check if the submitted vehicle is registered to this unit
   const { data: matchedVehicle } = await supabaseAdmin

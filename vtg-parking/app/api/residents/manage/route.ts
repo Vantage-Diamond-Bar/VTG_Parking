@@ -1,32 +1,22 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { supabaseAdmin } from '@/lib/supabase';
 import { normalizedPlate } from '@/lib/utils';
-
-async function verifyOwner(unit_id: string, email: string): Promise<boolean> {
-  const normalizedEmail = email.trim().toLowerCase();
-
-  const { data: vehicles, error } = await supabaseAdmin
-    .from('resident_vehicles')
-    .select('owner_email')
-    .eq('unit_id', unit_id);
-
-  if (error || !vehicles) return false;
-
-  return vehicles.some((v) => v.owner_email?.trim().toLowerCase() === normalizedEmail);
-}
+import { decodeVerificationToken } from '@/lib/auth';
 
 export async function PATCH(req: NextRequest) {
   const body = await req.json();
-  const { action, unit_id, email } = body;
+  const { action, unit_id, token } = body;
 
-  if (!unit_id || !email || !action) {
-    return NextResponse.json({ error: 'unit_id, email, and action are required' }, { status: 400 });
+  if (!unit_id || !token || !action) {
+    return NextResponse.json({ error: 'unit_id, token, and action are required' }, { status: 400 });
   }
 
-  const isOwner = await verifyOwner(unit_id, email);
-  if (!isOwner) {
-    return NextResponse.json({ error: 'email_mismatch' }, { status: 403 });
+  const tokenData = decodeVerificationToken(token);
+  if (!tokenData || tokenData.unit_id !== unit_id) {
+    return NextResponse.json({ error: 'unauthorized' }, { status: 403 });
   }
+
+  const email = tokenData.email;
 
   if (action === 'update_owner') {
     const { owner_name, owner_phone, new_email, registrant_type } = body;
@@ -148,15 +138,15 @@ export async function PATCH(req: NextRequest) {
 
 export async function POST(req: NextRequest) {
   const body = await req.json();
-  const { action, unit_id, email } = body;
+  const { action, unit_id, token } = body;
 
-  if (!unit_id || !email || !action) {
-    return NextResponse.json({ error: 'unit_id, email, and action are required' }, { status: 400 });
+  if (!unit_id || !token || !action) {
+    return NextResponse.json({ error: 'unit_id, token, and action are required' }, { status: 400 });
   }
 
-  const isOwner = await verifyOwner(unit_id, email);
-  if (!isOwner) {
-    return NextResponse.json({ error: 'email_mismatch' }, { status: 403 });
+  const tokenData = decodeVerificationToken(token);
+  if (!tokenData || tokenData.unit_id !== unit_id) {
+    return NextResponse.json({ error: 'unauthorized' }, { status: 403 });
   }
 
   if (action === 'add_vehicle') {

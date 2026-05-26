@@ -758,7 +758,7 @@ function ManageView({ t, unitId, confirmedEmail, verificationToken, unitData, un
       const res = await fetch('/api/residents/manage', {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ action: 'update_owner', unit_id: unitId, email: confirmedEmail, owner_name: fullName, owner_phone: ownerPhone, new_email: ownerEmail, registrant_type: ownerType }),
+        body: JSON.stringify({ action: 'update_owner', unit_id: unitId, token: verificationToken, owner_name: fullName, owner_phone: ownerPhone, new_email: ownerEmail, registrant_type: ownerType }),
       })
       if (res.ok) { setEditingOwner(false); showToast(t('owner_updated')); await onReload() }
     } finally { setOwnerSaving(false) }
@@ -775,7 +775,7 @@ function ManageView({ t, unitId, confirmedEmail, verificationToken, unitData, un
       const res = await fetch('/api/residents/manage', {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ action: 'update_vehicle', unit_id: unitId, email: confirmedEmail, vehicle_id: vehicleId, ...vehicleEdits }),
+        body: JSON.stringify({ action: 'update_vehicle', unit_id: unitId, token: verificationToken, vehicle_id: vehicleId, ...vehicleEdits }),
       })
       const json = await res.json()
       if (res.ok) { setEditingVehicleId(null); showToast(t('vehicle_updated')); await onReload() }
@@ -791,7 +791,7 @@ function ManageView({ t, unitId, confirmedEmail, verificationToken, unitData, un
       const res = await fetch('/api/residents/manage', {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ action: 'update_doc', unit_id: unitId, email: confirmedEmail, vehicle_id: vehicleId, registration_doc_base64: b64, registration_doc_filename: file.name }),
+        body: JSON.stringify({ action: 'update_doc', unit_id: unitId, token: verificationToken, vehicle_id: vehicleId, registration_doc_base64: b64, registration_doc_filename: file.name }),
       })
       if (res.ok) { showToast(t('doc_renewed_success')); await onReload() }
     } finally { setDocUploading(null) }
@@ -803,7 +803,7 @@ function ManageView({ t, unitId, confirmedEmail, verificationToken, unitData, un
       const res = await fetch('/api/residents/manage', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ action: 'delete_vehicle', unit_id: unitId, email: confirmedEmail, vehicle_id: vehicleId }),
+        body: JSON.stringify({ action: 'delete_vehicle', unit_id: unitId, token: verificationToken, vehicle_id: vehicleId }),
       })
       if (res.ok) { setDeleteTarget(null); showToast(t('vehicle_deleted')); await onReload() }
     } finally { setDeleting(false) }
@@ -820,7 +820,7 @@ function ManageView({ t, unitId, confirmedEmail, verificationToken, unitData, un
       const res = await fetch('/api/residents/manage', {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ action: 'update_vehicle', unit_id: unitId, email: confirmedEmail, vehicle_id: vehicleId, ...pendingEdits, is_oversized: true }),
+        body: JSON.stringify({ action: 'update_vehicle', unit_id: unitId, token: verificationToken, vehicle_id: vehicleId, ...pendingEdits, is_oversized: true }),
       })
       const json = await res.json()
       if (res.ok) { setEditingPendingId(null); showToast(t('vehicle_updated')); await onReload() }
@@ -834,7 +834,7 @@ function ManageView({ t, unitId, confirmedEmail, verificationToken, unitData, un
       const res = await fetch('/api/residents/manage', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ action: 'withdraw_pending', unit_id: unitId, email: confirmedEmail, vehicle_id: vehicleId }),
+        body: JSON.stringify({ action: 'withdraw_pending', unit_id: unitId, token: verificationToken, vehicle_id: vehicleId }),
       })
       if (res.ok) { setWithdrawTarget(null); showToast('Application withdrawn successfully.'); await onReload() }
     } finally { setWithdrawing(false) }
@@ -901,7 +901,7 @@ function ManageView({ t, unitId, confirmedEmail, verificationToken, unitData, un
       } else {
         const msg =
           json.error === 'plate_is_resident' ? 'That plate belongs to a registered resident vehicle.'
-          : json.error === 'quota_exceeded'  ? `Monthly visitor quota would be exceeded (${json.month}). Please choose different dates.`
+          : json.error === 'quota_exceeded'  ? `Monthly visitor quota for ${new Date(json.month + '-02').toLocaleDateString('en-US', { month: 'long', year: 'numeric' })} is already full. Please choose different dates.`
           : (json.error ?? 'Failed to update.')
         showToast(msg, 'error')
       }
@@ -951,7 +951,7 @@ function ManageView({ t, unitId, confirmedEmail, verificationToken, unitData, un
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          action: 'add_vehicle', unit_id: unitId, email: confirmedEmail,
+          action: 'add_vehicle', unit_id: unitId, token: verificationToken,
           year: Number(addVehicle.year), make: addVehicle.make, model: addVehicle.model, color: addVehicle.color,
           license_plate: addVehicle.license_plate.replace(/\s/g, '').toUpperCase(), plate_state: addVehicle.plate_state,
           is_oversized: addVehicle.is_oversized, registration_doc_base64: addVehicle.registration_doc_base64,

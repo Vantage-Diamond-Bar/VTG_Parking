@@ -259,6 +259,7 @@ export default function VacationPage() {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
+            token: verificationToken,
             unit_id: unitId,
             registrant_type: vehicle.registrant_type,
             first_name: owner.name.split(' ')[0] ?? owner.name,

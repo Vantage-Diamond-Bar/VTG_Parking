@@ -4,6 +4,10 @@ import bcrypt from 'bcryptjs'
 import { randomInt } from 'crypto'
 import { sendOtpEmail } from '@/lib/email'
 
+// Max OTP sends per unit+email in any 10-minute rolling window
+const RATE_LIMIT_MAX    = 3
+const RATE_LIMIT_WINDOW = 10 * 60 * 1000 // ms
+
 export async function POST(req: NextRequest) {
   const { unit_id, email } = await req.json()
 
@@ -30,17 +34,29 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ status: 'mismatch' })
   }
 
-  // Generate a 6-digit code and store its bcrypt hash
-  const otp = String(randomInt(100000, 999999))
-  const otp_hash = await bcrypt.hash(otp, 8)
-  const expires_at = new Date(Date.now() + 10 * 60 * 1000).toISOString()
+  // ── Rate limit: count OTPs issued in the last 10 min BEFORE the cleanup delete ──
+  const windowStart = new Date(Date.now() - RATE_LIMIT_WINDOW).toISOString()
+  const { count: recentCount } = await supabaseAdmin
+    .from('email_otps')
+    .select('id', { count: 'exact', head: true })
+    .eq('unit_id', unit_id)
+    .eq('email', emailLower)
+    .gte('created_at', windowStart)
 
-  // Replace any existing unused OTPs for this unit+email
+  if ((recentCount ?? 0) >= RATE_LIMIT_MAX) {
+    return NextResponse.json({ status: 'rate_limited' }, { status: 429 })
+  }
+
+  // Remove stale OTPs, then issue a fresh one
   await supabaseAdmin
     .from('email_otps')
     .delete()
     .eq('unit_id', unit_id)
     .eq('email', emailLower)
+
+  const otp      = String(randomInt(100000, 999999))
+  const otp_hash = await bcrypt.hash(otp, 8)
+  const expires_at = new Date(Date.now() + 10 * 60 * 1000).toISOString()
 
   await supabaseAdmin
     .from('email_otps')
