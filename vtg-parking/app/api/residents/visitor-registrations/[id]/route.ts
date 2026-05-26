@@ -70,39 +70,6 @@ async function checkQuotaExceeded(
   return null;
 }
 
-// Recompute visitor_monthly_quota for given unit + months from live registration data.
-// Uses ptInputToISO for correct PT→UTC month boundaries, matching the booking RPC.
-async function recomputeQuota(unit_id: string, months: string[]) {
-  for (const yearMonth of months) {
-    const [y, mo] = yearMonth.split('-').map(Number);
-    const nextMo = mo === 12 ? 1 : mo + 1;
-    const nextY  = mo === 12 ? y + 1 : y;
-    const monthStart = ptInputToISO(`${yearMonth}-01T00:00`);
-    const monthEnd   = ptInputToISO(`${String(nextY)}-${String(nextMo).padStart(2, '0')}-01T00:00`);
-
-    const { data: regs } = await supabaseAdmin
-      .from('visitor_registrations')
-      .select('start_datetime, end_datetime')
-      .eq('unit_id', unit_id)
-      .lt('start_datetime', monthEnd)
-      .gt('end_datetime', monthStart);
-
-    let totalNights = 0;
-    for (const reg of regs ?? []) {
-      const s = reg.start_datetime < monthStart ? monthStart : reg.start_datetime;
-      const e = reg.end_datetime   > monthEnd   ? monthEnd   : reg.end_datetime;
-      totalNights += countNights(s, e);
-    }
-
-    await supabaseAdmin
-      .from('visitor_monthly_quota')
-      .upsert(
-        { unit_id, year_month: yearMonth, nights_used: totalNights },
-        { onConflict: 'unit_id,year_month' }
-      );
-  }
-}
-
 // ── PATCH ─────────────────────────────────────────────────────────────────────
 
 export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
@@ -205,13 +172,6 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
 
   if (updateErr) return NextResponse.json({ error: updateErr.message }, { status: 500 });
 
-  // Recompute quota for all months touched by old or new range
-  const months = Array.from(new Set([
-    ...affectedMonths(oldStart, oldEnd),
-    ...affectedMonths(proposedStart, proposedEnd),
-  ]));
-  await recomputeQuota(unit_id, months);
-
   return NextResponse.json({ success: true });
 }
 
@@ -244,8 +204,6 @@ export async function DELETE(req: NextRequest, { params }: { params: Promise<{ i
     return NextResponse.json({ error: 'Cannot delete a registration that has already started' }, { status: 409 });
   }
 
-  const months = affectedMonths(reg.start_datetime, reg.end_datetime);
-
   const { error: deleteErr } = await supabaseAdmin
     .from('visitor_registrations')
     .delete()
@@ -253,8 +211,6 @@ export async function DELETE(req: NextRequest, { params }: { params: Promise<{ i
     .eq('unit_id', unit_id);
 
   if (deleteErr) return NextResponse.json({ error: deleteErr.message }, { status: 500 });
-
-  await recomputeQuota(unit_id, months);
 
   return NextResponse.json({ success: true });
 }
