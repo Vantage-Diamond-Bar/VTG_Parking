@@ -16,7 +16,8 @@ export default async function AdminProtectedLayout({
   children: React.ReactNode;
 }) {
   const session = await getSession();
-  if (!session || session.role !== 'admin') {
+  // otp_verified must be true — prevents patrol-portal sessions from bypassing email MFA
+  if (!session || session.role !== 'admin' || !session.otp_verified) {
     redirect('/admin/login');
   }
 

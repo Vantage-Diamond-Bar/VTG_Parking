@@ -11,6 +11,8 @@ export interface AuthUser {
   username: string
   role: UserRole
   display_name: string | null
+  /** true only when admin completed the email-OTP step during admin portal login */
+  otp_verified?: boolean
 }
 
 const SESSION_SECRET = process.env.SESSION_SECRET ?? ''

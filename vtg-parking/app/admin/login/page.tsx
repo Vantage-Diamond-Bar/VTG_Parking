@@ -2,46 +2,127 @@
 
 import { useState } from 'react';
 import { useTranslations } from 'next-intl';
-import { useForm } from 'react-hook-form';
 import BrandName from '@/components/BrandName';
 
-interface LoginFormData {
-  username: string;
-  password: string;
-}
+type LoginStep = 'password' | 'otp';
 
 export default function AdminLoginPage() {
   const t = useTranslations('admin');
-  const [error, setError] = useState('');
+
+  // ── Step 1: password ─────────────────────────────────────────────────────
+  const [username, setUsername] = useState('');
+  const [password, setPassword] = useState('');
+
+  // ── Step 2: OTP ──────────────────────────────────────────────────────────
+  const [step, setStep]           = useState<LoginStep>('password');
+  const [emailHint, setEmailHint] = useState('');
+  const [otpCode, setOtpCode]     = useState('');
+
+  // ── UI state ─────────────────────────────────────────────────────────────
   const [loading, setLoading] = useState(false);
+  const [error, setError]     = useState('');
 
-  const { register, handleSubmit } = useForm<LoginFormData>();
+  // ── Helpers ───────────────────────────────────────────────────────────────
+  const inputCls = 'w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500';
 
-  const onSubmit = async (data: LoginFormData) => {
+  async function sendOtp(e: React.FormEvent) {
+    e.preventDefault();
     setError('');
     setLoading(true);
     try {
-      const res = await fetch('/api/auth/admin', {
+      const res  = await fetch('/api/auth/admin', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(data),
+        body: JSON.stringify({ username: username.trim(), password }),
       });
-      if (res.ok) {
-        const json = await res.json();
-        if (json.role) {
-          window.location.href = '/admin/dashboard';
+      const json = await res.json();
+
+      if (!res.ok) {
+        if (json.error === 'no_email') {
+          setError('No email address configured for this account. Contact the system administrator.');
         } else {
           setError(t('invalid_credentials'));
         }
+        return;
+      }
+
+      if (json.status === 'otp_sent') {
+        setEmailHint(json.email_hint ?? '');
+        setOtpCode('');
+        setStep('otp');
+      } else if (json.status === 'rate_limited') {
+        setError('Too many verification attempts. Please wait 10 minutes and try again.');
       } else {
         setError(t('invalid_credentials'));
       }
     } catch {
-      setError(t('invalid_credentials'));
+      setError('Network error. Please try again.');
     } finally {
       setLoading(false);
     }
-  };
+  }
+
+  async function verifyOtp(e: React.FormEvent) {
+    e.preventDefault();
+    setError('');
+    setLoading(true);
+    try {
+      const res  = await fetch('/api/auth/admin', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ username: username.trim(), password, otp: otpCode.trim() }),
+      });
+      const json = await res.json();
+
+      if (res.ok && json.ok) {
+        window.location.href = '/admin/dashboard';
+        return;
+      }
+
+      if (json.status === 'too_many_attempts') {
+        setError('Too many incorrect codes. This code has been invalidated. Please request a new one.');
+        setStep('password');
+        setOtpCode('');
+      } else if (json.status === 'invalid') {
+        setError('Incorrect verification code. Please try again.');
+      } else {
+        setError('Verification failed. Please try again.');
+      }
+    } catch {
+      setError('Network error. Please try again.');
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  async function resendOtp() {
+    setOtpCode('');
+    setError('');
+    // Re-trigger step 1 flow
+    setLoading(true);
+    try {
+      const res  = await fetch('/api/auth/admin', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ username: username.trim(), password }),
+      });
+      const json = await res.json();
+      if (json.status === 'otp_sent') {
+        setEmailHint(json.email_hint ?? emailHint);
+      } else if (json.status === 'rate_limited') {
+        setError('Too many verification attempts. Please wait 10 minutes and try again.');
+      } else if (!res.ok) {
+        setError(t('invalid_credentials'));
+        setStep('password');
+      }
+    } catch {
+      setError('Network error. Please try again.');
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  // ─── Render ───────────────────────────────────────────────────────────────
 
   return (
     <div className="min-h-screen bg-gray-100 flex items-center justify-center px-4">
@@ -53,43 +134,102 @@ export default function AdminLoginPage() {
 
         <h2 className="text-xl font-semibold text-gray-800 mb-6 text-center">{t('login')}</h2>
 
-        <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">
-              {t('username')}
-            </label>
-            <input
-              {...register('username', { required: true })}
-              type="text"
-              autoComplete="username"
-              className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-            />
-          </div>
+        {/* ── Step 1: Username + Password ─────────────────────────────── */}
+        {step === 'password' && (
+          <form onSubmit={sendOtp} className="space-y-4">
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">{t('username')}</label>
+              <input
+                type="text"
+                value={username}
+                onChange={(e) => setUsername(e.target.value)}
+                autoComplete="username"
+                required
+                className={inputCls}
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">{t('password')}</label>
+              <input
+                type="password"
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                autoComplete="current-password"
+                required
+                className={inputCls}
+              />
+            </div>
 
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">
-              {t('password')}
-            </label>
-            <input
-              {...register('password', { required: true })}
-              type="password"
-              autoComplete="current-password"
-              className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-            />
-          </div>
+            {error && <p className="text-red-600 text-sm text-center">{error}</p>}
 
-          {error && (
-            <p className="text-red-600 text-sm text-center">{error}</p>
-          )}
+            <button
+              type="submit"
+              disabled={loading || !username.trim() || !password}
+              className="w-full bg-blue-600 hover:bg-blue-700 disabled:opacity-60 text-white font-semibold py-2 px-4 rounded-lg transition-colors text-sm"
+            >
+              {loading ? 'Sending verification code…' : 'Continue'}
+            </button>
+          </form>
+        )}
 
-          <button
-            type="submit"
-            disabled={loading}
-            className="w-full bg-blue-600 hover:bg-blue-700 disabled:opacity-60 text-white font-semibold py-2 px-4 rounded-lg transition-colors text-sm"
-          >
-            {loading ? t('signing_in') : t('sign_in')}
-          </button>
-        </form>
+        {/* ── Step 2: OTP Input ───────────────────────────────────────── */}
+        {step === 'otp' && (
+          <form onSubmit={verifyOtp} className="space-y-4">
+            <div className="bg-blue-50 border border-blue-200 rounded-lg px-4 py-3 text-sm text-blue-800">
+              <p className="font-semibold mb-1">📧 Check your email</p>
+              <p>
+                A 6-digit verification code was sent to{' '}
+                <span className="font-mono font-bold">{emailHint}</span>.
+                It expires in 10 minutes.
+              </p>
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                Verification Code
+              </label>
+              <input
+                type="text"
+                inputMode="numeric"
+                maxLength={6}
+                value={otpCode}
+                onChange={(e) => setOtpCode(e.target.value.replace(/\D/g, ''))}
+                onKeyDown={(e) => e.key === 'Enter' && otpCode.length === 6 && verifyOtp(e as any)}
+                placeholder="000000"
+                autoFocus
+                className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm font-mono tracking-widest text-center text-xl focus:outline-none focus:ring-2 focus:ring-blue-500"
+              />
+            </div>
+
+            {error && <p className="text-red-600 text-sm text-center">{error}</p>}
+
+            <button
+              type="submit"
+              disabled={loading || otpCode.length < 6}
+              className="w-full bg-blue-600 hover:bg-blue-700 disabled:opacity-60 text-white font-semibold py-2 px-4 rounded-lg transition-colors text-sm"
+            >
+              {loading ? 'Verifying…' : 'Verify & Sign In'}
+            </button>
+
+            <div className="flex items-center justify-between text-sm pt-1">
+              <button
+                type="button"
+                onClick={() => { setStep('password'); setError(''); setOtpCode(''); }}
+                className="text-gray-400 hover:text-gray-600 transition-colors"
+              >
+                ← Back
+              </button>
+              <button
+                type="button"
+                onClick={resendOtp}
+                disabled={loading}
+                className="text-blue-600 hover:underline disabled:opacity-50"
+              >
+                Resend code
+              </button>
+            </div>
+          </form>
+        )}
 
         <div className="mt-5 text-center">
           <a href="/" className="inline-flex items-center gap-1.5 text-sm text-gray-400 hover:text-gray-600 transition-colors">

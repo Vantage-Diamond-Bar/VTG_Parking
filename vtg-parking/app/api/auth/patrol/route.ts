@@ -14,7 +14,8 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
   }
 
-  const sessionToken = encodeSession(user);
+  // Patrol login never grants admin-portal access — otp_verified must stay false
+  const sessionToken = encodeSession({ ...user, otp_verified: false });
 
   const res = NextResponse.json({ ok: true, role: user.role });
   res.cookies.set('session', sessionToken, {
