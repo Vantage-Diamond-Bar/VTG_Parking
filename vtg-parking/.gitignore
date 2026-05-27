@@ -42,3 +42,6 @@ yarn-error.log*
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+
+# local session docs (handoffs, debug notes — not for version control)
+/docs/
