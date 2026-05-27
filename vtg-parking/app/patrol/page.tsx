@@ -178,6 +178,35 @@ export default function PatrolPage() {
           </div>
         );
       }
+      if (item.is_oversized) {
+        return (
+          <div key={index} className="bg-emerald-50 border-2 border-emerald-500 rounded-xl p-6 mt-4">
+            <div className="flex items-center justify-between mb-3">
+              <div className="flex items-center gap-3">
+                <span className="text-2xl">🚛</span>
+                <h2 className="text-xl font-bold text-emerald-900">{t('resident_vehicle')}</h2>
+              </div>
+              <span className="inline-block bg-emerald-700 text-white text-xs font-bold px-3 py-1 rounded-full uppercase tracking-wide">
+                RESIDENT VEHICLE
+              </span>
+            </div>
+            <div className="bg-emerald-600 text-white rounded-lg px-4 py-3 mb-4 flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <span className="text-lg">✅</span>
+                <span className="font-bold text-sm uppercase tracking-wide">APPROVED OVERSIZED VEHICLE</span>
+              </div>
+              <span className="text-emerald-200 text-xs font-semibold">PERMITTED</span>
+            </div>
+            <div className="grid grid-cols-2 gap-3 text-sm">
+              <div><span className="text-emerald-700 font-medium">{t('unit')}:</span> <span className="font-semibold">{item.address}</span></div>
+              <div><span className="text-emerald-700 font-medium">{t('owner')}:</span> <span className="font-semibold">{item.owner_name}</span></div>
+              <div><span className="text-emerald-700 font-medium">{t('vehicle')}:</span> <span className="font-semibold">{[item.year, item.make, item.model].filter(Boolean).join(' ')}</span></div>
+              <div><span className="text-emerald-700 font-medium">{t('color')}:</span> <span className="font-semibold">{item.color}</span></div>
+              <div><span className="text-emerald-700 font-medium">{t('plate')}:</span> <span className="font-mono font-bold text-emerald-900">{item.plate}{item.state ? ` / ${item.state}` : ''}</span></div>
+            </div>
+          </div>
+        );
+      }
       return (
         <div key={index} className="bg-blue-50 border-2 border-blue-300 rounded-xl p-6 mt-4">
           <div className="flex items-center justify-between mb-4">
@@ -405,7 +434,7 @@ export default function PatrolPage() {
                     </div>
                     <div className="text-xs text-gray-500 font-mono">
                       {v.plate}{v.state ? ` · ${v.state}` : ''}
-                      {v.is_oversized && <span className="ml-2 text-orange-600 font-semibold">OVERSIZED</span>}
+                      {v.is_oversized && <span className="ml-2 bg-emerald-600 text-white text-xs font-bold px-1.5 py-0.5 rounded uppercase tracking-wide">OVERSIZED ✓</span>}
                     </div>
                   </div>
                   <div className="text-xs text-gray-400 shrink-0">{v.owner_name}</div>
