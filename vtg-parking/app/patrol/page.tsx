@@ -46,6 +46,8 @@ export default function PatrolPage() {
   const [code, setCode] = useState('');
 
   const [results, setResults] = useState<ResultItem[]>([]);
+  const [unitVehicles, setUnitVehicles] = useState<ResultItem[]>([]);
+  const [unitVisitors, setUnitVisitors] = useState<ResultItem[]>([]);
   const [notFound, setNotFound] = useState(false);
   const [searching, setSearching] = useState(false);
   const [error, setError] = useState('');
@@ -66,6 +68,8 @@ export default function PatrolPage() {
 
   function resetResults() {
     setResults([]);
+    setUnitVehicles([]);
+    setUnitVisitors([]);
     setNotFound(false);
     setError('');
   }
@@ -82,6 +86,8 @@ export default function PatrolPage() {
         const data = await res.json();
         if (data.found) {
           setResults(data.results ?? []);
+          setUnitVehicles(data.unit_vehicles ?? []);
+          setUnitVisitors(data.unit_visitors ?? []);
         } else {
           setNotFound(true);
         }
@@ -281,8 +287,10 @@ export default function PatrolPage() {
           <span className="text-xs text-gray-500 mt-0.5 leading-none">{t('patrol_lookup')}</span>
         </div>
         <div className="flex items-center gap-2">
-          <a href="/" className="text-sm text-gray-500 hover:text-gray-800 border border-gray-300 px-3 py-1.5 rounded-lg hover:bg-gray-50 transition-colors">🏠 Home</a>
-          <a href="/admin/dashboard" className="text-sm text-gray-500 hover:text-gray-800 border border-gray-300 px-3 py-1.5 rounded-lg hover:bg-gray-50 transition-colors">🔐 Admin</a>
+          <a href="/" className="text-sm text-gray-500 hover:text-gray-800 border border-gray-300 px-3 py-1.5 rounded-lg hover:bg-gray-50 transition-colors">🏠</a>
+          <a href="/admin/dashboard" className="flex items-center gap-2 bg-indigo-700 hover:bg-indigo-800 text-white text-sm font-semibold px-4 py-1.5 rounded-lg transition-colors shadow-sm">
+            <span>🔐</span><span>Admin Portal</span>
+          </a>
           <button onClick={handleLogout} className="text-sm text-gray-500 hover:text-gray-800 border border-gray-300 px-3 py-1.5 rounded-lg hover:bg-gray-50 transition-colors">{t('logout')}</button>
         </div>
       </header>
@@ -378,8 +386,68 @@ export default function PatrolPage() {
           </div>
         )}
 
-        {/* Results — one card per match */}
+        {/* Results — primary match card(s) */}
         {results.map((item, i) => renderCard(item, i))}
+
+        {/* Other vehicles registered to the same unit */}
+        {unitVehicles.length > 0 && (
+          <div className="mt-6">
+            <h3 className="text-xs font-bold text-gray-500 uppercase tracking-widest mb-2 px-1">
+              Other Vehicles in This Unit
+            </h3>
+            <div className="bg-white border border-gray-200 rounded-xl divide-y divide-gray-100">
+              {unitVehicles.map((v, i) => (
+                <div key={i} className="flex items-center gap-3 px-4 py-3 text-sm">
+                  <span className="text-lg">{v.is_oversized ? '🚛' : '🚗'}</span>
+                  <div className="flex-1 min-w-0">
+                    <div className="font-semibold text-gray-900">
+                      {[v.year, v.color, v.make, v.model].filter(Boolean).join(' ')}
+                    </div>
+                    <div className="text-xs text-gray-500 font-mono">
+                      {v.plate}{v.state ? ` · ${v.state}` : ''}
+                      {v.is_oversized && <span className="ml-2 text-orange-600 font-semibold">OVERSIZED</span>}
+                    </div>
+                  </div>
+                  <div className="text-xs text-gray-400 shrink-0">{v.owner_name}</div>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {/* Visitor registrations for the same unit — current month & upcoming */}
+        {unitVisitors.length > 0 && (
+          <div className="mt-4 mb-8">
+            <h3 className="text-xs font-bold text-gray-500 uppercase tracking-widest mb-2 px-1">
+              Unit Visitor Registrations — This Month &amp; Upcoming
+            </h3>
+            <div className="bg-white border border-gray-200 rounded-xl divide-y divide-gray-100">
+              {unitVisitors.map((v, i) => {
+                const expired = v.status === 'expired';
+                const upcoming = v.status === 'upcoming';
+                const dot = expired ? 'bg-red-400' : upcoming ? 'bg-yellow-400' : 'bg-green-400';
+                return (
+                  <div key={i} className="flex items-center gap-3 px-4 py-3 text-sm">
+                    <span className={`w-2 h-2 rounded-full shrink-0 ${dot}`} />
+                    <div className="flex-1 min-w-0">
+                      <div className="font-semibold text-gray-900 font-mono text-xs">
+                        {v.plate}{v.state ? ` · ${v.state}` : ''}
+                      </div>
+                      <div className="text-xs text-gray-500">
+                        {[v.make, v.model, v.color].filter(Boolean).join(' ')}
+                        {v.guest_name ? ` · ${v.guest_name}` : ''}
+                      </div>
+                    </div>
+                    <div className="text-right text-xs text-gray-400 shrink-0">
+                      <div>{formatPDT(v.valid_from!, { short: true })}</div>
+                      <div>→ {formatPDT(v.valid_until!, { short: true })}</div>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        )}
       </main>
     </div>
   );

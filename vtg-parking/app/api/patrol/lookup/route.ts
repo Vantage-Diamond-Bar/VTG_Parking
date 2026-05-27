@@ -114,7 +114,60 @@ export async function GET(req: NextRequest) {
       }
     }
 
-    return NextResponse.json({ found: results.length > 0, results });
+    // 3. Unit context: other vehicles + current/future visitors for the same unit
+    const unit_id: string | null =
+      residentRes.data?.unit_id ??
+      vacationRes.data?.[0]?.unit_id ??
+      null;
+
+    let unit_vehicles: object[] = [];
+    let unit_visitors: object[] = [];
+
+    if (unit_id) {
+      const monthStart = new Date(new Date().getFullYear(), new Date().getMonth(), 1).toISOString();
+
+      const [otherVehiclesRes, unitVisitorsRes] = await Promise.all([
+        supabaseAdmin
+          .from('resident_vehicles')
+          .select('owner_name, year, make, model, color, license_plate, plate_state, is_oversized, vehicle_type')
+          .eq('unit_id', unit_id)
+          .eq('approval_status', 'approved')
+          .not('license_plate', 'ilike', plate),
+        supabaseAdmin
+          .from('visitor_registrations')
+          .select('visitor_name, license_plate, plate_state, make, model, color, start_datetime, end_datetime')
+          .eq('unit_id', unit_id)
+          .gte('end_datetime', monthStart)
+          .order('start_datetime', { ascending: true })
+          .limit(20),
+      ]);
+
+      unit_vehicles = (otherVehiclesRes.data ?? []).map((v) => ({
+        owner_name: v.owner_name,
+        year: v.year,
+        make: v.make,
+        model: v.model,
+        color: v.color,
+        plate: v.license_plate,
+        state: v.plate_state,
+        is_oversized: v.is_oversized,
+        vehicle_type: v.vehicle_type,
+      }));
+
+      unit_visitors = (unitVisitorsRes.data ?? []).map((v) => ({
+        guest_name: v.visitor_name ?? null,
+        plate: v.license_plate,
+        state: v.plate_state,
+        make: v.make,
+        model: v.model,
+        color: v.color,
+        valid_from: v.start_datetime,
+        valid_until: v.end_datetime,
+        status: determineStatus(v.start_datetime, v.end_datetime),
+      }));
+    }
+
+    return NextResponse.json({ found: results.length > 0, results, unit_vehicles, unit_visitors });
   }
 
   /* ── Lookup by access code ── */

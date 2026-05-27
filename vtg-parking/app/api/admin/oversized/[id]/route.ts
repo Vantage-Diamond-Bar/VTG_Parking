@@ -27,15 +27,31 @@ export async function PATCH(
 
   if (!vehicle) return NextResponse.json({ error: 'Not found' }, { status: 404 });
 
-  // Update approval_status in-place — no separate insert needed
+  const now = new Date().toISOString();
+
+  // Rejection converts the vehicle to a regular approved registration so patrol
+  // can still find it and the resident retains their registration.
+  // oversized_rejected_at preserves history for the admin panel.
+  const updatePayload: Record<string, unknown> =
+    status === 'rejected'
+      ? {
+          approval_status: 'approved',
+          is_oversized: false,
+          oversized_rejected_at: now,
+          admin_notes: admin_notes ?? null,
+          reviewed_at: now,
+          reviewed_by: session.username,
+        }
+      : {
+          approval_status: 'approved',
+          admin_notes: admin_notes ?? null,
+          reviewed_at: now,
+          reviewed_by: session.username,
+        };
+
   const { error: updateError } = await supabaseAdmin
     .from('resident_vehicles')
-    .update({
-      approval_status: status,
-      admin_notes: admin_notes ?? null,
-      reviewed_at: new Date().toISOString(),
-      reviewed_by: session.username,
-    })
+    .update(updatePayload)
     .eq('id', id);
 
   if (updateError) return NextResponse.json({ error: updateError.message }, { status: 500 });

@@ -250,7 +250,7 @@ export async function sendOversizedDecision({
         </table>
         ${isApproved
           ? '<p style="color:#15803d;">Your vehicle has been added to the community parking registry as an oversized vehicle. You may park in a designated outdoor community space. Please ensure you comply with all community parking rules.</p>'
-          : '<p style="color:#b91c1c;">Your application was not approved. Please contact the VTG management office if you have questions.</p>'
+          : '<p style="color:#b91c1c;">Your oversized vehicle permit application was not approved. However, your vehicle has been retained in the community parking registry as a <strong>standard (non-oversized) vehicle</strong>. Patrol officers will be able to locate your vehicle registration as normal. If you have questions about this decision, please contact the VTG management office.</p>'
         }
         <hr style="border:none;border-top:1px solid #e5e7eb;margin:20px 0;">
         <p style="font-size:11px;color:#9ca3af;margin:0;">VTG Community Parking Management System</p>

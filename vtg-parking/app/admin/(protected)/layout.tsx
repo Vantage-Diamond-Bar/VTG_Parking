@@ -68,13 +68,18 @@ export default async function AdminProtectedLayout({
             <span>🏠</span>
             <span>Return to Home</span>
           </Link>
-          <Link
+          <a
             href="/patrol"
-            className="flex items-center gap-3 px-3 py-2 rounded-lg text-sm text-gray-400 hover:bg-gray-700 hover:text-white transition-colors w-full"
+            className="block rounded-xl bg-indigo-900 hover:bg-indigo-800 transition-colors p-3 border border-indigo-700 mt-1"
           >
-            <span>🚔</span>
-            <span>Patrol Portal</span>
-          </Link>
+            <div className="flex items-center gap-2.5">
+              <span className="text-2xl leading-none">🚔</span>
+              <div>
+                <div className="text-sm font-bold text-white leading-tight">Patrol Portal</div>
+                <div className="text-xs text-indigo-300 leading-tight mt-0.5">Vehicle lookup</div>
+              </div>
+            </div>
+          </a>
           <a
             href="/api/auth/logout?role=admin"
             className="flex items-center gap-3 px-3 py-2 rounded-lg text-sm text-gray-400 hover:bg-gray-700 hover:text-white transition-colors w-full"
