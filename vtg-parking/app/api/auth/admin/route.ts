@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { cookies } from 'next/headers';
 import { verifyCredentials, encodeSession } from '@/lib/auth';
 import { supabaseAdmin } from '@/lib/supabase';
 import bcrypt from 'bcryptjs';
@@ -80,15 +81,15 @@ export async function POST(req: NextRequest) {
 
     // Issue full admin session — otp_verified marks it as having passed email MFA
     const sessionToken = encodeSession({ ...user, otp_verified: true });
-    const res = NextResponse.json({ ok: true, role: user.role });
-    res.cookies.set('session', sessionToken, {
+    const cookieStore = await cookies();
+    cookieStore.set('session', sessionToken, {
       httpOnly: true,
       secure: process.env.NODE_ENV === 'production',
       sameSite: 'lax',
       maxAge: 8 * 60 * 60,   // 8 hours
       path: '/',
     });
-    return res;
+    return NextResponse.json({ ok: true, role: user.role });
   }
 
   // ── Step 1: No OTP yet — send one ────────────────────────────────────────

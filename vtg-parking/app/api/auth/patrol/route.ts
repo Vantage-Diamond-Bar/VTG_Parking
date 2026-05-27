@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { cookies } from 'next/headers';
 import { verifyCredentials, encodeSession } from '@/lib/auth';
 
 export async function POST(req: NextRequest) {
@@ -17,8 +18,8 @@ export async function POST(req: NextRequest) {
   // Patrol login never grants admin-portal access — otp_verified must stay false
   const sessionToken = encodeSession({ ...user, otp_verified: false });
 
-  const res = NextResponse.json({ ok: true, role: user.role });
-  res.cookies.set('session', sessionToken, {
+  const cookieStore = await cookies();
+  cookieStore.set('session', sessionToken, {
     httpOnly: true,
     secure: process.env.NODE_ENV === 'production',
     sameSite: 'lax',
@@ -26,5 +27,5 @@ export async function POST(req: NextRequest) {
     path: '/',
   });
 
-  return res;
+  return NextResponse.json({ ok: true, role: user.role });
 }
