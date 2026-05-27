@@ -37,7 +37,8 @@ export async function GET(req: NextRequest) {
         .from('resident_vehicles')
         .select('*, units(address)')
         .ilike('license_plate', plate)
-        .eq('approval_status', 'approved')
+        // approved (any) OR pending oversized (awaiting admin review)
+        .or('approval_status.eq.approved,and(approval_status.eq.pending,is_oversized.eq.true)')
         .maybeSingle(),
       supabaseAdmin
         .from('vacation_parking_requests')
