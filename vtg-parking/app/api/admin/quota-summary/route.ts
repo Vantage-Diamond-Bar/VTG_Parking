@@ -1,4 +1,4 @@
-import { NextRequest, NextResponse } from 'next/server'
+﻿import { NextRequest, NextResponse } from 'next/server'
 import { supabaseAdmin } from '@/lib/supabase'
 import { requireAdmin } from '@/lib/auth'
 import { countNights, monthBounds, VISITOR_QUOTA_LIMIT } from '@/lib/utils'
@@ -6,7 +6,7 @@ import { countNights, monthBounds, VISITOR_QUOTA_LIMIT } from '@/lib/utils'
 export const dynamic = 'force-dynamic'
 
 export async function GET(req: NextRequest) {
-  if (!requireAdmin(req)) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+  if (!await requireAdmin(req)) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
 
   const search = new URL(req.url).searchParams.get('search') || ''
 

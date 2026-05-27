@@ -1,5 +1,7 @@
 import { cookies } from 'next/headers'
 import type { NextRequest } from 'next/server'
+// next/headers cookies() is used for both Server Components (getSession) and
+// Route Handlers (requireAdmin) to ensure consistent cookie reads in Next.js 15.
 import { supabaseAdmin } from './supabase'
 import bcrypt from 'bcryptjs'
 import { createHmac, timingSafeEqual } from 'crypto'
@@ -84,8 +86,12 @@ export function getSessionFromRequest(req: NextRequest): AuthUser | null {
 }
 
 // Requires admin role AND completed email-OTP step. Returns null for any failure.
-export function requireAdmin(req: NextRequest): AuthUser | null {
-  const session = getSessionFromRequest(req)
+// Uses next/headers cookies() for consistent reads across Server Components and Route Handlers.
+export async function requireAdmin(_req?: NextRequest): Promise<AuthUser | null> {
+  const cookieStore = await cookies()
+  const sessionCookie = cookieStore.get('session')
+  if (!sessionCookie) return null
+  const session = decodeSession(sessionCookie.value)
   if (!session || session.role !== 'admin' || !session.otp_verified) return null
   return session
 }
