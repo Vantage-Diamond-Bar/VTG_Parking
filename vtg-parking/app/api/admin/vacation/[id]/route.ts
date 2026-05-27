@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { supabaseAdmin } from '@/lib/supabase'
-import { getSessionFromRequest } from '@/lib/auth'
+import { requireAdmin } from '@/lib/auth'
 import { sendVacationDecision } from '@/lib/email'
 
 const ACCESS_CODE_CHARS = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789'
@@ -17,9 +17,8 @@ export async function PATCH(
   req: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
-  const session = getSessionFromRequest(req)
+  const session = requireAdmin(req)
   if (!session) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
-  if (session.role !== 'admin') return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
 
   const { id } = await params
   const { status, admin_notes, rejection_reason } = await req.json()
@@ -37,7 +36,19 @@ export async function PATCH(
 
   if (!request) return NextResponse.json({ error: 'Not found' }, { status: 404 })
 
-  const access_code = status === 'approved' ? generateAccessCode() : null
+  let access_code: string | null = null
+  if (status === 'approved') {
+    for (let attempt = 0; attempt < 10; attempt++) {
+      const candidate = generateAccessCode()
+      const { data: collision } = await supabaseAdmin
+        .from('vacation_parking_requests')
+        .select('id')
+        .eq('access_code', candidate)
+        .maybeSingle()
+      if (!collision) { access_code = candidate; break }
+    }
+    if (!access_code) return NextResponse.json({ error: 'Failed to generate unique access code' }, { status: 500 })
+  }
 
   const { error } = await supabaseAdmin
     .from('vacation_parking_requests')

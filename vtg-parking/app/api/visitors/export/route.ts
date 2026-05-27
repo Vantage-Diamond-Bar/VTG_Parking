@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { supabaseAdmin } from '@/lib/supabase';
-import { getSessionFromRequest } from '@/lib/auth';
+import { requireAdmin } from '@/lib/auth';
 import { formatPDT } from '@/lib/utils';
 import * as XLSX from 'xlsx';
 
@@ -11,9 +11,7 @@ function sanitizeCell(value: string): string {
 }
 
 export async function GET(req: NextRequest) {
-  const session = getSessionFromRequest(req);
-  if (!session) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-  if (session.role !== 'admin') return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
+  if (!requireAdmin(req)) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
 
   const { searchParams } = new URL(req.url);
   const format = searchParams.get('format') || 'csv';

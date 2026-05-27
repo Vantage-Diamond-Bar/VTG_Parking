@@ -83,6 +83,13 @@ export function getSessionFromRequest(req: NextRequest): AuthUser | null {
   return null
 }
 
+// Requires admin role AND completed email-OTP step. Returns null for any failure.
+export function requireAdmin(req: NextRequest): AuthUser | null {
+  const session = getSessionFromRequest(req)
+  if (!session || session.role !== 'admin' || !session.otp_verified) return null
+  return session
+}
+
 export function encodeSession(user: AuthUser): string {
   const payload = Buffer.from(JSON.stringify(user)).toString('base64url')
   return `${payload}.${hmacSign(payload)}`

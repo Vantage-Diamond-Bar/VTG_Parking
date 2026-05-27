@@ -1,14 +1,12 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { supabaseAdmin } from '@/lib/supabase'
-import { getSessionFromRequest } from '@/lib/auth'
+import { requireAdmin } from '@/lib/auth'
 import { countNights, monthBounds, VISITOR_QUOTA_LIMIT } from '@/lib/utils'
 
 export const dynamic = 'force-dynamic'
 
 export async function GET(req: NextRequest) {
-  const session = getSessionFromRequest(req)
-  if (!session) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
-  if (session.role !== 'admin') return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
+  if (!requireAdmin(req)) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
 
   const search = new URL(req.url).searchParams.get('search') || ''
 

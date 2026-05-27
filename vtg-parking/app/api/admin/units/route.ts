@@ -1,10 +1,11 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { supabaseAdmin } from '@/lib/supabase';
-import { getSessionFromRequest } from '@/lib/auth';
+import { requireAdmin } from '@/lib/auth';
 import { sortAddresses } from '@/lib/utils';
 
-export async function GET(_req: NextRequest) {
-  // Unit addresses are non-sensitive; page is protected by admin layout
+export async function GET(req: NextRequest) {
+  if (!requireAdmin(req)) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+
   const { data, error } = await supabaseAdmin
     .from('units')
     .select('*');
@@ -17,9 +18,7 @@ export async function GET(_req: NextRequest) {
 }
 
 export async function POST(req: NextRequest) {
-  const session = getSessionFromRequest(req);
-  if (!session) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-  if (session.role !== 'admin') return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
+  if (!requireAdmin(req)) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
 
   const { address } = await req.json();
 

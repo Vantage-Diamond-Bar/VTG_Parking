@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { supabaseAdmin } from '@/lib/supabase';
 import { generateAccessCode, getYearMonth, normalizedPlate, VISITOR_QUOTA_LIMIT } from '@/lib/utils';
-import { getSessionFromRequest, verifyVerificationToken } from '@/lib/auth';
+import { requireAdmin, verifyVerificationToken } from '@/lib/auth';
 import { sendVisitorBookingEmail } from '@/lib/email';
 
 export async function POST(req: NextRequest) {
@@ -145,10 +145,7 @@ export async function POST(req: NextRequest) {
 }
 
 export async function GET(req: NextRequest) {
-  // Require admin role — this endpoint returns all visitor PII
-  const session = getSessionFromRequest(req);
-  if (!session) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-  if (session.role !== 'admin') return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
+  if (!requireAdmin(req)) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
 
   const { searchParams } = new URL(req.url);
   const unit_id = searchParams.get('unit_id');

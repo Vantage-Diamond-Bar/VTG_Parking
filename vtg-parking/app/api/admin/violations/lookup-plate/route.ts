@@ -1,8 +1,10 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { supabaseAdmin } from '@/lib/supabase'
+import { requireAdmin } from '@/lib/auth'
 import { normalizedPlate } from '@/lib/utils'
 
 export async function POST(req: NextRequest) {
+  if (!requireAdmin(req)) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
   const { plate: rawPlate } = await req.json()
   if (!rawPlate) return NextResponse.json({ unit_address: null })
 

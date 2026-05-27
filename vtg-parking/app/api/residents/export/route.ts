@@ -1,13 +1,15 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { supabaseAdmin } from '@/lib/supabase';
-import { getSessionFromRequest } from '@/lib/auth';
+import { requireAdmin } from '@/lib/auth';
 import { formatPDT } from '@/lib/utils';
 import * as XLSX from 'xlsx';
 
+function sanitizeCell(value: string): string {
+  return /^[=+\-@\t\r]/.test(value) ? `\t${value}` : value;
+}
+
 export async function GET(req: NextRequest) {
-  const session = getSessionFromRequest(req);
-  if (!session) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-  if (session.role !== 'admin') return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
+  if (!requireAdmin(req)) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
 
   const { searchParams } = new URL(req.url);
   const format = searchParams.get('format') || 'csv';
@@ -23,15 +25,15 @@ export async function GET(req: NextRequest) {
 
   const rows = (data || []).map((v: any) => ({
     'Address': v.units?.address ?? '',
-    'Owner': v.owner_name ?? '',
+    'Owner': sanitizeCell(v.owner_name ?? ''),
     'Year': v.year ?? '',
-    'Make': v.make ?? '',
-    'Model': v.model ?? '',
+    'Make': sanitizeCell(v.make ?? ''),
+    'Model': sanitizeCell(v.model ?? ''),
     'Color': v.color ?? '',
-    'Plate': v.license_plate ?? '',
+    'Plate': sanitizeCell(v.license_plate ?? ''),
     'State': v.plate_state ?? '',
     'Phone': [v.owner_phone_country_code, v.owner_phone].filter(Boolean).join(' ') || '',
-    'Email': v.owner_email ?? '',
+    'Email': sanitizeCell(v.owner_email ?? ''),
     'SMS Opt-in': v.opt_in_sms ? 'Yes' : 'No',
     'Email Opt-in': v.opt_in_email ? 'Yes' : 'No',
     'Registered Date': formatPDT(v.created_at, { dateOnly: true }),

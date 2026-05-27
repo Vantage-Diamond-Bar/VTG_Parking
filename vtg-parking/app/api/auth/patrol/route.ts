@@ -10,7 +10,7 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: 'Invalid credentials' }, { status: 401 });
   }
 
-  if (user.role !== 'admin' && user.role !== 'patrol') {
+  if (user.role !== 'patrol') {
     return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
   }
 
