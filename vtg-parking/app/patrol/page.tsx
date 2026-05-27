@@ -288,9 +288,6 @@ export default function PatrolPage() {
         </div>
         <div className="flex items-center gap-2">
           <a href="/" className="text-sm text-gray-500 hover:text-gray-800 border border-gray-300 px-3 py-1.5 rounded-lg hover:bg-gray-50 transition-colors">🏠</a>
-          <a href="/admin/dashboard" className="flex items-center gap-2 bg-indigo-700 hover:bg-indigo-800 text-white text-sm font-semibold px-4 py-1.5 rounded-lg transition-colors shadow-sm">
-            <span>🔐</span><span>Admin Portal</span>
-          </a>
           <button onClick={handleLogout} className="text-sm text-gray-500 hover:text-gray-800 border border-gray-300 px-3 py-1.5 rounded-lg hover:bg-gray-50 transition-colors">{t('logout')}</button>
         </div>
       </header>

@@ -61,16 +61,9 @@ export default async function AdminProtectedLayout({
         </nav>
 
         <div className="px-3 py-4 border-t border-gray-700 space-y-1">
-          <Link
-            href="/"
-            className="flex items-center gap-3 px-3 py-2 rounded-lg text-sm text-gray-400 hover:bg-gray-700 hover:text-white transition-colors w-full"
-          >
-            <span>🏠</span>
-            <span>Return to Home</span>
-          </Link>
           <a
             href="/patrol"
-            className="block rounded-xl bg-indigo-900 hover:bg-indigo-800 transition-colors p-3 border border-indigo-700 mt-1"
+            className="block rounded-xl bg-indigo-900 hover:bg-indigo-800 transition-colors p-3 border border-indigo-700"
           >
             <div className="flex items-center gap-2.5">
               <span className="text-2xl leading-none">🚔</span>
@@ -80,6 +73,13 @@ export default async function AdminProtectedLayout({
               </div>
             </div>
           </a>
+          <Link
+            href="/"
+            className="flex items-center gap-3 px-3 py-2 rounded-lg text-sm text-gray-400 hover:bg-gray-700 hover:text-white transition-colors w-full"
+          >
+            <span>🏠</span>
+            <span>Return to Home</span>
+          </Link>
           <a
             href="/api/auth/logout?role=admin"
             className="flex items-center gap-3 px-3 py-2 rounded-lg text-sm text-gray-400 hover:bg-gray-700 hover:text-white transition-colors w-full"

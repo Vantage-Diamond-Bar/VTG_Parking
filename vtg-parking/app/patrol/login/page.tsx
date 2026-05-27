@@ -92,7 +92,29 @@ export default function PatrolLoginPage() {
           </button>
         </form>
 
-        <div className="mt-5 text-center">
+        {/* ── Admin Portal shortcut ──────────────────────────────── */}
+        <div className="mt-6">
+          <div className="relative flex items-center mb-4">
+            <div className="flex-grow border-t border-gray-200" />
+            <span className="mx-3 text-xs text-gray-400 whitespace-nowrap">or</span>
+            <div className="flex-grow border-t border-gray-200" />
+          </div>
+          <a
+            href="/admin/login"
+            className="flex items-center justify-between w-full bg-amber-50 hover:bg-amber-100 border border-amber-200 rounded-xl px-4 py-3 transition-colors group"
+          >
+            <div className="flex items-center gap-3">
+              <span className="text-2xl">🔐</span>
+              <div className="text-left">
+                <p className="text-sm font-semibold text-amber-900">Admin Portal</p>
+                <p className="text-xs text-amber-700">Community management console</p>
+              </div>
+            </div>
+            <span className="text-amber-400 group-hover:text-amber-600 transition-colors text-lg">→</span>
+          </a>
+        </div>
+
+        <div className="mt-4 text-center">
           <a href="/" className="inline-flex items-center gap-1.5 text-sm text-gray-400 hover:text-gray-600 transition-colors">
             <span>←</span> Return to Home
           </a>

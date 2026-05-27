@@ -30,7 +30,7 @@ export async function GET(req: NextRequest) {
     query = query.eq('is_oversized', true).eq('approval_status', 'approved').is('oversized_rejected_at', null);
   } else {
     // all: either currently oversized OR has rejection history
-    query = query.or('is_oversized.eq.true,oversized_rejected_at.not.is.null');
+    query = query.or('is_oversized.eq.true,not.oversized_rejected_at.is.null');
   }
 
   const { data, error, count } = await query;
