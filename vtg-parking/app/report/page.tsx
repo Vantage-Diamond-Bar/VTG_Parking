@@ -95,7 +95,7 @@ export default function ReportPage() {
       })
       const data = await res.json()
       if (!res.ok) {
-        setError(data?.message ?? 'Submission failed')
+        setError(data?.error ?? data?.message ?? 'Submission failed. Please try again.')
         return
       }
       setSuccess(true)

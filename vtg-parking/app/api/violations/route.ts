@@ -4,6 +4,7 @@ import { getSession } from '@/lib/auth';
 import { sendViolationReport } from '@/lib/email';
 
 export async function POST(req: NextRequest) {
+  try {
   const formData = await req.formData();
 
   const location = formData.get('location') as string;
@@ -96,6 +97,10 @@ export async function POST(req: NextRequest) {
   } catch {}
 
   return NextResponse.json({ success: true });
+  } catch (err: any) {
+    console.error('[violations POST]', err);
+    return NextResponse.json({ error: err?.message ?? 'Internal server error' }, { status: 500 });
+  }
 }
 
 export async function GET(req: NextRequest) {
