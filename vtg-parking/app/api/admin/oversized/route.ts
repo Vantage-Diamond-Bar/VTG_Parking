@@ -30,7 +30,7 @@ export async function GET(req: NextRequest) {
     query = query.eq('is_oversized', true).eq('approval_status', 'approved').is('oversized_rejected_at', null);
   } else {
     // all: either currently oversized OR has rejection history
-    query = query.or('is_oversized.eq.true,not.oversized_rejected_at.is.null');
+    query = query.or('is_oversized.eq.true,oversized_rejected_at.not.is.null');
   }
 
   const { data, error, count } = await query;
@@ -42,7 +42,7 @@ export async function GET(req: NextRequest) {
   // - rejected history rows → status = 'rejected'
   const mapped = (data ?? []).map((row) => ({
     ...row,
-    status: row.oversized_rejected_at ? 'rejected' : row.approval_status,
+    status: row.approval_status === 'pending' ? 'pending' : (row.oversized_rejected_at ? 'rejected' : row.approval_status),
   }));
 
   return NextResponse.json({ data: mapped, total: count, page, limit });

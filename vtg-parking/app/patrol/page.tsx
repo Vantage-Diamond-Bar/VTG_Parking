@@ -111,6 +111,8 @@ export default function PatrolPage() {
         const data = await res.json();
         if (data.found) {
           setResults(data.results ?? []);
+          setUnitVehicles(data.unit_vehicles ?? []);
+          setUnitVisitors(data.unit_visitors ?? []);
         } else {
           setNotFound(true);
         }

@@ -55,6 +55,16 @@ export async function PATCH(req: NextRequest) {
       return NextResponse.json({ error: 'plate_conflict', plate }, { status: 409 });
     }
 
+    // Fetch current oversized state to detect false→true upgrade
+    const { data: current } = await supabaseAdmin
+      .from('resident_vehicles')
+      .select('is_oversized')
+      .eq('id', vehicle_id)
+      .eq('unit_id', unit_id)
+      .single();
+
+    const upgradingToOversized = is_oversized === true && current?.is_oversized === false;
+
     const { error } = await supabaseAdmin
       .from('resident_vehicles')
       .update({
@@ -65,6 +75,10 @@ export async function PATCH(req: NextRequest) {
         license_plate: plate,
         plate_state,
         is_oversized,
+        // Re-entering oversized flow: reset to pending and clear prior review/rejection state
+        ...(upgradingToOversized
+          ? { approval_status: 'pending', reviewed_at: null, reviewed_by: null, oversized_rejected_at: null }
+          : {}),
       })
       .eq('id', vehicle_id)
       .eq('unit_id', unit_id);

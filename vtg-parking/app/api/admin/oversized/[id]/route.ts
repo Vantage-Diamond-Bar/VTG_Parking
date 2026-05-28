@@ -22,7 +22,6 @@ export async function PATCH(
     .from('resident_vehicles')
     .select('*, units(address)')
     .eq('id', id)
-    .eq('is_oversized', true)
     .single();
 
   if (!vehicle) return NextResponse.json({ error: 'Not found' }, { status: 404 });
@@ -44,6 +43,8 @@ export async function PATCH(
         }
       : {
           approval_status: 'approved',
+          is_oversized: true,
+          oversized_rejected_at: null,
           admin_notes: admin_notes ?? null,
           reviewed_at: now,
           reviewed_by: session.username,
@@ -58,21 +59,25 @@ export async function PATCH(
 
   // Send decision email to applicant
   if (vehicle.owner_email) {
-    sendOversizedDecision({
-      applicantEmail: vehicle.owner_email,
-      ownerName: vehicle.owner_name,
-      unitAddress: (vehicle.units as any)?.address ?? '',
-      vehicle: {
-        year: vehicle.year,
-        make: vehicle.make,
-        model: vehicle.model,
-        color: vehicle.color,
-        license_plate: vehicle.license_plate,
-        plate_state: vehicle.plate_state,
-      },
-      status,
-      admin_notes: admin_notes ?? null,
-    });
+    try {
+      await sendOversizedDecision({
+        applicantEmail: vehicle.owner_email,
+        ownerName: vehicle.owner_name,
+        unitAddress: (vehicle.units as any)?.address ?? '',
+        vehicle: {
+          year: vehicle.year,
+          make: vehicle.make,
+          model: vehicle.model,
+          color: vehicle.color,
+          license_plate: vehicle.license_plate,
+          plate_state: vehicle.plate_state,
+        },
+        status,
+        admin_notes: admin_notes ?? null,
+      });
+    } catch (emailErr) {
+      console.error('sendOversizedDecision failed:', emailErr);
+    }
   }
 
   return NextResponse.json({ success: true });
