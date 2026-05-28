@@ -14,20 +14,19 @@ vi.mock('@/lib/utils', () => ({ normalizedPlate: (p: string) => p }))
 import { GET } from './route'
 
 // ── Chain builders ────────────────────────────────────────────────────────────
-// For calls ending in .maybeSingle() — returns { data } immediately when awaited
+
+// Flat chain ending in .maybeSingle() — supports any sequence of filter methods
 function maybeSingleChain(data: object | null) {
   const maybeSingle = vi.fn().mockResolvedValue({ data })
-  const eqChain: Record<string, unknown> = { maybeSingle }
-  eqChain.eq = vi.fn(() => eqChain)
-  return {
-    select: vi.fn(() => ({
-      eq: vi.fn(() => eqChain),
-      ilike: vi.fn(() => ({ eq: vi.fn(() => eqChain) })),
-    })),
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const chain: any = { maybeSingle }
+  for (const m of ['select', 'eq', 'or', 'not', 'gte', 'order', 'limit', 'neq', 'ilike']) {
+    chain[m] = vi.fn(() => chain)
   }
+  return chain
 }
 
-// For list calls ending with .then() — thenable that resolves to { data, error: null }
+// Flat chain for list queries — thenable resolving to { data, error: null }
 function listChain(rows: object[]) {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const chain: any = {
@@ -35,7 +34,7 @@ function listChain(rows: object[]) {
       Promise.resolve({ data: rows, error: null }).then(resolve),
     catch: (_: unknown) => chain,
   }
-  for (const m of ['select', 'eq', 'not', 'gte', 'order', 'limit']) {
+  for (const m of ['select', 'eq', 'not', 'gte', 'order', 'limit', 'ilike', 'or']) {
     chain[m] = vi.fn(() => chain)
   }
   return chain
@@ -62,10 +61,19 @@ const visitorRow = {
   color: 'White',
   start_datetime: past,
   end_datetime: future,
+  access_code: 'ABC123',
   units: { address: '100 Main St' },
 }
 
 // ── Tests ─────────────────────────────────────────────────────────────────────
+// Code-search from() call order:
+//   1. visitor_registrations     — .eq('access_code').maybeSingle()
+//   2. vacation_parking_requests — .eq('access_code').eq('status').maybeSingle()
+//   3. resident_vehicles         — .ilike('license_plate').or().maybeSingle()  (resident by matched plate)
+//   4. resident_vehicles         — fetchUnitContext vehicles (list)
+//   5. vacation_parking_requests — fetchUnitContext vacations (list)
+//   6. visitor_registrations     — fetchUnitContext visitors (list)
+
 describe('GET /api/patrol/lookup — code search', () => {
   beforeEach(() => {
     vi.clearAllMocks()
@@ -95,10 +103,12 @@ describe('GET /api/patrol/lookup — code search', () => {
   })
 
   it('returns found=true with the matched visitor record', async () => {
-    mockFrom.mockReturnValueOnce(maybeSingleChain(visitorRow))  // visitor match
-    mockFrom.mockReturnValueOnce(maybeSingleChain(null))         // no vacation match
-    mockFrom.mockReturnValueOnce(listChain([]))                  // other vehicles
-    mockFrom.mockReturnValueOnce(listChain([]))                  // unit visitors
+    mockFrom.mockReturnValueOnce(maybeSingleChain(visitorRow))  // 1: visitor match
+    mockFrom.mockReturnValueOnce(maybeSingleChain(null))         // 2: no vacation match
+    mockFrom.mockReturnValueOnce(maybeSingleChain(null))         // 3: resident by plate → not found
+    mockFrom.mockReturnValueOnce(listChain([]))                  // 4: unit vehicles
+    mockFrom.mockReturnValueOnce(listChain([]))                  // 5: unit vacations
+    mockFrom.mockReturnValueOnce(listChain([]))                  // 6: unit visitors
 
     const res = await GET(makeRequest({ code: 'ABC123' }))
     const body = await res.json()
@@ -122,10 +132,12 @@ describe('GET /api/patrol/lookup — code search', () => {
       vehicle_type: null,
     }
 
-    mockFrom.mockReturnValueOnce(maybeSingleChain(visitorRow))    // visitor match
-    mockFrom.mockReturnValueOnce(maybeSingleChain(null))           // no vacation match
-    mockFrom.mockReturnValueOnce(listChain([otherVehicle]))        // other vehicles in unit
-    mockFrom.mockReturnValueOnce(listChain([]))                    // unit visitors
+    mockFrom.mockReturnValueOnce(maybeSingleChain(visitorRow))    // 1: visitor match
+    mockFrom.mockReturnValueOnce(maybeSingleChain(null))           // 2: no vacation match
+    mockFrom.mockReturnValueOnce(maybeSingleChain(null))           // 3: resident by plate → not found
+    mockFrom.mockReturnValueOnce(listChain([otherVehicle]))        // 4: unit vehicles
+    mockFrom.mockReturnValueOnce(listChain([]))                    // 5: unit vacations
+    mockFrom.mockReturnValueOnce(listChain([]))                    // 6: unit visitors
 
     const res = await GET(makeRequest({ code: 'ABC123' }))
     const body = await res.json()
@@ -145,17 +157,50 @@ describe('GET /api/patrol/lookup — code search', () => {
       color: 'Red',
       start_datetime: past,
       end_datetime: future,
+      access_code: 'ZZZ999',
     }
 
-    mockFrom.mockReturnValueOnce(maybeSingleChain(visitorRow))    // visitor match
-    mockFrom.mockReturnValueOnce(maybeSingleChain(null))           // no vacation match
-    mockFrom.mockReturnValueOnce(listChain([]))                    // no other vehicles
-    mockFrom.mockReturnValueOnce(listChain([unitVisitor]))         // unit visitors
+    mockFrom.mockReturnValueOnce(maybeSingleChain(visitorRow))    // 1: visitor match
+    mockFrom.mockReturnValueOnce(maybeSingleChain(null))           // 2: no vacation match
+    mockFrom.mockReturnValueOnce(maybeSingleChain(null))           // 3: resident by plate → not found
+    mockFrom.mockReturnValueOnce(listChain([]))                    // 4: unit vehicles
+    mockFrom.mockReturnValueOnce(listChain([]))                    // 5: unit vacations
+    mockFrom.mockReturnValueOnce(listChain([unitVisitor]))         // 6: unit visitors
 
     const res = await GET(makeRequest({ code: 'ABC123' }))
     const body = await res.json()
 
     expect(body.unit_visitors).toHaveLength(1)
     expect(body.unit_visitors[0].plate).toBe('GHI789')
+  })
+
+  it('excludes matched visitor from unit_visitors to prevent duplication', async () => {
+    const otherVisitor = {
+      visitor_name: 'Other Guest',
+      license_plate: 'DEF456',
+      plate_state: 'NV',
+      make: 'Ford',
+      model: 'Focus',
+      color: 'Red',
+      start_datetime: past,
+      end_datetime: future,
+      access_code: 'ZZZ999',
+    }
+
+    mockFrom.mockReturnValueOnce(maybeSingleChain(visitorRow))                       // 1: visitor match
+    mockFrom.mockReturnValueOnce(maybeSingleChain(null))                              // 2: no vacation match
+    mockFrom.mockReturnValueOnce(maybeSingleChain(null))                              // 3: resident by plate
+    mockFrom.mockReturnValueOnce(listChain([]))                                       // 4: unit vehicles
+    mockFrom.mockReturnValueOnce(listChain([]))                                       // 5: unit vacations
+    mockFrom.mockReturnValueOnce(listChain([visitorRow, otherVisitor]))               // 6: unit visitors (both)
+
+    const res = await GET(makeRequest({ code: 'ABC123' }))
+    const body = await res.json()
+
+    expect(body.results).toHaveLength(1)
+    expect(body.results[0].access_code).toBe('ABC123')
+    // matched visitor must NOT appear again in the unit context list
+    expect(body.unit_visitors).toHaveLength(1)
+    expect(body.unit_visitors[0].access_code).toBe('ZZZ999')
   })
 })

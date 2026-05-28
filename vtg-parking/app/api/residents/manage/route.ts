@@ -55,15 +55,19 @@ export async function PATCH(req: NextRequest) {
       return NextResponse.json({ error: 'plate_conflict', plate }, { status: 409 });
     }
 
-    // Fetch current oversized state to detect false→true upgrade
-    const { data: current } = await supabaseAdmin
+    // Fetch current oversized state; also validates vehicle belongs to this unit
+    const { data: current, error: currentError } = await supabaseAdmin
       .from('resident_vehicles')
       .select('is_oversized')
       .eq('id', vehicle_id)
       .eq('unit_id', unit_id)
       .single();
 
-    const upgradingToOversized = is_oversized === true && current?.is_oversized === false;
+    if (currentError || !current) {
+      return NextResponse.json({ error: 'Vehicle not found for this unit' }, { status: 404 });
+    }
+
+    const upgradingToOversized = is_oversized === true && current.is_oversized === false;
 
     const { error } = await supabaseAdmin
       .from('resident_vehicles')

@@ -17,11 +17,13 @@ export async function PATCH(
     return NextResponse.json({ error: 'Invalid status' }, { status: 400 });
   }
 
-  // Fetch the vehicle from resident_vehicles
+  // Fetch the vehicle — guard ensures only genuinely pending applications are processed
   const { data: vehicle } = await supabaseAdmin
     .from('resident_vehicles')
     .select('*, units(address)')
     .eq('id', id)
+    .eq('is_oversized', true)
+    .eq('approval_status', 'pending')
     .single();
 
   if (!vehicle) return NextResponse.json({ error: 'Not found' }, { status: 404 });

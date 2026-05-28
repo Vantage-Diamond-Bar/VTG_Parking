@@ -8,7 +8,12 @@ const { mockRequireAdmin, mockSingle, mockUpdate, mockUpdateEq, mockFrom, mockSe
     const mockUpdateEq = vi.fn()
     const mockUpdate = vi.fn(() => ({ eq: mockUpdateEq }))
     const mockFrom = vi.fn(() => ({
-      select: vi.fn(() => ({ eq: vi.fn(() => ({ single: mockSingle })) })),
+      select: vi.fn(() => {
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        const eqChain: any = { single: mockSingle }
+        eqChain.eq = vi.fn(() => eqChain)
+        return { eq: vi.fn(() => eqChain) }
+      }),
       update: mockUpdate,
     }))
     return {
@@ -130,23 +135,24 @@ describe('PATCH /api/admin/oversized/[id]', () => {
       expect(payload.approval_status).toBe('approved')
     })
 
-    it('re-approves a previously rejected vehicle (is_oversized was false)', async () => {
+    it('returns 404 for a rejected vehicle — must re-apply to get re-approved', async () => {
       mockRequireAdmin.mockResolvedValue(adminUser)
-      // Vehicle was rejected: is_oversized=false, oversized_rejected_at set
-      mockSingle.mockResolvedValue({
-        data: {
-          ...baseVehicle,
-          is_oversized: false,
-          oversized_rejected_at: '2026-05-01T00:00:00Z',
-        },
-      })
+      // Guard (.eq is_oversized=true, .eq approval_status=pending) filters it out
+      mockSingle.mockResolvedValue({ data: null })
 
       const res = await PATCH(makeRequest({ status: 'approved' }), makeParams())
 
-      expect(res.status).toBe(200)
-      const payload = mockUpdate.mock.calls[0][0] as Record<string, unknown>
-      expect(payload.is_oversized).toBe(true)
-      expect(payload.oversized_rejected_at).toBeNull()
+      expect(res.status).toBe(404)
+    })
+
+    it('returns 404 for a regular vehicle that never applied for oversized', async () => {
+      mockRequireAdmin.mockResolvedValue(adminUser)
+      // Guard filters out any vehicle that is not is_oversized=true AND approval_status=pending
+      mockSingle.mockResolvedValue({ data: null })
+
+      const res = await PATCH(makeRequest({ status: 'approved' }), makeParams('regular-vehicle'))
+
+      expect(res.status).toBe(404)
     })
   })
 

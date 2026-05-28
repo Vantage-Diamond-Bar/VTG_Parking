@@ -35,10 +35,12 @@ function makeRequest(body: object) {
 function setupUpdateVehicle({
   conflict = null,
   currentIsOversized = false,
+  vehicleFound = true,
   updateError = null,
 }: {
   conflict?: object | null
   currentIsOversized?: boolean
+  vehicleFound?: boolean
   updateError?: { message: string } | null
 } = {}) {
   mockFrom.mockReset()
@@ -51,10 +53,13 @@ function setupUpdateVehicle({
     })),
   })
   // call 2: fetch current is_oversized — .select().eq().eq().single()
+  const currentResult = vehicleFound
+    ? { data: { is_oversized: currentIsOversized }, error: null }
+    : { data: null, error: { code: 'PGRST116', message: 'no rows' } }
   mockFrom.mockReturnValueOnce({
     select: vi.fn(() => ({
       eq: vi.fn(() => ({
-        eq: vi.fn(() => ({ single: mockCurrentSingle.mockResolvedValue({ data: { is_oversized: currentIsOversized } }) })),
+        eq: vi.fn(() => ({ single: mockCurrentSingle.mockResolvedValue(currentResult) })),
       })),
     })),
   })
@@ -156,6 +161,14 @@ describe('PATCH /api/residents/manage — update_vehicle', () => {
       const payload = mockUpdate.mock.calls[0][0] as Record<string, unknown>
       expect(payload.approval_status).toBeUndefined()
     })
+  })
+
+  it('returns 404 when vehicle_id does not belong to the unit (cross-unit update blocked)', async () => {
+    setupUpdateVehicle({ vehicleFound: false })
+
+    const res = await PATCH(makeRequest(vehicleBody()))
+
+    expect(res.status).toBe(404)
   })
 
   it('returns 500 when DB update fails', async () => {
