@@ -49,8 +49,6 @@ export default function PatrolPage() {
   const [unitVehicles, setUnitVehicles] = useState<ResultItem[]>([]);
   const [unitVacations, setUnitVacations] = useState<ResultItem[]>([]);
   const [unitVisitors, setUnitVisitors] = useState<ResultItem[]>([]);
-  const [searchedPlate, setSearchedPlate] = useState('');
-  const [searchedCode, setSearchedCode] = useState('');
   const [notFound, setNotFound] = useState(false);
   const [searching, setSearching] = useState(false);
   const [error, setError] = useState('');
@@ -74,8 +72,6 @@ export default function PatrolPage() {
     setUnitVehicles([]);
     setUnitVacations([]);
     setUnitVisitors([]);
-    setSearchedPlate('');
-    setSearchedCode('');
     setNotFound(false);
     setError('');
   }
@@ -96,7 +92,6 @@ export default function PatrolPage() {
           setUnitVehicles(data.unit_vehicles ?? []);
           setUnitVacations(data.unit_vacations ?? []);
           setUnitVisitors(data.unit_visitors ?? []);
-          setSearchedPlate(normalizedSearchPlate);
         } else {
           setNotFound(true);
         }
@@ -124,7 +119,6 @@ export default function PatrolPage() {
           setUnitVehicles(data.unit_vehicles ?? []);
           setUnitVacations(data.unit_vacations ?? []);
           setUnitVisitors(data.unit_visitors ?? []);
-          setSearchedCode(normalizedCode);
         } else {
           setNotFound(true);
         }
@@ -164,10 +158,21 @@ export default function PatrolPage() {
     }
   };
 
-  /** True if this compact-list item matches the current search query */
+  /**
+   * Plates and codes from the primary result cards — used to badge compact-list rows.
+   * Derived from `results` so it's always in sync with what was actually found,
+   * avoiding any state-timing issues with separate searchedPlate/searchedCode state.
+   */
+  const matchedPlates = new Set(
+    results.map(r => r.plate?.toUpperCase().replace(/\s+/g, '')).filter((p): p is string => !!p)
+  );
+  const matchedCodes = new Set(
+    results.map(r => r.access_code?.toUpperCase()).filter((c): c is string => !!c)
+  );
+
   const isThisVehicle = (item: ResultItem) => {
-    if (searchedPlate && item.plate?.toUpperCase().replace(/\s+/g, '') === searchedPlate) return true;
-    if (searchedCode && item.access_code?.toUpperCase() === searchedCode) return true;
+    if (item.plate && matchedPlates.has(item.plate.toUpperCase().replace(/\s+/g, ''))) return true;
+    if (item.access_code && matchedCodes.has(item.access_code.toUpperCase())) return true;
     return false;
   };
 

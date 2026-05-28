@@ -108,7 +108,6 @@ export async function GET(req: NextRequest) {
   /* ── Lookup by license plate ── */
   if (rawPlate) {
     const plate = normalizedPlate(rawPlate);
-    const now = new Date().toISOString();
     const results: object[] = [];
 
     // Run all 3 checks in parallel — visitor is always checked so we can capture unit_id
@@ -124,8 +123,8 @@ export async function GET(req: NextRequest) {
         .select('*, units(address)')
         .ilike('license_plate', plate)
         .eq('status', 'approved')
-        .gte('end_datetime', now)
-        .order('start_datetime', { ascending: true })
+        .gte('end_datetime', lastMonthStart())
+        .order('start_datetime', { ascending: false })
         .limit(1),
       supabaseAdmin
         .from('visitor_registrations')
@@ -259,6 +258,36 @@ export async function GET(req: NextRequest) {
       access_code: v.access_code,
       status: determineStatus(v.start_datetime, v.end_datetime),
     });
+  }
+
+  // Also look up the resident vehicle for the matched plate (if any)
+  const matchedPlateFromCode =
+    visitorRes.data?.license_plate ?? vacationByCodeRes.data?.license_plate ?? null;
+
+  if (matchedPlateFromCode) {
+    const residentByPlateRes = await supabaseAdmin
+      .from('resident_vehicles')
+      .select('*, units(address)')
+      .ilike('license_plate', matchedPlateFromCode)
+      .or('approval_status.eq.approved,and(approval_status.eq.pending,is_oversized.eq.true)')
+      .maybeSingle();
+
+    if (residentByPlateRes.data) {
+      const r = residentByPlateRes.data;
+      results.push({
+        type: 'resident',
+        address: (r.units as any)?.address ?? null,
+        owner_name: r.owner_name,
+        year: r.year,
+        make: r.make,
+        model: r.model,
+        color: r.color,
+        plate: r.license_plate,
+        state: r.plate_state,
+        approval_status: r.approval_status,
+        is_oversized: r.is_oversized,
+      });
+    }
   }
 
   const unit_id: string | null =
