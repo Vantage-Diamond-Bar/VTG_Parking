@@ -5,6 +5,7 @@ import Link from 'next/link'
 import { useTranslations } from 'next-intl'
 import { US_STATES, CAR_COLORS, CAR_MAKES, VEHICLE_TYPES, VISITOR_QUOTA_LIMIT, getYearMonth, ptInputToISO, formatPDT } from '@/lib/utils'
 import PhoneInput from '@/components/PhoneInput'
+import UnitSearchInput from '@/components/UnitSearchInput'
 
 // ─── Types ─────────────────────────────────────────────────────────────────
 
@@ -364,10 +365,13 @@ export default function RegisterPage() {
           {/* Unit selector — always shown */}
           <div className="mb-6">
             <label className={labelCls}>{t('unit_number')} *</label>
-            <select value={unitId} onChange={(e) => handleUnitChange(e.target.value)} className={inputCls}>
-              <option value="">{t('unit_placeholder')}</option>
-              {units.map(u => <option key={u.id} value={u.id}>{u.address}</option>)}
-            </select>
+            <UnitSearchInput
+              units={units}
+              value={unitId}
+              onChange={handleUnitChange}
+              placeholder={t('unit_placeholder')}
+              className={inputCls}
+            />
           </div>
 
           {pageState === 'checking' && (

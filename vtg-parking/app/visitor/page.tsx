@@ -5,6 +5,7 @@ import Link from 'next/link'
 import { useTranslations } from 'next-intl'
 import { US_STATES, CAR_COLORS, CAR_MAKES, VEHICLE_TYPES, VISITOR_QUOTA_LIMIT, getYearMonth, ptInputToISO } from '@/lib/utils'
 import PhoneInput from '@/components/PhoneInput'
+import UnitSearchInput from '@/components/UnitSearchInput'
 
 type VerifyState = 'idle' | 'loading' | 'no_vehicles' | 'awaiting_email' | 'otp_sending' | 'otp_sent' | 'otp_verifying' | 'otp_invalid' | 'mismatch' | 'overdue' | 'verified'
 
@@ -334,18 +335,13 @@ export default function VisitorPage() {
               <h2 className={sectionCls}>{t('section_unit')}</h2>
               <div>
                 <label className={labelCls}>{t('unit_number')}</label>
-                <select
+                <UnitSearchInput
+                  units={units}
                   value={unitId}
-                  onChange={(e) => setUnitId(e.target.value)}
+                  onChange={setUnitId}
+                  placeholder={t('unit_placeholder')}
                   className={inputCls}
-                >
-                  <option value="">{t('unit_placeholder')}</option>
-                  {units.map((u) => (
-                    <option key={u.id} value={u.id}>
-                      {u.address}
-                    </option>
-                  ))}
-                </select>
+                />
                 {fieldErrors.unit_id && (
                   <p className="text-red-500 text-xs mt-1">{fieldErrors.unit_id}</p>
                 )}

@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react'
 import Link from 'next/link'
 import { useTranslations } from 'next-intl'
 import PhoneInput from '@/components/PhoneInput'
+import UnitSearchInput from '@/components/UnitSearchInput'
 import { splitPhone, ptInputToISO } from '@/lib/utils'
 
 // ─── Types ────────────────────────────────────────────────────────────────────
@@ -381,18 +382,13 @@ export default function VacationPage() {
           {/* ── Step 1: Unit selection ───────────────────────────────────── */}
           <div className="mb-6">
             <label className={labelCls}>{t('unit_number')} *</label>
-            <select
+            <UnitSearchInput
+              units={units}
               value={unitId}
-              onChange={(e) => handleUnitChange(e.target.value)}
+              onChange={handleUnitChange}
+              placeholder={t('unit_placeholder')}
               className={inputCls}
-            >
-              <option value="">{t('unit_placeholder')}</option>
-              {units.map((u) => (
-                <option key={u.id} value={u.id}>
-                  {u.address}
-                </option>
-              ))}
-            </select>
+            />
           </div>
 
           {/* ── Step 2: Unit check feedback ──────────────────────────────── */}
