@@ -10,6 +10,86 @@ function determineStatus(start: string, end: string): 'active' | 'expired' | 'up
   return 'active';
 }
 
+/** First day of the previous calendar month (UTC midnight) */
+function lastMonthStart(): string {
+  const d = new Date();
+  d.setUTCDate(1);
+  d.setUTCMonth(d.getUTCMonth() - 1);
+  d.setUTCHours(0, 0, 0, 0);
+  return d.toISOString();
+}
+
+/** Fetch all 3 unit-context sections for a given unit_id */
+async function fetchUnitContext(unit_id: string) {
+  const since = lastMonthStart();
+
+  const [vehiclesRes, vacationsRes, visitorsRes] = await Promise.all([
+    // All resident vehicles: approved OR pending oversized
+    supabaseAdmin
+      .from('resident_vehicles')
+      .select('owner_name, year, make, model, color, license_plate, plate_state, is_oversized, approval_status, vehicle_type')
+      .eq('unit_id', unit_id)
+      .or('approval_status.eq.approved,and(approval_status.eq.pending,is_oversized.eq.true)'),
+    // Approved vacation records from last month start onwards
+    supabaseAdmin
+      .from('vacation_parking_requests')
+      .select('first_name, last_name, license_plate, plate_state, year, make, model, color, start_datetime, end_datetime, access_code')
+      .eq('unit_id', unit_id)
+      .eq('status', 'approved')
+      .gte('end_datetime', since)
+      .order('start_datetime', { ascending: true }),
+    // Visitor registrations from last month start onwards
+    supabaseAdmin
+      .from('visitor_registrations')
+      .select('visitor_name, license_plate, plate_state, make, model, color, start_datetime, end_datetime, access_code')
+      .eq('unit_id', unit_id)
+      .gte('end_datetime', since)
+      .order('start_datetime', { ascending: true }),
+  ]);
+
+  const unit_vehicles = (vehiclesRes.data ?? []).map((v) => ({
+    owner_name: v.owner_name,
+    year: v.year,
+    make: v.make,
+    model: v.model,
+    color: v.color,
+    plate: v.license_plate,
+    state: v.plate_state,
+    is_oversized: v.is_oversized,
+    approval_status: v.approval_status,
+    vehicle_type: v.vehicle_type,
+  }));
+
+  const unit_vacations = (vacationsRes.data ?? []).map((v) => ({
+    owner_name: `${v.first_name} ${v.last_name}`,
+    plate: v.license_plate,
+    state: v.plate_state,
+    year: v.year,
+    make: v.make,
+    model: v.model,
+    color: v.color,
+    valid_from: v.start_datetime,
+    valid_until: v.end_datetime,
+    access_code: v.access_code,
+    status: determineStatus(v.start_datetime, v.end_datetime),
+  }));
+
+  const unit_visitors = (visitorsRes.data ?? []).map((v) => ({
+    guest_name: v.visitor_name ?? null,
+    plate: v.license_plate,
+    state: v.plate_state,
+    make: v.make,
+    model: v.model,
+    color: v.color,
+    valid_from: v.start_datetime,
+    valid_until: v.end_datetime,
+    access_code: v.access_code,
+    status: determineStatus(v.start_datetime, v.end_datetime),
+  }));
+
+  return { unit_vehicles, unit_vacations, unit_visitors };
+}
+
 export async function GET(req: NextRequest) {
   const session = getSessionFromRequest(req);
   if (!session) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
@@ -31,13 +111,12 @@ export async function GET(req: NextRequest) {
     const now = new Date().toISOString();
     const results: object[] = [];
 
-    // 1. Parallel: resident vehicles + non-expired approved vacation
-    const [residentRes, vacationRes] = await Promise.all([
+    // Run all 3 checks in parallel — visitor is always checked so we can capture unit_id
+    const [residentRes, vacationRes, visitorRes] = await Promise.all([
       supabaseAdmin
         .from('resident_vehicles')
         .select('*, units(address)')
         .ilike('license_plate', plate)
-        // approved (any) OR pending oversized (awaiting admin review)
         .or('approval_status.eq.approved,and(approval_status.eq.pending,is_oversized.eq.true)')
         .maybeSingle(),
       supabaseAdmin
@@ -47,6 +126,12 @@ export async function GET(req: NextRequest) {
         .eq('status', 'approved')
         .gte('end_datetime', now)
         .order('start_datetime', { ascending: true })
+        .limit(1),
+      supabaseAdmin
+        .from('visitor_registrations')
+        .select('*, units(address)')
+        .ilike('license_plate', plate)
+        .order('start_datetime', { ascending: false })
         .limit(1),
     ]);
 
@@ -86,92 +171,43 @@ export async function GET(req: NextRequest) {
       });
     }
 
-    // 2. Only check visitor if no resident/vacation match (a resident plate
-    //    can never be registered as visitor — plate_conflict blocks it)
-    if (results.length === 0) {
-      const { data: visitors } = await supabaseAdmin
-        .from('visitor_registrations')
-        .select('*, units(address)')
-        .ilike('license_plate', plate)
-        .order('start_datetime', { ascending: false })
-        .limit(1);
-
-      if (visitors && visitors.length > 0) {
-        const reg = visitors[0];
-        results.push({
-          type: 'visitor',
-          address: (reg.units as any)?.address ?? null,
-          guest_name: reg.visitor_name ?? null,
-          plate: reg.license_plate,
-          state: reg.plate_state,
-          make: reg.make,
-          model: reg.model,
-          color: reg.color,
-          valid_from: reg.start_datetime,
-          valid_until: reg.end_datetime,
-          status: determineStatus(reg.start_datetime, reg.end_datetime),
-        });
-      }
+    if (visitorRes.data && visitorRes.data.length > 0) {
+      const reg = visitorRes.data[0];
+      results.push({
+        type: 'visitor',
+        address: (reg.units as any)?.address ?? null,
+        guest_name: reg.visitor_name ?? null,
+        plate: reg.license_plate,
+        state: reg.plate_state,
+        make: reg.make,
+        model: reg.model,
+        color: reg.color,
+        valid_from: reg.start_datetime,
+        valid_until: reg.end_datetime,
+        access_code: reg.access_code,
+        status: determineStatus(reg.start_datetime, reg.end_datetime),
+      });
     }
 
-    // 3. Unit context: other vehicles + current/future visitors for the same unit
+    // Determine unit_id from whichever match was found
     const unit_id: string | null =
       residentRes.data?.unit_id ??
       vacationRes.data?.[0]?.unit_id ??
+      (visitorRes.data && visitorRes.data.length > 0 ? visitorRes.data[0].unit_id : null) ??
       null;
 
     let unit_vehicles: object[] = [];
+    let unit_vacations: object[] = [];
     let unit_visitors: object[] = [];
 
     if (unit_id) {
-      const monthStart = new Date(new Date().getFullYear(), new Date().getMonth(), 1).toISOString();
-
-      const [otherVehiclesRes, unitVisitorsRes] = await Promise.all([
-        supabaseAdmin
-          .from('resident_vehicles')
-          .select('owner_name, year, make, model, color, license_plate, plate_state, is_oversized, vehicle_type')
-          .eq('unit_id', unit_id)
-          .eq('approval_status', 'approved')
-          .not('license_plate', 'ilike', plate),
-        supabaseAdmin
-          .from('visitor_registrations')
-          .select('visitor_name, license_plate, plate_state, make, model, color, start_datetime, end_datetime')
-          .eq('unit_id', unit_id)
-          .gte('end_datetime', monthStart)
-          .order('start_datetime', { ascending: true })
-          .limit(20),
-      ]);
-
-      unit_vehicles = (otherVehiclesRes.data ?? []).map((v) => ({
-        owner_name: v.owner_name,
-        year: v.year,
-        make: v.make,
-        model: v.model,
-        color: v.color,
-        plate: v.license_plate,
-        state: v.plate_state,
-        is_oversized: v.is_oversized,
-        vehicle_type: v.vehicle_type,
-      }));
-
-      unit_visitors = (unitVisitorsRes.data ?? []).map((v) => ({
-        guest_name: v.visitor_name ?? null,
-        plate: v.license_plate,
-        state: v.plate_state,
-        make: v.make,
-        model: v.model,
-        color: v.color,
-        valid_from: v.start_datetime,
-        valid_until: v.end_datetime,
-        status: determineStatus(v.start_datetime, v.end_datetime),
-      }));
+      ({ unit_vehicles, unit_vacations, unit_visitors } = await fetchUnitContext(unit_id));
     }
 
-    return NextResponse.json({ found: results.length > 0, results, unit_vehicles, unit_visitors });
+    return NextResponse.json({ found: results.length > 0, results, unit_vehicles, unit_vacations, unit_visitors });
   }
 
   /* ── Lookup by access code ── */
-  // Access codes are unique — a code belongs to either a visitor reg or a vacation req, never both
   const [visitorRes, vacationByCodeRes] = await Promise.all([
     supabaseAdmin
       .from('visitor_registrations')
@@ -201,6 +237,7 @@ export async function GET(req: NextRequest) {
       color: reg.color,
       valid_from: reg.start_datetime,
       valid_until: reg.end_datetime,
+      access_code: reg.access_code,
       status: determineStatus(reg.start_datetime, reg.end_datetime),
     });
   }
@@ -224,62 +261,16 @@ export async function GET(req: NextRequest) {
     });
   }
 
-  // Fetch unit context (other vehicles + current/upcoming visitors) for the same unit
   const unit_id: string | null =
     visitorRes.data?.unit_id ?? vacationByCodeRes.data?.unit_id ?? null;
 
   let unit_vehicles: object[] = [];
+  let unit_vacations: object[] = [];
   let unit_visitors: object[] = [];
 
   if (unit_id) {
-    const monthStart = new Date(new Date().getFullYear(), new Date().getMonth(), 1).toISOString();
-    const primaryPlate: string | null =
-      visitorRes.data?.license_plate ?? vacationByCodeRes.data?.license_plate ?? null;
-
-    let otherVehiclesQuery = supabaseAdmin
-      .from('resident_vehicles')
-      .select('owner_name, year, make, model, color, license_plate, plate_state, is_oversized, vehicle_type')
-      .eq('unit_id', unit_id)
-      .eq('approval_status', 'approved');
-    if (primaryPlate) {
-      otherVehiclesQuery = otherVehiclesQuery.not('license_plate', 'ilike', primaryPlate);
-    }
-
-    const [otherVehiclesRes, unitVisitorsRes] = await Promise.all([
-      otherVehiclesQuery,
-      supabaseAdmin
-        .from('visitor_registrations')
-        .select('visitor_name, license_plate, plate_state, make, model, color, start_datetime, end_datetime')
-        .eq('unit_id', unit_id)
-        .gte('end_datetime', monthStart)
-        .order('start_datetime', { ascending: true })
-        .limit(20),
-    ]);
-
-    unit_vehicles = (otherVehiclesRes.data ?? []).map((v) => ({
-      owner_name: v.owner_name,
-      year: v.year,
-      make: v.make,
-      model: v.model,
-      color: v.color,
-      plate: v.license_plate,
-      state: v.plate_state,
-      is_oversized: v.is_oversized,
-      vehicle_type: v.vehicle_type,
-    }));
-
-    unit_visitors = (unitVisitorsRes.data ?? []).map((v) => ({
-      guest_name: v.visitor_name ?? null,
-      plate: v.license_plate,
-      state: v.plate_state,
-      make: v.make,
-      model: v.model,
-      color: v.color,
-      valid_from: v.start_datetime,
-      valid_until: v.end_datetime,
-      status: determineStatus(v.start_datetime, v.end_datetime),
-    }));
+    ({ unit_vehicles, unit_vacations, unit_visitors } = await fetchUnitContext(unit_id));
   }
 
-  return NextResponse.json({ found: results.length > 0, results, unit_vehicles, unit_visitors });
+  return NextResponse.json({ found: results.length > 0, results, unit_vehicles, unit_vacations, unit_visitors });
 }

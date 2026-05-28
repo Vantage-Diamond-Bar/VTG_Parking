@@ -47,7 +47,10 @@ export default function PatrolPage() {
 
   const [results, setResults] = useState<ResultItem[]>([]);
   const [unitVehicles, setUnitVehicles] = useState<ResultItem[]>([]);
+  const [unitVacations, setUnitVacations] = useState<ResultItem[]>([]);
   const [unitVisitors, setUnitVisitors] = useState<ResultItem[]>([]);
+  const [searchedPlate, setSearchedPlate] = useState('');
+  const [searchedCode, setSearchedCode] = useState('');
   const [notFound, setNotFound] = useState(false);
   const [searching, setSearching] = useState(false);
   const [error, setError] = useState('');
@@ -69,7 +72,10 @@ export default function PatrolPage() {
   function resetResults() {
     setResults([]);
     setUnitVehicles([]);
+    setUnitVacations([]);
     setUnitVisitors([]);
+    setSearchedPlate('');
+    setSearchedCode('');
     setNotFound(false);
     setError('');
   }
@@ -78,8 +84,9 @@ export default function PatrolPage() {
     if (!plate.trim()) return;
     setSearching(true);
     resetResults();
+    const normalizedSearchPlate = plate.trim().toUpperCase().replace(/\s+/g, '');
     try {
-      const params = new URLSearchParams({ plate: plate.toUpperCase() });
+      const params = new URLSearchParams({ plate: normalizedSearchPlate });
       if (plateState) params.set('state', plateState);
       const res = await fetch(`/api/patrol/lookup?${params}`);
       if (res.ok) {
@@ -87,7 +94,9 @@ export default function PatrolPage() {
         if (data.found) {
           setResults(data.results ?? []);
           setUnitVehicles(data.unit_vehicles ?? []);
+          setUnitVacations(data.unit_vacations ?? []);
           setUnitVisitors(data.unit_visitors ?? []);
+          setSearchedPlate(normalizedSearchPlate);
         } else {
           setNotFound(true);
         }
@@ -105,14 +114,17 @@ export default function PatrolPage() {
     if (!code.trim()) return;
     setSearching(true);
     resetResults();
+    const normalizedCode = code.trim().toUpperCase();
     try {
-      const res = await fetch(`/api/patrol/lookup?code=${code.toUpperCase()}`);
+      const res = await fetch(`/api/patrol/lookup?code=${normalizedCode}`);
       if (res.ok) {
         const data = await res.json();
         if (data.found) {
           setResults(data.results ?? []);
           setUnitVehicles(data.unit_vehicles ?? []);
+          setUnitVacations(data.unit_vacations ?? []);
           setUnitVisitors(data.unit_visitors ?? []);
+          setSearchedCode(normalizedCode);
         } else {
           setNotFound(true);
         }
@@ -150,6 +162,13 @@ export default function PatrolPage() {
       default:
         return null;
     }
+  };
+
+  /** True if this compact-list item matches the current search query */
+  const isThisVehicle = (item: ResultItem) => {
+    if (searchedPlate && item.plate?.toUpperCase().replace(/\s+/g, '') === searchedPlate) return true;
+    if (searchedCode && item.access_code?.toUpperCase() === searchedCode) return true;
+    return false;
   };
 
   const renderCard = (item: ResultItem, index: number) => {
@@ -248,6 +267,12 @@ export default function PatrolPage() {
               {getStatusBadge(item.status)}
             </div>
           </div>
+          {item.access_code && (
+            <div className={`bg-${c}-100 border border-${c}-200 rounded-lg px-4 py-2 mb-3 text-center`}>
+              <span className={`text-xs font-bold text-${c}-600 uppercase`}>Access Code: </span>
+              <span className={`font-mono font-bold text-${c}-900 tracking-widest text-lg`}>{item.access_code}</span>
+            </div>
+          )}
           <div className="grid grid-cols-2 gap-3 text-sm">
             <div><span className={`text-${c}-600 font-medium`}>{t('unit')}:</span> <span className="font-semibold">{item.address}</span></div>
             {item.guest_name && (
@@ -420,54 +445,131 @@ export default function PatrolPage() {
         {/* Results — primary match card(s) */}
         {results.map((item, i) => renderCard(item, i))}
 
-        {/* Other vehicles registered to the same unit */}
-        {unitVehicles.length > 0 && (
+        {/* Vacation parking records for this unit — last month onwards */}
+        {unitVacations.length > 0 && (
           <div className="mt-6">
             <h3 className="text-xs font-bold text-gray-500 uppercase tracking-widest mb-2 px-1">
-              Other Vehicles in This Unit
+              Unit Vacation Parking — Last Month &amp; Upcoming
             </h3>
             <div className="bg-white border border-gray-200 rounded-xl divide-y divide-gray-100">
-              {unitVehicles.map((v, i) => (
-                <div key={i} className="flex items-center gap-3 px-4 py-3 text-sm">
-                  <span className="text-lg">{v.is_oversized ? '🚛' : '🚗'}</span>
-                  <div className="flex-1 min-w-0">
-                    <div className="font-semibold text-gray-900">
-                      {[v.year, v.color, v.make, v.model].filter(Boolean).join(' ')}
+              {unitVacations.map((v, i) => {
+                const expired = v.status === 'expired';
+                const upcoming = v.status === 'upcoming';
+                const dot = expired ? 'bg-red-400' : upcoming ? 'bg-yellow-400' : 'bg-purple-400';
+                const thisVeh = isThisVehicle(v);
+                return (
+                  <div key={i} className={`flex items-center gap-3 px-4 py-3 text-sm${thisVeh ? ' bg-purple-50' : ''}`}>
+                    <span className={`w-2 h-2 rounded-full shrink-0 ${dot}`} />
+                    <div className="flex-1 min-w-0">
+                      <div className="font-mono text-xs font-semibold text-gray-900 flex items-center gap-1.5 flex-wrap">
+                        {v.plate}{v.state ? ` · ${v.state}` : ''}
+                        {thisVeh && (
+                          <span className="bg-purple-600 text-white text-xs font-bold px-1.5 py-0.5 rounded uppercase tracking-wide">
+                            THIS VEHICLE
+                          </span>
+                        )}
+                      </div>
+                      <div className="text-xs text-gray-500">
+                        {[v.make, v.model, v.color].filter(Boolean).join(' ')}
+                        {v.owner_name ? ` · ${v.owner_name}` : ''}
+                      </div>
+                      {v.access_code && (
+                        <div className="mt-1 inline-block bg-purple-100 border border-purple-200 rounded px-2 py-0.5">
+                          <span className="text-xs font-bold text-purple-600 uppercase">Code: </span>
+                          <span className="font-mono font-bold text-purple-900 tracking-widest text-xs">{v.access_code}</span>
+                        </div>
+                      )}
                     </div>
-                    <div className="text-xs text-gray-500 font-mono">
-                      {v.plate}{v.state ? ` · ${v.state}` : ''}
-                      {v.is_oversized && <span className="ml-2 bg-emerald-600 text-white text-xs font-bold px-1.5 py-0.5 rounded uppercase tracking-wide">OVERSIZED ✓</span>}
+                    <div className="text-right text-xs text-gray-400 shrink-0">
+                      <div>{formatPDT(v.valid_from!, { short: true })}</div>
+                      <div>→ {formatPDT(v.valid_until!, { short: true })}</div>
                     </div>
                   </div>
-                  <div className="text-xs text-gray-400 shrink-0">{v.owner_name}</div>
-                </div>
-              ))}
+                );
+              })}
             </div>
           </div>
         )}
 
-        {/* Visitor registrations for the same unit — current month & upcoming */}
+        {/* All resident vehicles registered to this unit */}
+        {unitVehicles.length > 0 && (
+          <div className="mt-4">
+            <h3 className="text-xs font-bold text-gray-500 uppercase tracking-widest mb-2 px-1">
+              All Resident Vehicles in This Unit
+            </h3>
+            <div className="bg-white border border-gray-200 rounded-xl divide-y divide-gray-100">
+              {unitVehicles.map((v, i) => {
+                const thisVeh = isThisVehicle(v);
+                const pendingOversized = v.is_oversized && v.approval_status === 'pending';
+                const approvedOversized = v.is_oversized && v.approval_status === 'approved';
+                return (
+                  <div key={i} className={`flex items-center gap-3 px-4 py-3 text-sm${thisVeh ? ' bg-blue-50' : ''}`}>
+                    <span className="text-lg">{v.is_oversized ? '🚛' : '🚗'}</span>
+                    <div className="flex-1 min-w-0">
+                      <div className="font-semibold text-gray-900 flex items-center gap-1.5 flex-wrap">
+                        {[v.year, v.color, v.make, v.model].filter(Boolean).join(' ')}
+                        {thisVeh && (
+                          <span className="bg-blue-600 text-white text-xs font-bold px-1.5 py-0.5 rounded uppercase tracking-wide">
+                            THIS VEHICLE
+                          </span>
+                        )}
+                      </div>
+                      <div className="text-xs text-gray-500 font-mono flex items-center gap-1.5 flex-wrap mt-0.5">
+                        {v.plate}{v.state ? ` · ${v.state}` : ''}
+                        {approvedOversized && (
+                          <span className="bg-emerald-600 text-white text-xs font-bold px-1.5 py-0.5 rounded uppercase tracking-wide">
+                            OVERSIZED ✓
+                          </span>
+                        )}
+                        {pendingOversized && (
+                          <span className="bg-orange-500 text-white text-xs font-bold px-1.5 py-0.5 rounded uppercase tracking-wide">
+                            OVERSIZED PENDING
+                          </span>
+                        )}
+                      </div>
+                    </div>
+                    <div className="text-xs text-gray-400 shrink-0">{v.owner_name}</div>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        )}
+
+        {/* Visitor registrations for this unit — last month onwards */}
         {unitVisitors.length > 0 && (
           <div className="mt-4 mb-8">
             <h3 className="text-xs font-bold text-gray-500 uppercase tracking-widest mb-2 px-1">
-              Unit Visitor Registrations — This Month &amp; Upcoming
+              Unit Visitor Registrations — Last Month &amp; Upcoming
             </h3>
             <div className="bg-white border border-gray-200 rounded-xl divide-y divide-gray-100">
               {unitVisitors.map((v, i) => {
                 const expired = v.status === 'expired';
                 const upcoming = v.status === 'upcoming';
                 const dot = expired ? 'bg-red-400' : upcoming ? 'bg-yellow-400' : 'bg-green-400';
+                const thisVeh = isThisVehicle(v);
                 return (
-                  <div key={i} className="flex items-center gap-3 px-4 py-3 text-sm">
+                  <div key={i} className={`flex items-center gap-3 px-4 py-3 text-sm${thisVeh ? ' bg-green-50' : ''}`}>
                     <span className={`w-2 h-2 rounded-full shrink-0 ${dot}`} />
                     <div className="flex-1 min-w-0">
-                      <div className="font-semibold text-gray-900 font-mono text-xs">
+                      <div className="font-mono text-xs font-semibold text-gray-900 flex items-center gap-1.5 flex-wrap">
                         {v.plate}{v.state ? ` · ${v.state}` : ''}
+                        {thisVeh && (
+                          <span className="bg-green-600 text-white text-xs font-bold px-1.5 py-0.5 rounded uppercase tracking-wide">
+                            THIS VEHICLE
+                          </span>
+                        )}
                       </div>
                       <div className="text-xs text-gray-500">
                         {[v.make, v.model, v.color].filter(Boolean).join(' ')}
                         {v.guest_name ? ` · ${v.guest_name}` : ''}
                       </div>
+                      {v.access_code && (
+                        <div className="mt-1 inline-block bg-green-100 border border-green-200 rounded px-2 py-0.5">
+                          <span className="text-xs font-bold text-green-600 uppercase">Code: </span>
+                          <span className="font-mono font-bold text-green-900 tracking-widest text-xs">{v.access_code}</span>
+                        </div>
+                      )}
                     </div>
                     <div className="text-right text-xs text-gray-400 shrink-0">
                       <div>{formatPDT(v.valid_from!, { short: true })}</div>
