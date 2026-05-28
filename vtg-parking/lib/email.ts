@@ -159,7 +159,7 @@ export async function sendVacationDecision({
   if (!applicantEmail) return
 
   const isApproved = status === 'approved'
-  const headerColor = isApproved ? '#15803d' : '#b91c1c'
+  const headerColor = isApproved ? '#15803d' : '#1f2937'
   const statusText = isApproved ? 'APPROVED ✓' : 'REJECTED ✗'
   const start = new Date(startDatetime).toLocaleString('en-US', { timeZone: 'America/Los_Angeles', dateStyle: 'medium', timeStyle: 'short' })
   const end = new Date(endDatetime).toLocaleString('en-US', { timeZone: 'America/Los_Angeles', dateStyle: 'medium', timeStyle: 'short' })
@@ -197,7 +197,7 @@ export async function sendVacationDecision({
         ${rejectionSection}
         ${isApproved
           ? '<p style="color:#15803d;">Your vehicle is authorized to remain parked in the same location for the approved period without risk of citation.</p>'
-          : '<p style="color:#b91c1c;">Your request was not approved. Please contact the Vantage management office if you have questions.</p>'
+          : '<p style="color:#374151;">Your request was not approved. Please contact the Vantage management office if you have questions.</p>'
         }
         <hr style="border:none;border-top:1px solid #e5e7eb;margin:20px 0;">
         <p style="font-size:11px;color:#9ca3af;margin:0;">Vantage Community Parking</p>
@@ -231,7 +231,7 @@ export async function sendOversizedDecision({
   if (!applicantEmail) return
 
   const isApproved = status === 'approved'
-  const headerColor = isApproved ? '#15803d' : '#b91c1c'
+  const headerColor = isApproved ? '#15803d' : '#1f2937'
   const statusText = isApproved ? 'APPROVED ✓' : 'REJECTED ✗'
   const plateDisplay = vehicle.plate_state ? `${vehicle.license_plate} / ${vehicle.plate_state}` : vehicle.license_plate
 
@@ -250,7 +250,7 @@ export async function sendOversizedDecision({
         </table>
         ${isApproved
           ? '<p style="color:#15803d;">Your vehicle has been added to the community parking registry as an oversized vehicle. You may park in a designated outdoor community space. Please ensure you comply with all community parking rules.</p>'
-          : '<p style="color:#b91c1c;">Your oversized vehicle permit application was not approved. However, your vehicle has been retained in the community parking registry as a <strong>standard (non-oversized) vehicle</strong>. Patrol officers will be able to locate your vehicle registration as normal. If you have questions about this decision, please contact the Vantage management office.</p>'
+          : '<p style="color:#374151;">Your oversized vehicle permit application was not approved. However, your vehicle has been retained in the community parking registry as a <strong>standard (non-oversized) vehicle</strong>. Patrol officers will be able to locate your vehicle registration as normal. If you have questions about this decision, please contact the Vantage management office.</p>'
         }
         <hr style="border:none;border-top:1px solid #e5e7eb;margin:20px 0;">
         <p style="font-size:11px;color:#9ca3af;margin:0;">Vantage Community Parking</p>
