@@ -1,4 +1,4 @@
--- VTG Parking Management System - Database Schema (canonical current state)
+-- Vantage Parking Management System - Database Schema (canonical current state)
 -- Last updated: 2026-05-27 — reflects all migrations through 20260527_schema_catch_up.sql.
 --
 -- Use this file to set up a fresh database.

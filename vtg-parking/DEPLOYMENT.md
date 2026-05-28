@@ -1,4 +1,4 @@
-# VTG Parking System — Deployment Guide
+# Vantage Parking System — Deployment Guide
 
 ## 部署步骤（约需 30–60 分钟，全程免费）
 

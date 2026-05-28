@@ -1,4 +1,4 @@
-# VTG Parking — Project Context
+# Vantage Parking — Project Context
 
 > **Read this file at the start of every new conversation.**
 > It describes the full current state of the system so you can continue development without re-reading the entire chat history.
