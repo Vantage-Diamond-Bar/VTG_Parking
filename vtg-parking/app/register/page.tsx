@@ -703,6 +703,7 @@ function ManageView({ t, unitId, confirmedEmail, verificationToken, unitData, un
   // Delete confirm
   const [deleteTarget, setDeleteTarget] = useState<string | null>(null)
   const [deleting, setDeleting] = useState(false)
+  const [deleteError, setDeleteError] = useState<string | null>(null)
 
   // Pending vehicle edit
   const [editingPendingId, setEditingPendingId] = useState<string | null>(null)
@@ -799,14 +800,28 @@ function ManageView({ t, unitId, confirmedEmail, verificationToken, unitData, un
 
   async function handleDelete(vehicleId: string) {
     setDeleting(true)
+    setDeleteError(null)
     try {
       const res = await fetch('/api/residents/manage', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ action: 'delete_vehicle', unit_id: unitId, token: verificationToken, vehicle_id: vehicleId }),
       })
-      if (res.ok) { setDeleteTarget(null); showToast(t('vehicle_deleted')); await onReload() }
-    } finally { setDeleting(false) }
+      if (res.ok) {
+        setDeleteTarget(null)
+        setDeleteError(null)
+        showToast(t('vehicle_deleted'))
+        await onReload()
+      } else if (res.status === 403) {
+        setDeleteError('Your session has expired. Please refresh the page and verify your email again.')
+      } else {
+        setDeleteError('Failed to delete vehicle. Please try again.')
+      }
+    } catch {
+      setDeleteError('Network error. Please check your connection and try again.')
+    } finally {
+      setDeleting(false)
+    }
   }
 
   function startEditPending(p: OversizedPending) {
@@ -1532,9 +1547,12 @@ function ManageView({ t, unitId, confirmedEmail, verificationToken, unitData, un
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
           <div className="bg-white rounded-xl shadow-xl w-full max-w-sm p-6">
             <h2 className="text-lg font-semibold text-gray-900 mb-2">{t('delete_vehicle')}</h2>
-            <p className="text-sm text-gray-600 mb-6">{t('confirm_delete_vehicle')}</p>
+            <p className="text-sm text-gray-600 mb-4">{t('confirm_delete_vehicle')}</p>
+            {deleteError && (
+              <p className="text-sm text-red-600 bg-red-50 border border-red-200 rounded-lg px-3 py-2 mb-4">{deleteError}</p>
+            )}
             <div className="flex justify-end gap-3">
-              <button onClick={() => setDeleteTarget(null)} className="text-sm border border-gray-300 px-4 py-2 rounded-lg hover:bg-gray-50">{t('cancel_edit')}</button>
+              <button onClick={() => { setDeleteTarget(null); setDeleteError(null) }} className="text-sm border border-gray-300 px-4 py-2 rounded-lg hover:bg-gray-50">{t('cancel_edit')}</button>
               <button onClick={() => handleDelete(deleteTarget)} disabled={deleting}
                 className="text-sm bg-red-600 text-white px-4 py-2 rounded-lg hover:bg-red-700 disabled:opacity-50">{deleting ? '...' : t('delete')}</button>
             </div>

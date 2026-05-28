@@ -108,9 +108,9 @@ export interface VerificationTokenData {
 }
 
 // Signed token issued after OTP verification — proves the user owns the email on file.
-// Carries unit_id + email for downstream endpoints; valid for 60 minutes.
+// Carries unit_id + email for downstream endpoints; valid for 4 hours.
 export function createVerificationToken(unit_id: string, email: string): string {
-  const exp = Date.now() + 60 * 60 * 1000
+  const exp = Date.now() + 4 * 60 * 60 * 1000
   const payload = Buffer.from(JSON.stringify({ unit_id, email, exp })).toString('base64url')
   return `${payload}.${hmacSign(payload)}`
 }
