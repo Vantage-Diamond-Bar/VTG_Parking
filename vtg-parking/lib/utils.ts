@@ -123,14 +123,26 @@ export function getPTYearMonth(): string {
   return `${y}-${String(m).padStart(2, '0')}`
 }
 
-/** Returns ISO-string boundaries [start, end) for a given "YYYY-MM" month. */
+/**
+ * Returns UTC ISO-string boundaries [start, end) for a given "YYYY-MM" month,
+ * where the boundaries represent Pacific Time midnight (not UTC midnight).
+ *
+ * e.g. monthBounds("2026-05"):
+ *   start → "2026-05-01T07:00:00.000Z"  (May 1  00:00 PDT = UTC 07:00)
+ *   end   → "2026-06-01T07:00:00.000Z"  (Jun 1  00:00 PDT = UTC 07:00)
+ *
+ * Using bare "YYYY-MM-DDTHH:mm" strings (no timezone) caused a UTC-server bug:
+ * new Date("2026-06-01T00:00") on Vercel (UTC) = UTC midnight = PDT May 31 17:00,
+ * which made countNights() clamp cross-month stays one calendar day too early.
+ */
 export function monthBounds(yearMonth: string): { start: string; end: string } {
   const [y, mo] = yearMonth.split('-').map(Number)
   const nextMo = mo === 12 ? 1 : mo + 1
   const nextY  = mo === 12 ? y + 1 : y
+  const nextYM = `${String(nextY)}-${String(nextMo).padStart(2, '0')}`
   return {
-    start: `${yearMonth}-01T00:00`,
-    end:   `${String(nextY)}-${String(nextMo).padStart(2, '0')}-01T00:00`,
+    start: ptInputToISO(`${yearMonth}-01T00:00`),
+    end:   ptInputToISO(`${nextYM}-01T00:00`),
   }
 }
 
