@@ -258,39 +258,44 @@ export default function PatrolPage() {
     if (item.type === 'visitor') {
       const isExpired = item.status === 'expired';
       const isUpcoming = item.status === 'upcoming';
-      const c = isExpired ? 'red' : isUpcoming ? 'yellow' : 'green';
+      // Use explicit class strings (not dynamic fragments) so Tailwind includes all shades in the build
+      const cls = isExpired
+        ? { card: 'bg-red-50 border-red-300',   title: 'text-red-800',    badge: 'bg-red-700',    codeBox: 'bg-red-100 border-red-200',       codeLabel: 'text-red-600',    codeVal: 'text-red-900',    label: 'text-red-600',    emoji: '⛔' }
+        : isUpcoming
+        ? { card: 'bg-yellow-100 border-yellow-500', title: 'text-yellow-900', badge: 'bg-yellow-600', codeBox: 'bg-yellow-200 border-yellow-400', codeLabel: 'text-yellow-800', codeVal: 'text-yellow-900', label: 'text-yellow-700', emoji: '⏳' }
+        : { card: 'bg-green-50 border-green-300',  title: 'text-green-800',  badge: 'bg-green-700',  codeBox: 'bg-green-100 border-green-200',   codeLabel: 'text-green-600',  codeVal: 'text-green-900',  label: 'text-green-600',  emoji: '✅' };
       return (
-        <div key={index} className={`bg-${c}-50 border-2 border-${c}-300 rounded-xl p-6 mt-4`}>
+        <div key={index} className={`${cls.card} border-2 rounded-xl p-6 mt-4`}>
           <div className="flex items-center justify-between mb-4">
             <div className="flex items-center gap-3">
-              <span className="text-2xl">{isExpired ? '⛔' : isUpcoming ? '⏳' : '✅'}</span>
-              <h2 className={`text-xl font-bold text-${c}-800`}>{t('visitor_vehicle')}</h2>
+              <span className="text-2xl">{cls.emoji}</span>
+              <h2 className={`text-xl font-bold ${cls.title}`}>{t('visitor_vehicle')}</h2>
             </div>
             <div className="flex flex-col items-end gap-1">
-              <span className={`inline-block bg-${c}-700 text-white text-xs font-bold px-3 py-1 rounded-full uppercase tracking-wide`}>
+              <span className={`inline-block ${cls.badge} text-white text-xs font-bold px-3 py-1 rounded-full uppercase tracking-wide`}>
                 VISITOR VEHICLE
               </span>
               {getStatusBadge(item.status)}
             </div>
           </div>
           {item.access_code && (
-            <div className={`bg-${c}-100 border border-${c}-200 rounded-lg px-4 py-2 mb-3 text-center`}>
-              <span className={`text-xs font-bold text-${c}-600 uppercase`}>Access Code: </span>
-              <span className={`font-mono font-bold text-${c}-900 tracking-widest text-lg`}>{item.access_code}</span>
+            <div className={`${cls.codeBox} border rounded-lg px-4 py-2 mb-3 text-center`}>
+              <span className={`text-xs font-bold ${cls.codeLabel} uppercase`}>Access Code: </span>
+              <span className={`font-mono font-bold ${cls.codeVal} tracking-widest text-lg`}>{item.access_code}</span>
             </div>
           )}
           <div className="grid grid-cols-2 gap-3 text-sm">
-            <div><span className={`text-${c}-600 font-medium`}>{t('unit')}:</span> <span className="font-semibold">{item.address}</span></div>
+            <div><span className={`${cls.label} font-medium`}>{t('unit')}:</span> <span className="font-semibold">{item.address}</span></div>
             {item.guest_name && (
-              <div><span className={`text-${c}-600 font-medium`}>{t('guest_name')}:</span> <span className="font-semibold">{item.guest_name}</span></div>
+              <div><span className={`${cls.label} font-medium`}>{t('guest_name')}:</span> <span className="font-semibold">{item.guest_name}</span></div>
             )}
-            <div><span className={`text-${c}-600 font-medium`}>{t('plate')}:</span> <span className="font-mono font-bold">{item.plate}{item.state ? ` / ${item.state}` : ''}</span></div>
-            <div><span className={`text-${c}-600 font-medium`}>{t('vehicle')}:</span> <span className="font-semibold">{[item.make, item.model, item.color].filter(Boolean).join(' ')}</span></div>
+            <div><span className={`${cls.label} font-medium`}>{t('plate')}:</span> <span className="font-mono font-bold">{item.plate}{item.state ? ` / ${item.state}` : ''}</span></div>
+            <div><span className={`${cls.label} font-medium`}>{t('vehicle')}:</span> <span className="font-semibold">{[item.make, item.model, item.color].filter(Boolean).join(' ')}</span></div>
             {item.valid_from && (
-              <div><span className={`text-${c}-600 font-medium`}>{t('valid_from')}:</span> <span className="font-semibold">{formatPDT(item.valid_from, { short: true })}</span></div>
+              <div><span className={`${cls.label} font-medium`}>{t('valid_from')}:</span> <span className="font-semibold">{formatPDT(item.valid_from, { short: true })}</span></div>
             )}
             {item.valid_until && (
-              <div><span className={`text-${c}-600 font-medium`}>{t('valid_until')}:</span> <span className="font-semibold">{formatPDT(item.valid_until, { short: true })}</span></div>
+              <div><span className={`${cls.label} font-medium`}>{t('valid_until')}:</span> <span className="font-semibold">{formatPDT(item.valid_until, { short: true })}</span></div>
             )}
           </div>
         </div>
