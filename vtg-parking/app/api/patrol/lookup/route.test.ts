@@ -174,7 +174,7 @@ describe('GET /api/patrol/lookup — code search', () => {
     expect(body.unit_visitors[0].plate).toBe('GHI789')
   })
 
-  it('excludes matched visitor from unit_visitors to prevent duplication', async () => {
+  it('includes matched visitor in unit_visitors so patrol officers see full unit context', async () => {
     const otherVisitor = {
       visitor_name: 'Other Guest',
       license_plate: 'DEF456',
@@ -199,8 +199,10 @@ describe('GET /api/patrol/lookup — code search', () => {
 
     expect(body.results).toHaveLength(1)
     expect(body.results[0].access_code).toBe('ABC123')
-    // matched visitor must NOT appear again in the unit context list
-    expect(body.unit_visitors).toHaveLength(1)
-    expect(body.unit_visitors[0].access_code).toBe('ZZZ999')
+    // The matched visitor appears in results[] as the highlighted card AND in
+    // unit_visitors[] as part of the full unit context — both are intentional.
+    expect(body.unit_visitors).toHaveLength(2)
+    expect(body.unit_visitors.map((v: { access_code: string }) => v.access_code)).toContain('ABC123')
+    expect(body.unit_visitors.map((v: { access_code: string }) => v.access_code)).toContain('ZZZ999')
   })
 })

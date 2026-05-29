@@ -299,10 +299,8 @@ export async function GET(req: NextRequest) {
 
   if (unit_id) {
     ({ unit_vehicles, unit_vacations, unit_visitors } = await fetchUnitContext(unit_id));
-    // Exclude the matched record from context lists so it doesn't appear twice
-    const matchedCode = code!.toUpperCase();
-    unit_visitors = (unit_visitors as { access_code?: string }[]).filter(v => v.access_code !== matchedCode);
-    unit_vacations = (unit_vacations as { access_code?: string }[]).filter(v => v.access_code !== matchedCode);
+    // unit_visitors intentionally includes the matched registration so patrol officers
+    // can see the full unit context (all visitors) alongside the highlighted result card.
   }
 
   return NextResponse.json({ found: results.length > 0, results, unit_vehicles, unit_vacations, unit_visitors });

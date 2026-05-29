@@ -2,7 +2,7 @@ export const dynamic = 'force-dynamic';
 
 import { NextRequest, NextResponse } from 'next/server';
 import { supabaseAdmin } from '@/lib/supabase';
-import { getYearMonth, monthBounds, countNights, VISITOR_QUOTA_LIMIT } from '@/lib/utils';
+import { getPTYearMonth, monthBounds, countNights, VISITOR_QUOTA_LIMIT } from '@/lib/utils';
 import { decodeVerificationToken } from '@/lib/auth';
 
 export async function GET(req: NextRequest) {
@@ -87,21 +87,24 @@ export async function GET(req: NextRequest) {
     }
   }
 
-  // Step 5: Fetch visitor quota for current month
+  // Step 5: Fetch visitor quota for current month.
+  // Uses overlap filter + clamping, identical to GET /api/visitors/quota, so that
+  // the resident dashboard and the visitor booking page show the same count.
   let nights_used = 0;
   try {
-    const yearMonth = getYearMonth();
+    const yearMonth = getPTYearMonth();  // PDT-aware; getYearMonth() is local-time-based
     const { start, end } = monthBounds(yearMonth);
     const { data: visitorRegs } = await supabaseAdmin
       .from('visitor_registrations')
       .select('start_datetime, end_datetime')
       .eq('unit_id', unit_id)
-      .gte('start_datetime', start)
-      .lt('start_datetime', end);
-    nights_used = (visitorRegs ?? []).reduce(
-      (total, reg) => total + countNights(reg.start_datetime, reg.end_datetime),
-      0
-    );
+      .lt('start_datetime', end)   // started before the month ends
+      .gt('end_datetime', start);  // ended after the month started
+    nights_used = (visitorRegs ?? []).reduce((total, reg) => {
+      const clampedStart = reg.start_datetime > start ? reg.start_datetime : start;
+      const clampedEnd   = reg.end_datetime   < end   ? reg.end_datetime   : end;
+      return total + countNights(clampedStart, clampedEnd);
+    }, 0);
   } catch {
     // non-fatal
   }
