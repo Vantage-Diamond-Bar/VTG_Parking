@@ -257,12 +257,13 @@ export default function PatrolPage() {
 
     if (item.type === 'visitor') {
       const isExpired = item.status === 'expired';
-      const c = isExpired ? 'red' : 'green';
+      const isUpcoming = item.status === 'upcoming';
+      const c = isExpired ? 'red' : isUpcoming ? 'yellow' : 'green';
       return (
         <div key={index} className={`bg-${c}-50 border-2 border-${c}-300 rounded-xl p-6 mt-4`}>
           <div className="flex items-center justify-between mb-4">
             <div className="flex items-center gap-3">
-              <span className="text-2xl">{isExpired ? '⛔' : '✅'}</span>
+              <span className="text-2xl">{isExpired ? '⛔' : isUpcoming ? '⏳' : '✅'}</span>
               <h2 className={`text-xl font-bold text-${c}-800`}>{t('visitor_vehicle')}</h2>
             </div>
             <div className="flex flex-col items-end gap-1">
