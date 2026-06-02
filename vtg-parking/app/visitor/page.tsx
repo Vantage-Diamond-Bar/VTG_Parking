@@ -166,8 +166,8 @@ export default function VisitorPage() {
     if (!color) errors.color = t('required')
     if (!startDatetime) errors.start_datetime = t('required')
     if (!endDatetime) errors.end_datetime = t('required')
-    if (startDatetime && endDatetime && endDatetime <= startDatetime) {
-      errors.end_datetime = t('end_after_start')
+    if (startDatetime && endDatetime && endDatetime.slice(0, 10) <= startDatetime.slice(0, 10)) {
+      errors.end_datetime = t('end_after_start_date')
     }
     setFieldErrors(errors)
     return Object.keys(errors).length === 0
@@ -657,6 +657,12 @@ export default function VisitorPage() {
                         <input
                           type="datetime-local"
                           value={endDatetime}
+                          min={(() => {
+                            if (!startDatetime) return undefined
+                            const d = new Date(startDatetime)
+                            d.setDate(d.getDate() + 1)
+                            return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}T00:00`
+                          })()}
                           onChange={(e) => setEndDatetime(e.target.value)}
                           className={inputCls}
                         />

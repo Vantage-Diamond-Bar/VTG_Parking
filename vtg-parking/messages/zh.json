@@ -167,6 +167,7 @@
     "print": "打印",
     "required": "此项为必填项。",
     "end_after_start": "结束时间必须晚于开始时间。",
+    "end_after_start_date": "退出日期必须晚于入住日期（不允许当天进出的申请）。",
     "no_vehicles_message": "该住户未登记过车辆，无法申请户外访客停车，建议停入自家车库。",
     "verify_email_title": "住户邮箱验证",
     "verify_email_desc": "请输入该住户预留的邮箱地址以继续操作。",

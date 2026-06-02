@@ -167,6 +167,7 @@
     "print": "Print",
     "required": "This field is required.",
     "end_after_start": "Check-out must be after check-in.",
+    "end_after_start_date": "Check-out date must be a later date than check-in (same-day bookings are not allowed).",
     "no_vehicles_message": "This unit has no registered vehicles. Outdoor guest parking is not available. We recommend using your assigned garage.",
     "verify_email_title": "Host Verification Required",
     "verify_email_desc": "Please enter the email address on file for this unit to continue.",

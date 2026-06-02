@@ -724,6 +724,7 @@ function ManageView({ t, unitId, confirmedEmail, verificationToken, unitData, un
   const [editingVisitorId, setEditingVisitorId] = useState<string | null>(null)
   const [visitorEdits, setVisitorEdits] = useState<Record<string, string>>({})
   const [visitorSaving, setVisitorSaving] = useState(false)
+  const [visitorEditError, setVisitorEditError] = useState('')
   const [deleteVisitorTarget, setDeleteVisitorTarget] = useState<string | null>(null)
   const [deletingVisitor, setDeletingVisitor] = useState(false)
 
@@ -892,7 +893,33 @@ function ManageView({ t, unitId, confirmedEmail, verificationToken, unitData, un
     setVisitorEdits({ end_datetime: isoToPTInput(reg.end_datetime) })
   }
 
+  function validateVisitorEdit(reg: VisitorReg): string {
+    const isActive = reg.status === 'active'
+    const endDate  = visitorEdits.end_datetime?.slice(0, 10) ?? ''
+    if (!endDate) return 'Checkout date is required.'
+
+    const todayPT = new Intl.DateTimeFormat('en-CA', {
+      timeZone: 'America/Los_Angeles', year: 'numeric', month: '2-digit', day: '2-digit',
+    }).format(new Date())
+
+    if (endDate < todayPT) return 'Checkout date cannot be in the past.'
+
+    if (isActive) {
+      const startDate = isoToPTInput(reg.start_datetime).slice(0, 10)
+      if (endDate <= startDate) return 'Check-out date must be a later date than check-in (same-day bookings are not allowed).'
+    } else {
+      const startDate = visitorEdits.start_datetime?.slice(0, 10) ?? ''
+      if (!startDate) return 'Check-in date is required.'
+      if (endDate <= startDate) return 'Check-out date must be a later date than check-in (same-day bookings are not allowed).'
+    }
+
+    return ''
+  }
+
   async function saveVisitorReg(reg: VisitorReg) {
+    const err = validateVisitorEdit(reg)
+    if (err) { setVisitorEditError(err); return }
+    setVisitorEditError('')
     setVisitorSaving(true)
     try {
       const isActive = reg.status === 'active'
@@ -1413,18 +1440,43 @@ function ManageView({ t, unitId, confirmedEmail, verificationToken, unitData, un
                             </div>
                             <div>
                               <label className={labelCls}>Check-in (PT)</label>
-                              <input type="datetime-local" value={visitorEdits.start_datetime ?? ''} onChange={e => setVisitorEdits(d => ({ ...d, start_datetime: e.target.value }))} className={inputCls} />
+                              <input
+                                type="datetime-local"
+                                value={visitorEdits.start_datetime ?? ''}
+                                onChange={e => { setVisitorEdits(d => ({ ...d, start_datetime: e.target.value })); setVisitorEditError('') }}
+                                className={inputCls}
+                              />
                             </div>
                           </div>
                         )}
                         <div>
                           <label className={labelCls}>Checkout (PT)</label>
-                          <input type="datetime-local" value={visitorEdits.end_datetime ?? ''} onChange={e => setVisitorEdits(d => ({ ...d, end_datetime: e.target.value }))} className={inputCls} />
+                          <input
+                            type="datetime-local"
+                            value={visitorEdits.end_datetime ?? ''}
+                            min={(() => {
+                              const todayPT = new Intl.DateTimeFormat('en-CA', {
+                                timeZone: 'America/Los_Angeles', year: 'numeric', month: '2-digit', day: '2-digit',
+                              }).format(new Date())
+                              const startDate = reg.status === 'active'
+                                ? isoToPTInput(reg.start_datetime).slice(0, 10)
+                                : visitorEdits.start_datetime?.slice(0, 10) ?? todayPT
+                              const [y, m, d] = startDate.split('-').map(Number)
+                              const next = new Date(y, m - 1, d + 1)
+                              const nextDay = `${next.getFullYear()}-${String(next.getMonth() + 1).padStart(2, '0')}-${String(next.getDate()).padStart(2, '0')}`
+                              return (nextDay > todayPT ? nextDay : todayPT) + 'T00:00'
+                            })()}
+                            onChange={e => { setVisitorEdits(d => ({ ...d, end_datetime: e.target.value })); setVisitorEditError('') }}
+                            className={inputCls}
+                          />
                         </div>
+                        {visitorEditError && (
+                          <p className="text-red-600 text-xs">{visitorEditError}</p>
+                        )}
                         <div className="flex gap-3">
                           <button onClick={() => saveVisitorReg(reg)} disabled={visitorSaving}
                             className="bg-blue-600 text-white text-sm px-4 py-2 rounded-lg hover:bg-blue-700 disabled:opacity-50">{visitorSaving ? '...' : t('save')}</button>
-                          <button onClick={() => setEditingVisitorId(null)} className="text-sm border border-gray-300 px-4 py-2 rounded-lg hover:bg-gray-50">{t('cancel_edit')}</button>
+                          <button onClick={() => { setEditingVisitorId(null); setVisitorEditError('') }} className="text-sm border border-gray-300 px-4 py-2 rounded-lg hover:bg-gray-50">{t('cancel_edit')}</button>
                         </div>
                       </div>
                     ) : (
