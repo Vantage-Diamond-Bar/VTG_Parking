@@ -89,13 +89,12 @@ WHERE username = 'admin';
 2. 进入管理后台 **门牌号管理** → 点击 **从 Excel 导入**
 
 ### 创建巡逻员账号
-在 Supabase SQL Editor 运行：
+先为该账号生成一个**强随机密码**的 bcrypt hash，再在 Supabase SQL Editor 运行：
 ```sql
--- 密码：Patrol@2026（请自行修改）
 INSERT INTO admin_users (username, password_hash, role, display_name)
 VALUES (
   'patrol01',
-  '$2a$10$rQnCMaB5p.m7l1kJxDc0/.JnKqPjE3YaI1AW3jLFBpMCcJXkBjrDm',
+  '<在此填入你生成的 bcrypt hash>',
   'patrol',
   'Patrol Officer 1'
 );
@@ -107,22 +106,19 @@ VALUES (
   - 角色前缀：管理员用 `admin`，巡逻员用 `patrol`。
   - 后缀：本人「名的首字母 + 姓的首字母」。
   - 例：Jeana Franco → 管理员 `admin_jf`，巡逻员 `patrol_jf`。
-- **初始密码**：`角色词(首字母大写) + 创建日期(YYYYMMDD)`。
-  - 例：2026-08-06 创建 → `Admin20260806` / `Patrol20260806`。
+- **初始密码**：为每个账号**单独生成一个强随机密码**（不要使用可预测的规则如"角色+日期"），通过安全渠道下发给账号所有者。
 - **入库前先生成 bcrypt hash**（cost = 10），`password_hash` 存哈希、不存明文：
   ```bash
-  node -e "require('bcryptjs').hash('你的密码', 10).then(console.log)"
+  node -e "require('bcryptjs').hash('<强随机密码>', 10).then(console.log)"
   ```
 - 管理员记得带 `email` 字段（登录需邮箱 OTP 验证码）；巡逻员登录仅用户名+密码，`email` 可留空。
-- ⚠️ 初始密码是「角色+日期」的可预测格式，仅作首次下发用；请提醒账号所有者**首次登录后立即改密**，勿长期沿用。
+- ⚠️ 请提醒账号所有者**首次登录后立即改密**。
 
 ---
 
 ## 默认账号
 
-| 角色 | 用户名 | 初始密码 |
-|------|--------|---------|
-| 管理员 | `admin` | `Admin@2026` |
+系统初始种子会创建一个管理员账号（用户名 `admin`）。**其密码不写入本仓库**——请在部署时按上面「修改默认管理员密码」的步骤，立即设置一个**强随机密码**并存入共享密码库。
 
 **⚠️ 首次登录后请立即修改密码！**
 

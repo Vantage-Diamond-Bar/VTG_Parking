@@ -127,7 +127,7 @@ Display pattern: `{countryCode && <span className="text-gray-500 mr-1">{countryC
 
 | Table | Purpose |
 |-------|---------|
-| `units` | All residential units. Columns: `id` (UUID), `address` (e.g. "860 Sunset Pl") |
+| `units` | All residential units. Columns: `id` (UUID), `address` (e.g. "123 Example St") |
 | `admin_users` | Admin/patrol accounts. Columns: `username`, `password_hash`, `role`, `active`, `last_login` |
 | `resident_vehicles` | Registered resident cars. Columns: `unit_id`, `owner_name`, `owner_phone`, `owner_phone_country_code`, `owner_email`, `opt_in_sms`, `opt_in_email`, `license_plate`, `plate_state`, `year`, `make`, `model`, `color` |
 | `visitor_registrations` | Visitor parking passes. Columns: `unit_id`, `visitor_name`, `visitor_phone`, `visitor_phone_country_code`, `license_plate`, `plate_state`, `make`, `model`, `color`, `start_datetime`, `end_datetime`, `access_code`, `created_at` |
@@ -381,13 +381,12 @@ These items were discussed but not yet implemented:
 
 ## 12. Credentials (Local Dev / Test)
 
-| Role | Username | Password |
-|------|----------|----------|
-| Admin | `admin` | `Admin@2026` |
-| Patrol | `patrol` | *(check .env or admin_users table)* |
+> Credentials are **not** stored in this repository. Get local/test login
+> details from the team's shared password manager, or read them from your own
+> local `.env` / the `admin_users` table in your own Supabase project.
 
 **Test data created during development:**
-- Plate `ABUSETEST` (CA) — registered for 3 units (860/861/862 Sunset Pl) in May 2026, has an unresolved abuse alert
+- Plate `ABUSETEST` (CA) — registered for 3 test units, has an unresolved abuse alert
 - Plate `ABTEST99` (CA) — older test plate, abuse alert has been resolved
 
 ---
