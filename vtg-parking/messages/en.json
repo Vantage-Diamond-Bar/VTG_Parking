@@ -65,6 +65,7 @@
     "oversized_notice_item3": "By checking this box, you certify this vehicle cannot be stored in the residential garage.",
     "oversized_notice_footer": "Approval is not automatic. Please contact the management office to schedule an inspection before parking.",
     "error_plate_conflict": "This license plate is already registered as a resident vehicle.",
+    "error_vehicle_limit": "Each unit may register up to {limit} vehicles. To register more, please contact the management company to submit an application; the vehicle will be added by them after HOA approval.",
     "required": "This field is required.",
     "title_manage": "Resident Vehicle Registration, Information & Management",
     "subtitle_manage": "Register new vehicles or manage your existing registration.",

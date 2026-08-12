@@ -71,6 +71,10 @@ export const VEHICLE_TYPES = [
 
 export const VISITOR_QUOTA_LIMIT = 10
 
+// Max vehicles a single unit may self-register. A 5th requires HOA approval,
+// after which the management company adds it directly (bypassing this limit).
+export const RESIDENT_VEHICLE_LIMIT = 4
+
 // ─── Pacific Time helpers ────────────────────────────────────────────────────
 // All date/time display and calculations use America/Los_Angeles (PDT/PST).
 export const PT_ZONE = 'America/Los_Angeles'

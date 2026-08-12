@@ -1,11 +1,27 @@
 ﻿import { NextRequest, NextResponse } from 'next/server';
 import { supabaseAdmin } from '@/lib/supabase';
 import { requireAdmin } from '@/lib/auth';
-import { normalizedPlate } from '@/lib/utils';
+import { normalizedPlate, RESIDENT_VEHICLE_LIMIT } from '@/lib/utils';
 
 export async function POST(req: NextRequest) {
   const body = await req.json();
   const { unit_id, owner_name, owner_phone, owner_phone_country_code, owner_email, opt_in_sms, opt_in_email, registrant_type, vehicles } = body;
+
+  // Per-unit vehicle cap. A unit may hold at most RESIDENT_VEHICLE_LIMIT vehicles;
+  // beyond that the resident must apply to the management company for HOA approval.
+  // Admins add approved extras directly in the DB, so this public path stays capped.
+  const { count: existingCount } = await supabaseAdmin
+    .from('resident_vehicles')
+    .select('id', { count: 'exact', head: true })
+    .eq('unit_id', unit_id)
+    .neq('approval_status', 'rejected');
+  const current = existingCount ?? 0;
+  if (current + vehicles.length > RESIDENT_VEHICLE_LIMIT) {
+    return NextResponse.json(
+      { error: 'vehicle_limit_exceeded', limit: RESIDENT_VEHICLE_LIMIT, current, attempted: vehicles.length },
+      { status: 409 }
+    );
+  }
 
   // First pass: validate plates and upload docs
   for (const vehicle of vehicles) {

@@ -233,6 +233,7 @@ The admin can mark alerts as resolved via the "Mark as Resolved" button, which c
 - Phone stored as separate country code + number columns
 - Duplicate plate detection: same plate in `resident_vehicles` → error
 - Visitor plate conflict: if a visitor is registered with a plate that later tries to register as resident → blocked
+- **Per-unit vehicle cap:** a unit may self-register at most `RESIDENT_VEHICLE_LIMIT = 4` vehicles (`lib/utils.ts`). Enforced server-side on both public insert paths (`POST /api/residents` batch, and `POST /api/residents/manage` `add_vehicle`) — count = `resident_vehicles` rows for the unit with `approval_status != 'rejected'` (i.e. approved + pending-oversized). Over-limit returns `{ error: 'vehicle_limit_exceeded' }` (409); the `/register` UI shows `register.error_vehicle_limit` and grays out the add button. A 5th vehicle requires HOA approval; the management company then adds it **directly in the DB** (admins have no in-app add path and are not subject to the cap).
 
 ### 7.4 Plate Lookup (Patrol)
 

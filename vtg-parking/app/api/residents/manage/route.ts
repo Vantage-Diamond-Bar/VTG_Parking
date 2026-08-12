@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { supabaseAdmin } from '@/lib/supabase';
-import { normalizedPlate } from '@/lib/utils';
+import { normalizedPlate, RESIDENT_VEHICLE_LIMIT } from '@/lib/utils';
 import { decodeVerificationToken } from '@/lib/auth';
 
 export async function PATCH(req: NextRequest) {
@@ -182,6 +182,21 @@ export async function POST(req: NextRequest) {
 
     if (!license_plate) {
       return NextResponse.json({ error: 'license_plate is required' }, { status: 400 });
+    }
+
+    // Per-unit vehicle cap. A unit may hold at most RESIDENT_VEHICLE_LIMIT vehicles;
+    // a 5th requires HOA approval, after which the management company adds it directly.
+    const { count: existingCount } = await supabaseAdmin
+      .from('resident_vehicles')
+      .select('id', { count: 'exact', head: true })
+      .eq('unit_id', unit_id)
+      .neq('approval_status', 'rejected');
+    const current = existingCount ?? 0;
+    if (current + 1 > RESIDENT_VEHICLE_LIMIT) {
+      return NextResponse.json(
+        { error: 'vehicle_limit_exceeded', limit: RESIDENT_VEHICLE_LIMIT, current, attempted: 1 },
+        { status: 409 }
+      );
     }
 
     const plate = normalizedPlate(license_plate);

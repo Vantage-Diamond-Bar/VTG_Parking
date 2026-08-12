@@ -3,7 +3,7 @@
 import { useState, useEffect, useCallback } from 'react'
 import Link from 'next/link'
 import { useTranslations } from 'next-intl'
-import { US_STATES, CAR_COLORS, CAR_MAKES, VEHICLE_TYPES, VISITOR_QUOTA_LIMIT, getYearMonth, ptInputToISO, formatPDT } from '@/lib/utils'
+import { US_STATES, CAR_COLORS, CAR_MAKES, VEHICLE_TYPES, VISITOR_QUOTA_LIMIT, RESIDENT_VEHICLE_LIMIT, getYearMonth, ptInputToISO, formatPDT } from '@/lib/utils'
 import PhoneInput from '@/components/PhoneInput'
 import UnitSearchInput from '@/components/UnitSearchInput'
 
@@ -286,7 +286,11 @@ export default function RegisterPage() {
       })
       const data = await res.json()
       if (!res.ok) {
-        setSubmitError(data?.error === 'plate_conflict' ? t('error_plate_conflict') : (data?.error ?? 'Submission failed'))
+        setSubmitError(
+          data?.error === 'plate_conflict' ? t('error_plate_conflict')
+          : data?.error === 'vehicle_limit_exceeded' ? t('error_vehicle_limit', { limit: RESIDENT_VEHICLE_LIMIT })
+          : (data?.error ?? 'Submission failed')
+        )
         return
       }
       setOversizedPendingCount(data.oversized_pending_count ?? 0)
@@ -540,10 +544,16 @@ export default function RegisterPage() {
                       }}
                     />
                   ))}
-                  <button type="button" onClick={() => setNewVehicles(p => [...p, emptyVehicle()])}
-                    className="w-full border-2 border-dashed border-blue-300 text-blue-600 py-3 rounded-lg text-sm font-semibold hover:border-blue-400 hover:bg-blue-50 transition-colors">
-                    + {t('add_vehicle')}
-                  </button>
+                  {newVehicles.length < RESIDENT_VEHICLE_LIMIT ? (
+                    <button type="button" onClick={() => setNewVehicles(p => [...p, emptyVehicle()])}
+                      className="w-full border-2 border-dashed border-blue-300 text-blue-600 py-3 rounded-lg text-sm font-semibold hover:border-blue-400 hover:bg-blue-50 transition-colors">
+                      + {t('add_vehicle')}
+                    </button>
+                  ) : (
+                    <p className="text-xs text-gray-500 bg-gray-50 border border-gray-200 rounded-lg px-4 py-3">
+                      {t('error_vehicle_limit', { limit: RESIDENT_VEHICLE_LIMIT })}
+                    </p>
+                  )}
                 </div>
               </div>
 
@@ -684,6 +694,9 @@ function ManageView({ t, unitId, confirmedEmail, verificationToken, unitData, un
   const unitAddress = unitData.unit_address
   const vehicles = unitData.vehicles
   const oversizedPending = unitData.oversized_pending ?? []
+  // Non-rejected vehicles count toward the per-unit cap (approved + pending oversized),
+  // mirroring the server-side check in /api/residents/manage.
+  const atVehicleLimit = vehicles.length + oversizedPending.length >= RESIDENT_VEHICLE_LIMIT
   // Fall back to first pending oversized vehicle for contact info when there are no approved vehicles yet
   const firstVehicle: ResidentVehicle | OversizedPending | undefined = vehicles[0] ?? oversizedPending[0]
 
@@ -1009,7 +1022,12 @@ function ManageView({ t, unitId, confirmedEmail, verificationToken, unitData, un
         setShowAddVehicle(false); setAddVehicle(emptyVehicle())
         showToast(json.oversized_pending ? 'Oversized vehicle submitted for admin review.' : t('vehicle_added'))
         await onReload()
-      } else showToast(json.error === 'plate_conflict' ? t('error_plate_conflict') : (json.error ?? 'Error'))
+      } else showToast(
+        json.error === 'plate_conflict' ? t('error_plate_conflict')
+        : json.error === 'vehicle_limit_exceeded' ? t('error_vehicle_limit', { limit: RESIDENT_VEHICLE_LIMIT })
+        : (json.error ?? 'Error'),
+        'error'
+      )
     } finally { setAddingVehicle(false) }
   }
 
@@ -1300,7 +1318,11 @@ function ManageView({ t, unitId, confirmedEmail, verificationToken, unitData, un
             ))}
 
             {/* Add vehicle */}
-            {!showAddVehicle ? (
+            {atVehicleLimit ? (
+              <div className="w-full border-2 border-dashed border-gray-200 bg-gray-50 text-gray-500 py-3 px-4 rounded-xl text-xs text-center cursor-not-allowed">
+                {t('error_vehicle_limit', { limit: RESIDENT_VEHICLE_LIMIT })}
+              </div>
+            ) : !showAddVehicle ? (
               <button onClick={() => setShowAddVehicle(true)}
                 className="w-full border-2 border-dashed border-blue-300 text-blue-600 py-3 rounded-xl text-sm font-semibold hover:border-blue-400 hover:bg-blue-50 transition-colors">
                 {t('add_vehicle_btn')}

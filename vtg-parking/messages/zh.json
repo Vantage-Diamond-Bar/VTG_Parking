@@ -65,6 +65,7 @@
     "oversized_notice_item3": "勾选此项即表示您确认该车辆无法停放在住宅车库内。",
     "oversized_notice_footer": "批准并非自动生效，请联系物业管理处预约检查。",
     "error_plate_conflict": "该车牌已作为住户车辆登记，无法重复登记。",
+    "error_vehicle_limit": "每户最多可注册 {limit} 辆车。如需注册更多车辆，请联系管理公司递交申请，经 HOA 批准后由管理公司为您添加。",
     "required": "此项为必填项。",
     "title_manage": "住户车辆注册登记、信息汇总和管理",
     "subtitle_manage": "新车辆注册登记，或管理您已有的注册信息。",
