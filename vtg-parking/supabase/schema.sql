@@ -17,10 +17,13 @@ create type violation_location as enum (
   'Other'
 );
 
+-- The 96-hour variant was in use until 2026-08; the HOA rule reverted to 72 hours.
+-- Existing databases still carry 'Vehicle Parked for Over 96 Hours Without Movement'
+-- as an orphaned enum value (added by 20260527_schema_catch_up.sql) — harmless, and
+-- Postgres cannot drop an enum value without rebuilding the type. Nothing writes it.
 create type violation_type as enum (
   'Parking in Yellow-Curb Trash Bin Area on Sundays',
   'Vehicle Parked for Over 72 Hours Without Movement',
-  'Vehicle Parked for Over 96 Hours Without Movement',
   'Opposite Direction of Traffic',
   'Parking Outside Designated Spaces',
   'Parking in Red-Curb Zone',

@@ -191,7 +191,7 @@
   },
   "vacation": {
     "title": "Vacation Extended Parking Request",
-    "subtitle": "Submit a request to keep your vehicle parked in the same location for more than 96 hours.",
+    "subtitle": "Submit a request to keep your vehicle parked in the same location for more than 72 hours.",
     "eligibility_notice_title": "Please Read Before Applying",
     "eligibility_item_1": "Your vehicle must be registered to your unit AND your unit must have 3 or more registered vehicles, OR the vehicle must be registered as an oversized vehicle.",
     "eligibility_item_2": "This request requires HOA Board or Parking Committee approval.",
@@ -334,7 +334,7 @@
     },
     "violation_types": {
       "Parking in Yellow-Curb Trash Bin Area on Sundays": "Parking in Yellow-Curb Trash Bin Area on Sundays",
-      "Vehicle Parked for Over 96 Hours Without Movement": "Vehicle Parked for Over 96 Hours Without Movement",
+      "Vehicle Parked for Over 72 Hours Without Movement": "Vehicle Parked for Over 72 Hours Without Movement",
       "Opposite Direction of Traffic": "Opposite Direction of Traffic",
       "Parking Outside Designated Spaces": "Parking Outside Designated Spaces",
       "Parking in Red-Curb Zone": "Parking in Red-Curb Zone",

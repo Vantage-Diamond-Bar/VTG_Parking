@@ -55,7 +55,7 @@ export const VIOLATION_LOCATIONS = [
 
 export const VIOLATION_TYPES = [
   'Parking in Yellow-Curb Trash Bin Area on Sundays',
-  'Vehicle Parked for Over 96 Hours Without Movement',
+  'Vehicle Parked for Over 72 Hours Without Movement',
   'Opposite Direction of Traffic',
   'Parking Outside Designated Spaces',
   'Parking in Red-Curb Zone',

@@ -191,7 +191,7 @@
   },
   "vacation": {
     "title": "度假延长停车申请",
-    "subtitle": "如需将车辆在同一位置停放超过96小时，请提交本申请。",
+    "subtitle": "如需将车辆在同一位置停放超过72小时，请提交本申请。",
     "eligibility_notice_title": "申请前请仔细阅读",
     "eligibility_item_1": "您的车辆必须已在本门牌下登记，且该门牌下须有3辆或以上登记车辆，或该车辆已被标注为大型车辆。",
     "eligibility_item_2": "本申请须经业主委员会或停车管理委员会审批。",
@@ -334,7 +334,7 @@
     },
     "violation_types": {
       "Parking in Yellow-Curb Trash Bin Area on Sundays": "周日停放于黄色路缘垃圾桶区域",
-      "Vehicle Parked for Over 96 Hours Without Movement": "车辆超过96小时未移动",
+      "Vehicle Parked for Over 72 Hours Without Movement": "车辆超过72小时未移动",
       "Opposite Direction of Traffic": "逆向停放",
       "Parking Outside Designated Spaces": "停放在非指定区域",
       "Parking in Red-Curb Zone": "停放在红色路缘禁停区",

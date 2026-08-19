@@ -125,6 +125,10 @@ END $$;
 -- The UI sends 'Vehicle Parked for Over 96 Hours Without Movement'; the enum
 -- only defined the 72-hour string.  ADD VALUE IF NOT EXISTS is a no-op if the
 -- value is already present.
+--
+-- SUPERSEDED 2026-08: the HOA rule reverted to 72 hours and the UI no longer emits
+-- the 96-hour string.  This statement is left as-is — historical migrations are not
+-- rewritten — so the value stays in the enum on existing databases as dead weight.
 ALTER TYPE violation_type ADD VALUE IF NOT EXISTS 'Vehicle Parked for Over 96 Hours Without Movement';
 
 -- ─── 7. admin_users — email column for OTP login ─────────────────────────────

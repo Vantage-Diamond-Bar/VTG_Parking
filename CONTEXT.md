@@ -61,7 +61,11 @@ Current implementation sends a single reminder only after the 1-year mark has al
 **Overdue enforcement**: a unit with any overdue vehicle must be blocked from both Visitor Registrations and Vacation Parking Requests. Currently the overdue check only exists in the Vacation Parking route; the Visitor Registration route (`/api/visitors/route.ts`) has no such check — this is a bug.
 
 ## Parking Time Limit（停放时限）
-The community rule currently enforces a **96-hour** maximum for a vehicle to remain in the same outdoor spot without movement. This value appears in all UI strings and `lib/utils.ts:VIOLATION_TYPES`. The `supabase/schema.sql` enum currently says "72 Hours" — that is a bug; all other references say 96. If HOA changes the rule, every reference below must be updated together:
-- `supabase/schema.sql` (enum definition — needs a migration)
-- `lib/utils.ts` (`VIOLATION_TYPES` constant)
-- `messages/en.json`, `messages/zh.json`, `messages/ko.json` (both the violation type label and the vacation page subtitle)
+The community rule enforces a **72-hour** maximum for a vehicle to remain in the same outdoor spot without movement. Changed from 96 to 72 on 2026-08-19 by HOA decision; every reference below was updated together and must stay in lockstep if the rule changes again:
+- `lib/utils.ts` (`VIOLATION_TYPES` constant — this string is both the DB enum value and the i18n lookup key)
+- `messages/en.json`, `messages/zh.json`, `messages/ko.json` (the `violation_types` key **and** its translated value, plus the vacation page subtitle)
+- `supabase/schema.sql` (enum definition, for fresh databases)
+
+Missing any one of the four code references leaves the report dropdown showing the raw English string instead of the translation.
+
+**Dead enum value**: `'Vehicle Parked for Over 96 Hours Without Movement'` remains in `violation_type` on existing databases (added by `20260527_schema_catch_up.sql`). Postgres cannot drop an enum value without rebuilding the type, and nothing writes it any more, so it is left in place. It is absent from `schema.sql`, so fresh databases never get it.
