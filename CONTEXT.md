@@ -75,10 +75,17 @@ Resident vehicles must renew their DMV registration document annually. The renew
 
 A unit is considered **registration overdue** if any of its approved vehicles has `created_at` older than 1 year. Overdue status blocks the unit from submitting Vacation Parking Requests.
 
-A scheduled cron job (`/api/cron/remind-registration`) emails residents when their registration is due. **Correct reminder schedule**:
-- Starting 1 month before expiry: weekly reminders with a "renew soon" tone
-- After expiry: monthly reminders with an "overdue" tone
-Current implementation sends a single reminder only after the 1-year mark has already passed — missing the pre-expiry weekly cadence entirely.
+A scheduled cron job (`/api/cron/remind-registration`) emails residents when their registration is due. **Reminder schedule** (implemented 2026-08-19):
+- Starting 30 days before expiry: weekly reminders, `soon` tone
+- After expiry: monthly reminders, `overdue` tone
+
+The cadence lives in one pure function, `reminderDue()` in `lib/utils.ts`, rather than being half-expressed as a query filter — it is the only code path that mails every resident, so its boundaries are pinned down by tests. The cron runs daily (`0 16 * * *` = 09:00 PT) and lets that function decide who is due; the query only narrows candidates.
+
+One email per owner regardless of vehicle count. When an owner holds one lapsed vehicle and another still inside its notice window, the lapsed one sets the tone and each vehicle is listed with its own due date.
+
+**`CRON_SECRET` is mandatory.** The route refuses to run (503) without it. It previously skipped the check entirely when the variable was unset — and it *was* unset in production, leaving an endpoint that anyone could hit to trigger a mass mailing.
+
+Two bugs fixed at the same time: the old gate was "last reminded over a year ago", so a resident who received one notice went silent for a full year afterwards; and reminders were sent for `rejected` vehicles, which now requires `approval_status = 'approved'`.
 
 **Overdue enforcement**: a unit with any overdue vehicle must be blocked from both Visitor Registrations and Vacation Parking Requests. Currently the overdue check only exists in the Vacation Parking route; the Visitor Registration route (`/api/visitors/route.ts`) has no such check — this is a bug.
 

@@ -101,6 +101,9 @@ create table resident_vehicles (
   admin_notes              text,
   reviewed_at              timestamptz,
   reviewed_by              text,
+  -- When the annual renewal reminder was last emailed for this vehicle.
+  -- Drives the cadence in /api/cron/remind-registration; null = never reminded.
+  last_reminded_at         timestamptz,
   created_at               timestamptz not null default now(),
   updated_at               timestamptz not null default now(),
   constraint resident_vehicles_approval_status_check
@@ -109,6 +112,8 @@ create table resident_vehicles (
 
 create index idx_resident_vehicles_plate    on resident_vehicles(upper(license_plate));
 create index idx_resident_vehicles_unit     on resident_vehicles(unit_id);
+create index idx_resident_vehicles_reminder on resident_vehicles(created_at, last_reminded_at)
+  where opt_in_email = true and owner_email is not null;
 create index idx_resident_vehicles_approval on resident_vehicles(unit_id, approval_status)
   where approval_status != 'approved';
 

@@ -263,3 +263,78 @@ export function generateMonthOptions(): { value: string; label: string }[] {
   }
   return options
 }
+
+// ─── Registration renewal reminders ──────────────────────────────────────────
+// Resident vehicle registrations expire one year after `created_at` (which is
+// deliberately reset when a resident re-uploads their document). Residents are
+// nudged on two cadences:
+//
+//   - weekly, starting 30 days before expiry  → 'soon'    ("renew soon")
+//   - monthly, once expiry has passed         → 'overdue' ("overdue")
+//
+// Kept as a pure function so the cadence is testable without a database or a
+// mail server — this is the only code path that mails every resident, so the
+// boundaries are worth pinning down in tests.
+
+export const RENEWAL_PERIOD_DAYS = 365
+/** How far before expiry the weekly nudges begin. */
+export const RENEWAL_NOTICE_DAYS = 30
+export const RENEWAL_INTERVAL_SOON_DAYS = 7
+export const RENEWAL_INTERVAL_OVERDUE_DAYS = 30
+
+export type ReminderKind = 'soon' | 'overdue'
+
+const DAY_MS = 24 * 60 * 60 * 1000
+
+/** Expiry instant for a registration created at `createdAt`. */
+export function renewalExpiryDate(createdAt: Date): Date {
+  const d = new Date(createdAt)
+  d.setFullYear(d.getFullYear() + 1)
+  return d
+}
+
+/**
+ * Whole days from `now` until expiry. Negative once expiry has passed.
+ * Counted on Pacific calendar dates, not raw elapsed milliseconds, so a
+ * reminder lands on the same day for everyone regardless of the hour their
+ * registration happened to be created at.
+ */
+export function daysUntilRenewal(createdAt: Date, now: Date): number {
+  const expiry = renewalExpiryDate(createdAt)
+  const toPTMidnight = (d: Date) => {
+    const parts = new Intl.DateTimeFormat('en-CA', {
+      timeZone: PT_ZONE, year: 'numeric', month: '2-digit', day: '2-digit',
+    }).formatToParts(d)
+    const get = (t: string) => parseInt(parts.find(p => p.type === t)!.value)
+    return Date.UTC(get('year'), get('month') - 1, get('day'))
+  }
+  return Math.round((toPTMidnight(expiry) - toPTMidnight(now)) / DAY_MS)
+}
+
+/**
+ * Which reminder, if any, is due for one vehicle right now.
+ * Returns null when it is too early, or when one was sent too recently.
+ */
+export function reminderDue(
+  createdAt: Date,
+  lastRemindedAt: Date | null,
+  now: Date
+): ReminderKind | null {
+  const daysLeft = daysUntilRenewal(createdAt, now)
+
+  // Still more than a month out — nothing to say yet.
+  if (daysLeft > RENEWAL_NOTICE_DAYS) return null
+
+  const kind: ReminderKind = daysLeft >= 0 ? 'soon' : 'overdue'
+  const intervalDays =
+    kind === 'soon' ? RENEWAL_INTERVAL_SOON_DAYS : RENEWAL_INTERVAL_OVERDUE_DAYS
+
+  if (lastRemindedAt) {
+    const sinceDays = Math.floor((now.getTime() - lastRemindedAt.getTime()) / DAY_MS)
+    // A resident crossing from 'soon' into 'overdue' still waits out the
+    // overdue interval; the change of tone alone is not worth an extra email.
+    if (sinceDays < intervalDays) return null
+  }
+
+  return kind
+}

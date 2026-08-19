@@ -345,33 +345,66 @@ export async function sendRegistrationReminder({
   address,
   vehicles,
   registeredAt,
+  variant = 'overdue',
 }: {
   ownerName: string
   ownerEmail: string
   address: string
-  vehicles: { make: string; model: string; color: string; license_plate: string }[]
+  vehicles: { make: string; model: string; color: string; license_plate: string; expiresAt?: Date; isOverdue?: boolean }[]
   registeredAt: Date
+  /**
+   * 'soon'    — weekly nudge in the 30 days before expiry
+   * 'overdue' — monthly nudge once expiry has passed
+   * When an owner has several vehicles, the most urgent one sets the tone.
+   */
+  variant?: 'soon' | 'overdue'
 }): Promise<boolean> {
   const appUrl = process.env.NEXT_PUBLIC_APP_URL ?? ''
+  const fmtDate = (d: Date) =>
+    d.toLocaleDateString('en-US', { timeZone: 'America/Los_Angeles', year: 'numeric', month: 'long', day: 'numeric' })
+
+  // Each vehicle carries its own due date: an owner can easily have one vehicle
+  // already overdue and another still in its notice window, and a single shared
+  // date at the top would be wrong for at least one of them.
   const vehicleList = vehicles
-    .map(
-      (v, i) =>
-        `<li style="padding:4px 0;">${i + 1}. ${v.color} ${v.make} ${v.model} — <strong style="font-family:monospace;">${v.license_plate}</strong></li>`
-    )
+    .map((v, i) => {
+      const due = v.expiresAt
+        ? v.isOverdue
+          ? ` <span style="color:#b91c1c;font-weight:bold;">— expired ${fmtDate(v.expiresAt)}</span>`
+          : ` <span style="color:#b45309;">— due ${fmtDate(v.expiresAt)}</span>`
+        : ''
+      return `<li style="padding:4px 0;">${i + 1}. ${v.color} ${v.make} ${v.model} — <strong style="font-family:monospace;">${v.license_plate}</strong>${due}</li>`
+    })
     .join('')
+
+  const isSoon = variant === 'soon'
+  const headerBg = isSoon ? '#1e40af' : '#b45309'
+  const headerSub = isSoon
+    ? 'Annual Vehicle Registration — Renewal Due Soon'
+    : 'Annual Vehicle Registration — Renewal Overdue'
+  const subject = isSoon
+    ? 'Vantage Community Parking — Your vehicle registration renewal is due soon'
+    : 'Vantage Community Parking — Your vehicle registration renewal is overdue'
+  const leadParagraph = isSoon
+    ? `<p>Your vehicle registration at <strong>${address}</strong> is coming up for its annual renewal. Renewing before it lapses keeps your parking privileges uninterrupted.</p>`
+    : `<p>Your vehicle registration at <strong>${address}</strong> was submitted on
+        <strong>${fmtDate(registeredAt)}</strong>.
+        It has now been over one year since your last registration update.</p>`
+  const consequence = isSoon
+    ? `<p style="font-size:13px;color:#6b7280;">Once a registration lapses, the unit cannot submit Visitor Parking or Vacation Parking requests until it is renewed.</p>`
+    : `<p style="background:#fef3c7;border:1px solid #fcd34d;border-radius:6px;padding:12px;font-size:13px;color:#92400e;">While your registration is out of date, your unit cannot submit Visitor Parking or Vacation Parking requests.</p>`
 
   const html = `
     <div style="font-family:sans-serif;max-width:600px;margin:0 auto;">
-      <div style="background:#1e40af;color:white;padding:28px 24px;border-radius:8px 8px 0 0;">
+      <div style="background:${headerBg};color:white;padding:28px 24px;border-radius:8px 8px 0 0;">
         <h1 style="margin:0;font-size:20px;">Vantage Community Parking</h1>
-        <p style="margin:6px 0 0;opacity:0.85;font-size:14px;">Annual Vehicle Registration Renewal Reminder</p>
+        <p style="margin:6px 0 0;opacity:0.85;font-size:14px;">${headerSub}</p>
       </div>
       <div style="background:white;padding:28px 24px;border:1px solid #e5e7eb;border-top:none;border-radius:0 0 8px 8px;">
         <p>Dear <strong>${ownerName}</strong>,</p>
-        <p>Your vehicle registration at <strong>${address}</strong> was submitted on
-        <strong>${registeredAt.toLocaleDateString('en-US', { timeZone: 'America/Los_Angeles', year: 'numeric', month: 'long', day: 'numeric' })}</strong>.
-        It has now been over one year since your last registration update.</p>
+        ${leadParagraph}
         <p>As required by Vantage community parking policy, all residents must renew their vehicle registration information annually to keep records current.</p>
+        ${consequence}
         <p><strong>Vehicles currently on file for your unit:</strong></p>
         <ul style="padding-left:20px;line-height:1.8;">${vehicleList}</ul>
         <p>Please visit the Vantage Parking portal to submit your updated registration:</p>
@@ -397,7 +430,7 @@ export async function sendRegistrationReminder({
     await resend.emails.send({
       from: EMAIL_FROM,
       to: ownerEmail,
-      subject: 'Vantage Community Parking — Annual Registration Renewal Reminder',
+      subject,
       html,
     })
     return true
