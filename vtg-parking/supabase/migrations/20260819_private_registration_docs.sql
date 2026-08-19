@@ -59,17 +59,19 @@ BEGIN
   END IF;
 END $$;
 
--- ─── 4. Follow-up, NOT part of this migration ────────────────────────────────
--- Once the new build is live and documents are confirmed viewable, drop the old
--- column in a separate migration:
---
---   ALTER TABLE resident_vehicles DROP COLUMN registration_doc_url;
---
--- Until then it stays as the rollback path: reverting the deploy restores a
--- fully working system with no database change.
---
--- Flipping the bucket itself is the last step of all, and only after the new
--- build is verified — it is what actually breaks the old public URLs:
+-- ─── 4. Status and follow-up ─────────────────────────────────────────────────
+-- APPLIED to production 2026-08-19: 107/107 rows backfilled, 0 anomalies.
+-- The bucket was flipped the same day and verified:
 --
 --   UPDATE storage.buckets SET public = false WHERE id = 'registration-docs';
 --   -- instant rollback: SET public = true
+--
+-- Old public URLs now return 400; view/add/edit were confirmed working against
+-- production.
+--
+-- CONTRACT STEP — deliberately deferred, do not add it here. Dropping
+-- registration_doc_url is scheduled to run as STEP 2b of
+-- supabase/go-live-cleanup.sql during the pre-launch data purge (~2026-09-01),
+-- because that step truncates resident_vehicles anyway. Until then the old
+-- column is the zero-cost rollback path: reverting the deploy restores a fully
+-- working system with no database change at all.

@@ -52,6 +52,49 @@ truncate table
 commit;
 
 
+-- ─── STEP 2b：删掉 resident_vehicles.registration_doc_url（expand/contract 收尾）──
+-- 2026-08-19 把行驶证从公开桶改成私有桶时，新增了 registration_doc_path 存对象路径，
+-- 旧的 registration_doc_url（存完整公开 URL）刻意留着没删，作为零成本的回滚退路：
+-- 只要旧列还在，回退部署就能立刻恢复旧版，数据库完全不用动。
+--
+-- 决定（2026-08-19）：不单独做一次迁移，等清库时一起删 —— 反正 STEP 2 已经把整张表
+-- truncate 掉了，此时删列既没有数据可丢，也不再需要回滚退路。
+--
+-- 必须在 STEP 2 之后执行。守卫是多余的保险：表为空时行数必然为 0。
+DO $$
+DECLARE
+  v_would_lose integer;
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1 FROM information_schema.columns
+    WHERE table_schema='public' AND table_name='resident_vehicles'
+      AND column_name='registration_doc_url'
+  ) THEN
+    RAISE NOTICE 'registration_doc_url 已不存在，跳过';
+    RETURN;
+  END IF;
+
+  SELECT count(*) INTO v_would_lose
+  FROM resident_vehicles
+  WHERE registration_doc_url IS NOT NULL AND registration_doc_path IS NULL;
+
+  IF v_would_lose > 0 THEN
+    RAISE EXCEPTION '中止：% 行只有旧列没有新列，删列会丢数据。先确认 STEP 2 的 truncate 已执行。', v_would_lose;
+  END IF;
+
+  ALTER TABLE resident_vehicles DROP COLUMN registration_doc_url;
+  RAISE NOTICE 'registration_doc_url 已删除';
+END $$;
+
+-- 反向恢复配方（万一删早了又需要回退到旧版代码）：
+--   ALTER TABLE resident_vehicles ADD COLUMN registration_doc_url text;
+--   UPDATE resident_vehicles
+--      SET registration_doc_url =
+--          '<你的 Supabase Project URL>/storage/v1/object/public/registration-docs/' || registration_doc_path
+--    WHERE registration_doc_path IS NOT NULL;
+--   UPDATE storage.buckets SET public = true WHERE id = 'registration-docs';
+
+
 -- ─── STEP 3：主数据（units）—— 不要盲删，用真实门牌表替换 ────────────────────
 -- 3a. 先看现有门牌是不是测试数据
 select unit_number, address, active, created_at
