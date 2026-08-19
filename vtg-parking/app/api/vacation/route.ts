@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { supabaseAdmin } from '@/lib/supabase'
 import { decodeVerificationToken } from '@/lib/auth'
+import { hasOverdueRegistration } from '@/lib/unit-eligibility'
 
 export async function POST(req: NextRequest) {
   const body = await req.json()
@@ -43,18 +44,10 @@ export async function POST(req: NextRequest) {
     }
   }
 
-  // Block submission if unit has overdue approved registrations
-  const oneYearAgo = new Date()
-  oneYearAgo.setFullYear(oneYearAgo.getFullYear() - 1)
-  const { data: unitVehicles } = await supabaseAdmin
-    .from('resident_vehicles')
-    .select('created_at')
-    .eq('unit_id', unit_id)
-    .eq('approval_status', 'approved')
-  const hasOverdue = (unitVehicles ?? []).some(
-    (v) => new Date(v.created_at) < oneYearAgo
-  )
-  if (hasOverdue) {
+  // Overdue-only on purpose: eligibility here is decided by this route's own
+  // rules (3+ vehicles, or oversized), so a unit with no vehicles is rejected
+  // earlier rather than by the shared visitor-parking gate.
+  if (await hasOverdueRegistration(unit_id)) {
     return NextResponse.json({ error: 'registration_overdue' }, { status: 403 })
   }
 

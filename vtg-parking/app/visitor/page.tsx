@@ -205,6 +205,12 @@ export default function VisitorPage() {
           setError(t('error_plate_conflict'))
         } else if (data?.error === 'quota_exceeded') {
           setError(t('error_quota_exceeded'))
+        } else if (data?.error === 'registration_overdue') {
+          // The unit fell out of good standing between passing verify-host and
+          // submitting; the API is the one that decides, so surface its reason.
+          setError(t('overdue_message'))
+        } else if (data?.error === 'no_resident_vehicles') {
+          setError(t('no_vehicles_message'))
         } else {
           setError(t('error_submission_failed'))
         }

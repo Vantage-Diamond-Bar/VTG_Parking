@@ -3,6 +3,7 @@ import { supabaseAdmin } from '@/lib/supabase';
 import { generateAccessCode, getYearMonth, normalizedPlate, VISITOR_QUOTA_LIMIT } from '@/lib/utils';
 import { requireAdmin, verifyVerificationToken } from '@/lib/auth';
 import { sendVisitorBookingEmail } from '@/lib/email';
+import { checkVisitorEligibility, eligibilityErrorBody } from '@/lib/unit-eligibility';
 
 export async function POST(req: NextRequest) {
   const body = await req.json();
@@ -16,6 +17,17 @@ export async function POST(req: NextRequest) {
   // Fix 3: Require a valid host-verification token signed by the server
   if (!verifyVerificationToken(verification_token, unit_id)) {
     return NextResponse.json({ error: 'Invalid or expired verification token' }, { status: 403 });
+  }
+
+  // The token proves who the resident is, not that their unit is entitled to
+  // guest parking — it is issued by /api/auth/verify-otp, which knows nothing
+  // about registration status. Without this, the overdue and no-vehicles rules
+  // existed only in /api/visitors/verify-host, i.e. only in the UI, and a
+  // resident could skip that call and post here directly.
+  const eligibility = await checkVisitorEligibility(unit_id);
+  if (!eligibility.ok) {
+    const { error, status } = eligibilityErrorBody(eligibility.reason);
+    return NextResponse.json({ error }, { status });
   }
 
   // 1. Normalize plate

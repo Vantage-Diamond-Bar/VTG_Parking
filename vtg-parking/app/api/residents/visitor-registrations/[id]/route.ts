@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { supabaseAdmin } from '@/lib/supabase';
 import { decodeVerificationToken } from '@/lib/auth';
+import { checkVisitorEligibility, eligibilityErrorBody } from '@/lib/unit-eligibility';
 import { normalizedPlate, ptInputToISO, PT_ZONE, countNights, VISITOR_QUOTA_LIMIT } from '@/lib/utils';
 
 // ── Timezone helpers ──────────────────────────────────────────────────────────
@@ -83,6 +84,16 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
   const tokenData = decodeVerificationToken(token);
   if (!tokenData || tokenData.unit_id !== unit_id) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 403 });
+  }
+
+  // Same gate as creating a booking. Blocking only creation would leave the
+  // rule trivially avoidable: an overdue unit could keep pushing an existing
+  // registration's end date out indefinitely. DELETE is deliberately left
+  // open — giving up a booking should never require being in good standing.
+  const eligibility = await checkVisitorEligibility(unit_id);
+  if (!eligibility.ok) {
+    const { error, status } = eligibilityErrorBody(eligibility.reason);
+    return NextResponse.json({ error }, { status });
   }
 
   const { data: reg, error: fetchErr } = await supabaseAdmin
