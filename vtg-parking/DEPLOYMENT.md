@@ -25,7 +25,7 @@
 
 1. 访问 https://resend.com，注册账号
 2. 进入 **API Keys** → Create API Key → 复制 Key → `RESEND_API_KEY`
-3. 进入 **Domains** → Add Domain → 输入你的社区域名（如 `vtgcommunity.com`）
+3. 进入 **Domains** → Add Domain → 输入社区域名 `vantagediamondbar.com`
 4. 按提示在域名 DNS 设置中添加 MX/TXT 记录（约 5 分钟生效）
 5. 验证通过后，发件地址设为：`parking@你的域名.com` → `EMAIL_FROM`
 
@@ -45,8 +45,8 @@ NEXT_PUBLIC_SUPABASE_URL        = （Step 1 复制的值）
 NEXT_PUBLIC_SUPABASE_ANON_KEY   = （Step 1 复制的值）
 SUPABASE_SERVICE_ROLE_KEY       = （Step 1 复制的值）
 RESEND_API_KEY                  = （Step 2 复制的值）
-EMAIL_FROM                      = parking@你的域名.com
-NEXT_PUBLIC_APP_URL             = https://你的Vercel域名.vercel.app
+EMAIL_FROM                      = noreply@parking.vantagediamondbar.com
+NEXT_PUBLIC_APP_URL             = https://parking.vantagediamondbar.com
 SESSION_SECRET                  = （随意填写一个32位以上的随机字符串）
 ```
 
@@ -56,11 +56,13 @@ SESSION_SECRET                  = （随意填写一个32位以上的随机字�
 
 ## Step 4：绑定自定义域名（可选）
 
-1. 在 Vercel 项目 → **Settings → Domains** → 添加你的子域名
-   - 推荐格式：`parking.vtgcommunity.com`
+1. 在 Vercel 项目 → **Settings → Domains** → 添加子域名
+   - 正式地址：**`parking.vantagediamondbar.com`**（已生效，这是发给住户的地址）
+   - Vercel 默认域名 `vtg-parking.vercel.app` 仍可访问；建议在同一页面把它设为
+     **重定向**到正式域名，避免两个地址并存造成混淆
 2. 在你的域名 DNS 管理处添加 CNAME 记录指向 Vercel
 3. 等待 DNS 生效（5分钟到24小时）
-4. 更新环境变量 `NEXT_PUBLIC_APP_URL` 为新域名，重新部署
+4. 更新环境变量 `NEXT_PUBLIC_APP_URL` 为 `https://parking.vantagediamondbar.com`（**结尾不要加斜杠**），重新部署
 
 ---
 

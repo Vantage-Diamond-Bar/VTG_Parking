@@ -88,3 +88,53 @@ describe('sendRegistrationReminder', () => {
     expect(ok).toBe(false)
   })
 })
+
+// The renewal email is the only place the system hands residents an absolute
+// URL, so it must point at the community domain — never the Vercel one — and
+// must survive a missing or sloppily-formatted env var.
+describe('renewal email link', () => {
+  const base = {
+    ownerName: 'Test Owner',
+    ownerEmail: 'owner@example.com',
+    address: '860 Sunset Pl',
+    vehicles,
+    registeredAt: new Date('2025-06-01T19:00:00Z'),
+    variant: 'soon' as const,
+  }
+
+  async function hrefFor(appUrl: string | undefined) {
+    const prev = process.env.NEXT_PUBLIC_APP_URL
+    if (appUrl === undefined) delete process.env.NEXT_PUBLIC_APP_URL
+    else process.env.NEXT_PUBLIC_APP_URL = appUrl
+    mockSend.mockClear()
+    mockSend.mockResolvedValue({ id: 'stub' })
+    await sendRegistrationReminder(base)
+    if (prev === undefined) delete process.env.NEXT_PUBLIC_APP_URL
+    else process.env.NEXT_PUBLIC_APP_URL = prev
+    const { html } = mockSend.mock.calls[0][0] as { html: string }
+    return html.match(/href="([^"]+\/register)"/)?.[1]
+  }
+
+  it('uses the configured app URL', async () => {
+    expect(await hrefFor('https://parking.vantagediamondbar.com')).toBe(
+      'https://parking.vantagediamondbar.com/register'
+    )
+  })
+
+  // A trailing slash in the env var used to produce "...com//register".
+  it('tolerates a trailing slash', async () => {
+    expect(await hrefFor('https://parking.vantagediamondbar.com/')).toBe(
+      'https://parking.vantagediamondbar.com/register'
+    )
+  })
+
+  // Previously fell back to '', making the button a relative link that is dead
+  // inside a mail client.
+  it('falls back to the community domain when the env var is missing', async () => {
+    expect(await hrefFor(undefined)).toBe('https://parking.vantagediamondbar.com/register')
+  })
+
+  it('never links to the Vercel deployment domain by default', async () => {
+    expect(await hrefFor(undefined)).not.toMatch(/vercel\.app/)
+  })
+})

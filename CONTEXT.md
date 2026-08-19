@@ -1,5 +1,14 @@
 # VTG Parking Management System — Domain Glossary
 
+## Public Address（对外地址）
+Residents are given **`https://parking.vantagediamondbar.com`**. That is the community's own domain and the only address that belongs in emails, printed notices, or anything handed to a resident.
+
+The Vercel deployment URL `vtg-parking.vercel.app` still resolves and is fine for debugging, but it is an implementation detail — treat it as internal.
+
+`NEXT_PUBLIC_APP_URL` carries this value and is consumed in exactly one place: the renewal reminder's "Update My Registration" button in `lib/email.ts`. Set it with **no trailing slash** — the href appends its own path, so a stray slash produces `...com//register`. `lib/email.ts:PUBLIC_SITE_URL` is the hard-coded fallback if the variable ever goes missing.
+
+Everything else is domain-agnostic on purpose: `/api/auth/logout` builds its redirect from `req.url`, so it follows whichever domain the user arrived on, and no page or API route hard-codes a host.
+
 ## Unit（住户单元）
 A residential unit in the VTG community. Identified by `unit_number` and `address`. Each unit has a fixed number of garage spaces; community rules require the 1st and 2nd vehicles to be parked inside the unit's own garage.
 

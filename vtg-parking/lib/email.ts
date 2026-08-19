@@ -2,7 +2,20 @@ import { Resend } from 'resend'
 import { supabaseAdmin } from './supabase'
 
 const resend = new Resend(process.env.RESEND_API_KEY)
-const EMAIL_FROM = process.env.EMAIL_FROM ?? 'parking@vtgcommunity.com'
+
+/**
+ * The community's own domain — the address residents are given, and the only
+ * one that should ever appear in an email. The Vercel deployment URL
+ * (vtg-parking.vercel.app) still resolves but is an implementation detail.
+ *
+ * Used only as a fallback: NEXT_PUBLIC_APP_URL / EMAIL_FROM are what production
+ * actually runs on. The previous fallbacks pointed at vtgcommunity.com, a
+ * domain that does not exist, so losing the env var meant mail silently failed
+ * to send rather than degrading to something that works.
+ */
+export const PUBLIC_SITE_URL = 'https://parking.vantagediamondbar.com'
+
+const EMAIL_FROM = process.env.EMAIL_FROM ?? 'noreply@parking.vantagediamondbar.com'
 
 export async function sendOtpEmail(to: string, otp: string): Promise<void> {
   const html = `
@@ -359,7 +372,10 @@ export async function sendRegistrationReminder({
    */
   variant?: 'soon' | 'overdue'
 }): Promise<boolean> {
-  const appUrl = process.env.NEXT_PUBLIC_APP_URL ?? ''
+  // Falls back to the community domain rather than '', which would have turned
+  // the button into a relative "/register" — a dead link inside an email client.
+  // The trailing slash is stripped because the href appends its own.
+  const appUrl = (process.env.NEXT_PUBLIC_APP_URL || PUBLIC_SITE_URL).replace(/\/+$/, '')
   const fmtDate = (d: Date) =>
     d.toLocaleDateString('en-US', { timeZone: 'America/Los_Angeles', year: 'numeric', month: 'long', day: 'numeric' })
 
