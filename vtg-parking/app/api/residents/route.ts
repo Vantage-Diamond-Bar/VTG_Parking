@@ -2,6 +2,7 @@
 import { supabaseAdmin } from '@/lib/supabase';
 import { requireAdmin } from '@/lib/auth';
 import { normalizedPlate, RESIDENT_VEHICLE_LIMIT } from '@/lib/utils';
+import { REGISTRATION_DOCS_BUCKET, isPathOwnedByUnit } from '@/lib/registration-docs';
 
 export async function POST(req: NextRequest) {
   const body = await req.json();
@@ -35,24 +36,32 @@ export async function POST(req: NextRequest) {
       .maybeSingle();
     if (existing) return NextResponse.json({ error: 'plate_conflict', plate }, { status: 409 });
 
-    // Use pre-uploaded URL if provided; otherwise fall back to base64 upload
-    let registration_doc_url: string | null = vehicle.registration_doc_url ?? null;
-    if (!registration_doc_url && vehicle.registration_doc_base64 && vehicle.registration_doc_filename) {
+    // Use the path returned by /api/residents/upload-doc if provided; otherwise
+    // fall back to a base64 upload in this request.
+    let registration_doc_path: string | null = vehicle.registration_doc_path ?? null;
+
+    // The client supplies this path, so it cannot be trusted. Documents are read
+    // back through a signed-URL endpoint that authorises by the vehicle's unit —
+    // an unchecked path would let a registrant point their own vehicle row at
+    // another unit's document and read it legitimately.
+    if (registration_doc_path && !isPathOwnedByUnit(registration_doc_path, unit_id)) {
+      return NextResponse.json({ error: 'invalid_doc_path' }, { status: 400 });
+    }
+
+    if (!registration_doc_path && vehicle.registration_doc_base64 && vehicle.registration_doc_filename) {
       const ext = vehicle.registration_doc_filename.split('.').pop();
       const buffer = Buffer.from(vehicle.registration_doc_base64, 'base64');
       const path = `${unit_id}/${plate}.${ext}`;
       const { error: uploadError } = await supabaseAdmin.storage
-        .from('registration-docs')
+        .from(REGISTRATION_DOCS_BUCKET)
         .upload(path, buffer, { contentType: 'application/octet-stream', upsert: true });
       if (!uploadError) {
-        registration_doc_url = supabaseAdmin.storage
-          .from('registration-docs')
-          .getPublicUrl(path).data.publicUrl;
+        registration_doc_path = path;
       }
     }
 
     vehicle._normalized_plate = plate;
-    vehicle._registration_doc_url = registration_doc_url;
+    vehicle._registration_doc_path = registration_doc_path;
   }
 
   // Second pass: all vehicles go to resident_vehicles.
@@ -73,7 +82,7 @@ export async function POST(req: NextRequest) {
     color: v.color,
     license_plate: v._normalized_plate,
     plate_state: v.plate_state ?? null,
-    registration_doc_url: v._registration_doc_url ?? null,
+    registration_doc_path: v._registration_doc_path ?? null,
     is_oversized: v.is_oversized === true,
     vehicle_type: v.vehicle_type ?? null,
     approval_status: v.is_oversized === true ? 'pending' : 'approved',

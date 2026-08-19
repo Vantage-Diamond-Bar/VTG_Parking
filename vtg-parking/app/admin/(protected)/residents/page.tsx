@@ -4,6 +4,7 @@ import { useState, useEffect, useCallback } from 'react';
 import { useTranslations } from 'next-intl';
 import { useForm } from 'react-hook-form';
 import { formatPDT } from '@/lib/utils';
+import { fetchRegistrationDocUrl } from '@/lib/doc-url';
 
 interface Resident {
   id: string;
@@ -21,7 +22,7 @@ interface Resident {
   owner_phone: string;
   owner_phone_country_code?: string | null;
   owner_email: string;
-  registration_doc_url?: string;
+  registration_doc_path?: string;
   created_at: string;
   opt_in_email?: boolean;
   opt_in_sms?: boolean;
@@ -54,6 +55,19 @@ export default function AdminResidentsPage() {
   const [deleteTarget, setDeleteTarget] = useState<Resident | null>(null);
   const [deleteLoading, setDeleteLoading] = useState(false);
   const [docViewUrl, setDocViewUrl] = useState<string | null>(null);
+  // Documents live in a private bucket, so opening one is an async round trip
+  // for a signed URL rather than following a stored link.
+  const [docLoadingId, setDocLoadingId] = useState<string | null>(null);
+  const [docError, setDocError] = useState<string | null>(null);
+
+  async function openDoc(vehicleId: string) {
+    setDocLoadingId(vehicleId);
+    setDocError(null);
+    const url = await fetchRegistrationDocUrl({ vehicle_id: vehicleId });
+    setDocLoadingId(null);
+    if (url) setDocViewUrl(url);
+    else setDocError(t('doc_unavailable'));
+  }
 
   const { register, handleSubmit, reset } = useForm<EditFormData>();
 
@@ -165,6 +179,12 @@ export default function AdminResidentsPage() {
         />
       </div>
 
+      {docError && (
+        <div className="mb-4 bg-red-50 border border-red-200 text-red-700 rounded-lg px-4 py-3 text-sm">
+          {docError}
+        </div>
+      )}
+
       <div className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
         <div className="overflow-x-auto">
           <table className="w-full text-sm">
@@ -228,12 +248,13 @@ export default function AdminResidentsPage() {
                     </td>
                     <td className="px-4 py-3 truncate max-w-[140px]">{r.owner_email}</td>
                     <td className="px-4 py-3">
-                      {r.registration_doc_url ? (
+                      {r.registration_doc_path ? (
                         <button
-                          onClick={() => setDocViewUrl(r.registration_doc_url!)}
-                          className="text-blue-600 hover:underline text-sm"
+                          onClick={() => openDoc(r.id)}
+                          disabled={docLoadingId === r.id}
+                          className="text-blue-600 hover:underline text-sm disabled:opacity-50"
                         >
-                          {t('view')}
+                          {docLoadingId === r.id ? '…' : t('view')}
                         </button>
                       ) : '—'}
                     </td>

@@ -115,7 +115,8 @@
     "vio_date": "날짜",
     "vio_type": "위반 유형",
     "vio_resolution": "처리 결과",
-    "vio_status": "상태"
+    "vio_status": "상태",
+    "doc_unavailable": "문서를 열 수 없습니다. 페이지를 새로고침한 후 이메일을 다시 인증해 주세요."
   },
   "visitor": {
     "title": "방문객 주차 등록",
@@ -527,7 +528,8 @@
     "vio_notes_placeholder": "메모 또는 의견을 추가하세요...",
     "vio_saving": "저장 중...",
     "vio_search_placeholder": "주소, 번호판, 위치로 검색...",
-    "vio_reset_search": "검색 초기화"
+    "vio_reset_search": "검색 초기화",
+    "doc_unavailable": "문서를 열 수 없습니다. 삭제되었을 수 있습니다."
   },
   "common": {
     "loading": "로딩 중...",

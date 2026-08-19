@@ -6,6 +6,20 @@ A residential unit in the VTG community. Identified by `unit_number` and `addres
 ## Resident Vehicle（住户车辆）
 A vehicle registered by a resident to their unit, backed by a DMV registration document. Requires admin approval (`approval_status`: `pending | approved | rejected`). Has an `is_oversized` flag.
 
+## Registration Document（行驶证文件）
+The DMV registration backing a Resident Vehicle. It is **PII**, so the `registration-docs` storage bucket is **private** (since 2026-08-19; it was public before that, and every stored URL was readable by anyone who had it).
+
+`resident_vehicles.registration_doc_path` holds the **object path** inside the bucket (`{unit_id}/{plate}.{ext}`), never a URL. Reading one goes through `POST /api/documents/signed-url`, which authorises the caller and returns a signed URL valid for 5 minutes.
+
+Three invariants hold this together — breaking any one reopens a hole:
+1. **The path is stored, never recomputed.** Filenames are built from the plate at upload time, and `update_vehicle` lets residents change the plate without renaming the file. A derived path would drift off the real object.
+2. **A client-supplied path is validated against its unit.** `POST /api/residents` takes the path from the browser; `isPathOwnedByUnit` requires the `{unit_id}/` prefix. Without it a registrant could point their own vehicle row at another unit's document and read it through the signing endpoint legitimately.
+3. **The signing endpoint checks the vehicle's unit, not just the caller's.** A resident holding a valid token for their own unit must not be able to name someone else's `vehicle_id`.
+
+`oversized_applications.registration_doc_url` is frozen legacy and deliberately keeps the old name and public-URL contents. Nothing reads it.
+
+**Upload authorisation is conditional, by necessity.** `POST /api/residents/upload-doc` serves the first-time registration form, and a unit with no vehicles has no email on file to send an OTP to — that path cannot present a token. So the endpoint requires a verification token only when the unit already has vehicles. A unit with zero vehicles remains open to anonymous upload; that is inherent to public self-registration, not an oversight.
+
 A registered vehicle occupies an **outdoor communal parking spot** only if:
 - It is **oversized** (too large to fit in the garage), or
 - It is the **3rd or later vehicle** registered to the unit.

@@ -89,7 +89,11 @@ create table resident_vehicles (
   owner_email              text,
   opt_in_sms               boolean not null default false,
   opt_in_email             boolean not null default false,
-  registration_doc_url     text,
+  -- Object path inside the PRIVATE registration-docs bucket, e.g. "{unit_id}/ABC123.pdf".
+  -- Never a URL — the app signs it at read time (POST /api/documents/signed-url).
+  -- Stored rather than derived: residents can change license_plate after upload and
+  -- the stored file is not renamed, so the path would drift if recomputed.
+  registration_doc_path    text,
   registrant_type          text    not null default 'owner',
   is_oversized             boolean not null default false,
   vehicle_type             text,
@@ -231,6 +235,8 @@ create table oversized_applications (
   color                    text        not null,
   license_plate            text        not null,
   plate_state              text,
+  -- Frozen legacy column: still a public URL, and deliberately NOT renamed to
+  -- match resident_vehicles.registration_doc_path. Nothing reads it.
   registration_doc_url     text,
   is_oversized             boolean     not null default true,
   vehicle_type             text,

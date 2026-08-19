@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useCallback, useMemo } from 'react';
 import { formatPDT } from '@/lib/utils';
+import { fetchRegistrationDocUrl } from '@/lib/doc-url';
 
 interface OversizedApplication {
   id: string;
@@ -19,7 +20,7 @@ interface OversizedApplication {
   color: string;
   license_plate: string;
   plate_state: string | null;
-  registration_doc_url: string | null;
+  registration_doc_path: string | null;
   admin_notes: string | null;
   reviewed_at: string | null;
   reviewed_by: string | null;
@@ -60,6 +61,19 @@ export default function AdminOversizedPage() {
   const [adminNotes, setAdminNotes] = useState('');
   const [submitting, setSubmitting] = useState(false);
   const [submitError, setSubmitError] = useState('');
+  // Documents live in a private bucket: open one by trading its path for a
+  // short-lived signed URL rather than following a stored link.
+  const [docLoading, setDocLoading] = useState(false);
+  const [docError, setDocError] = useState('');
+
+  async function openDoc(vehicleId: string) {
+    setDocLoading(true);
+    setDocError('');
+    const url = await fetchRegistrationDocUrl({ vehicle_id: vehicleId });
+    setDocLoading(false);
+    if (url) window.open(url, '_blank', 'noopener,noreferrer');
+    else setDocError('Could not open the document. It may have been removed.');
+  }
   const [toast, setToast] = useState('');
 
   const fetchApplications = useCallback(async () => {
@@ -301,17 +315,18 @@ export default function AdminOversizedPage() {
                     <p className="font-mono font-semibold">{selected.license_plate}{selected.plate_state ? ` / ${selected.plate_state}` : ''}</p>
                     <p className="text-gray-500 text-xs">{selected.year ?? ''} {selected.make} {selected.model} · {selected.color}</p>
                   </div>
-                  {selected.registration_doc_url && (
+                  {selected.registration_doc_path && (
                     <div className="col-span-2">
                       <p className="text-xs text-gray-500 uppercase">Registration Document</p>
-                      <a
-                        href={selected.registration_doc_url}
-                        target="_blank"
-                        rel="noreferrer"
-                        className="text-blue-600 hover:underline text-xs"
+                      <button
+                        type="button"
+                        onClick={() => openDoc(selected.id)}
+                        disabled={docLoading}
+                        className="text-blue-600 hover:underline text-xs disabled:opacity-50"
                       >
-                        View Document
-                      </a>
+                        {docLoading ? 'Opening…' : 'View Document'}
+                      </button>
+                      {docError && <p className="text-red-600 text-xs mt-1">{docError}</p>}
                     </div>
                   )}
                 </div>

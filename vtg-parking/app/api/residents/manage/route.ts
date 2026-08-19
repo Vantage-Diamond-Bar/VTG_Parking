@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { supabaseAdmin } from '@/lib/supabase';
 import { normalizedPlate, RESIDENT_VEHICLE_LIMIT } from '@/lib/utils';
 import { decodeVerificationToken } from '@/lib/auth';
+import { REGISTRATION_DOCS_BUCKET } from '@/lib/registration-docs';
 
 export async function PATCH(req: NextRequest) {
   const body = await req.json();
@@ -122,7 +123,7 @@ export async function PATCH(req: NextRequest) {
     const fileBuffer = Buffer.from(registration_doc_base64, 'base64');
 
     const { error: uploadError } = await supabaseAdmin.storage
-      .from('registration-docs')
+      .from(REGISTRATION_DOCS_BUCKET)
       .upload(filePath, fileBuffer, {
         upsert: true,
         contentType: `application/${ext === 'pdf' ? 'pdf' : 'octet-stream'}`,
@@ -132,20 +133,15 @@ export async function PATCH(req: NextRequest) {
       return NextResponse.json({ error: 'Failed to upload document' }, { status: 500 });
     }
 
-    const { data: publicUrlData } = supabaseAdmin.storage
-      .from('registration-docs')
-      .getPublicUrl(filePath);
-
-    const registration_doc_url = publicUrlData.publicUrl;
-
+    // Private bucket: store the path. Signing happens at read time.
     const { error: updateError } = await supabaseAdmin
       .from('resident_vehicles')
-      .update({ registration_doc_url, created_at: new Date().toISOString() })
+      .update({ registration_doc_path: filePath, created_at: new Date().toISOString() })
       .eq('id', vehicle_id)
       .eq('unit_id', unit_id);
 
     if (updateError) {
-      return NextResponse.json({ error: 'Failed to update vehicle doc URL' }, { status: 500 });
+      return NextResponse.json({ error: 'Failed to update vehicle doc path' }, { status: 500 });
     }
 
     return NextResponse.json({ success: true });
@@ -230,7 +226,7 @@ export async function POST(req: NextRequest) {
     const { owner_name, owner_phone, owner_phone_country_code, owner_email, registrant_type } = existingVehicles[0];
 
     // Upload doc if provided
-    let registration_doc_url: string | null = null;
+    let registration_doc_path: string | null = null;
 
     if (registration_doc_base64 && registration_doc_filename) {
       const ext = registration_doc_filename.split('.').pop() ?? 'pdf';
@@ -238,7 +234,7 @@ export async function POST(req: NextRequest) {
       const fileBuffer = Buffer.from(registration_doc_base64, 'base64');
 
       const { error: uploadError } = await supabaseAdmin.storage
-        .from('registration-docs')
+        .from(REGISTRATION_DOCS_BUCKET)
         .upload(filePath, fileBuffer, {
           upsert: true,
           contentType: `application/${ext === 'pdf' ? 'pdf' : 'octet-stream'}`,
@@ -248,11 +244,8 @@ export async function POST(req: NextRequest) {
         return NextResponse.json({ error: 'Failed to upload document' }, { status: 500 });
       }
 
-      const { data: publicUrlData } = supabaseAdmin.storage
-        .from('registration-docs')
-        .getPublicUrl(filePath);
-
-      registration_doc_url = publicUrlData.publicUrl;
+      // Private bucket: store the path. Signing happens at read time.
+      registration_doc_path = filePath;
     }
 
     // All vehicles go to resident_vehicles.
@@ -268,7 +261,7 @@ export async function POST(req: NextRequest) {
       plate_state: plate_state ?? null,
       is_oversized: isOversized,
       vehicle_type: body.vehicle_type ?? null,
-      registration_doc_url,
+      registration_doc_path,
       owner_name,
       owner_phone,
       owner_phone_country_code: owner_phone_country_code ?? null,

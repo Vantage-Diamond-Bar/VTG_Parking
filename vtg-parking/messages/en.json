@@ -115,7 +115,8 @@
     "vio_date": "Date",
     "vio_type": "Violation Type",
     "vio_resolution": "Resolution",
-    "vio_status": "Status"
+    "vio_status": "Status",
+    "doc_unavailable": "Could not open the document. Please refresh and verify your email again."
   },
   "visitor": {
     "title": "Visitor Parking Registration",
@@ -536,7 +537,8 @@
     "vio_notes_placeholder": "Add notes or comments...",
     "vio_saving": "Saving...",
     "vio_search_placeholder": "Search by address, plate, location...",
-    "vio_reset_search": "Reset"
+    "vio_reset_search": "Reset",
+    "doc_unavailable": "Could not open the document. It may have been removed."
   },
   "common": {
     "loading": "Loading...",

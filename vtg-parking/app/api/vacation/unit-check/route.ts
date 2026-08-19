@@ -11,7 +11,8 @@ export async function GET(req: NextRequest) {
   // Get all vehicles for this unit
   const { data: vehicles } = await supabaseAdmin
     .from('resident_vehicles')
-    .select('id, year, make, model, color, license_plate, plate_state, is_oversized, registration_doc_url, created_at, owner_email')
+    // No document field here on purpose: this endpoint is unauthenticated.
+    .select('id, year, make, model, color, license_plate, plate_state, is_oversized, created_at, owner_email')
     .eq('unit_id', unit_id)
     .eq('approval_status', 'approved')
 

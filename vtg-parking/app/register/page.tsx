@@ -6,6 +6,7 @@ import { useTranslations } from 'next-intl'
 import { US_STATES, CAR_COLORS, CAR_MAKES, VEHICLE_TYPES, VISITOR_QUOTA_LIMIT, RESIDENT_VEHICLE_LIMIT, getYearMonth, ptInputToISO, formatPDT } from '@/lib/utils'
 import PhoneInput from '@/components/PhoneInput'
 import UnitSearchInput from '@/components/UnitSearchInput'
+import { fetchRegistrationDocUrl } from '@/lib/doc-url'
 
 // ─── Types ─────────────────────────────────────────────────────────────────
 
@@ -15,14 +16,16 @@ interface VehicleForm {
   year: string; make: string; model: string; color: string
   license_plate: string; plate_state: string
   registration_doc_base64: string; registration_doc_filename: string
-  registration_doc_url: string
+  // Object path in the private bucket, not a URL — viewing goes through
+  // /api/documents/signed-url once the vehicle row exists.
+  registration_doc_path: string
   is_oversized: boolean; vehicle_type: string
 }
 
 interface ResidentVehicle {
   id: string; unit_id: string; year: number; make: string; model: string
   color: string; license_plate: string; plate_state: string
-  is_oversized: boolean; registration_doc_url?: string
+  is_oversized: boolean; registration_doc_path?: string
   owner_name: string; owner_email: string; owner_phone: string; owner_phone_country_code?: string | null
   registrant_type: string; created_at: string
 }
@@ -68,7 +71,7 @@ type PageState = 'idle' | 'checking' | 'new' | 'verify' | 'otp' | 'manage' | 'ne
 // ─── Helpers ───────────────────────────────────────────────────────────────
 
 function emptyVehicle(): VehicleForm {
-  return { year: '', make: '', model: '', color: '', license_plate: '', plate_state: '', registration_doc_base64: '', registration_doc_filename: '', registration_doc_url: '', is_oversized: false, vehicle_type: '' }
+  return { year: '', make: '', model: '', color: '', license_plate: '', plate_state: '', registration_doc_base64: '', registration_doc_filename: '', registration_doc_path: '', is_oversized: false, vehicle_type: '' }
 }
 
 async function fileToBase64(file: File): Promise<string> {
@@ -250,7 +253,7 @@ export default function RegisterPage() {
       if (!v.color) errors[`color_${i}`] = t('required')
       if (!v.license_plate.trim()) errors[`plate_${i}`] = t('required')
       if (!v.plate_state) errors[`state_${i}`] = t('required')
-      if (!v.registration_doc_url) errors[`doc_${i}`] = t('required')
+      if (!v.registration_doc_path) errors[`doc_${i}`] = t('required')
     })
     setFieldErrors(errors)
     return Object.keys(errors).length === 0
@@ -278,7 +281,7 @@ export default function RegisterPage() {
             year: Number(v.year), make: v.make, model: v.model, color: v.color,
             license_plate: v.license_plate.replace(/\s/g, '').toUpperCase(),
             plate_state: v.plate_state,
-            registration_doc_url: v.registration_doc_url,
+            registration_doc_path: v.registration_doc_path,
             is_oversized: v.is_oversized,
             vehicle_type: v.vehicle_type || null,
           })),
@@ -534,11 +537,11 @@ export default function RegisterPage() {
                           const res = await fetch('/api/residents/upload-doc', {
                             method: 'POST',
                             headers: { 'Content-Type': 'application/json' },
-                            body: JSON.stringify({ doc_base64: b64, doc_filename: file.name, unit_id: unitId }),
+                            body: JSON.stringify({ doc_base64: b64, doc_filename: file.name, unit_id: unitId, token: verificationToken }),
                           })
                           const data = await res.json()
                           if (!res.ok) { setFieldErrors(p => ({ ...p, [`doc_${index}`]: data.error ?? 'Upload failed' })); return }
-                          setNewVehicles(prev => { const n = [...prev]; n[index] = { ...n[index], registration_doc_url: data.url, registration_doc_filename: file.name }; return n })
+                          setNewVehicles(prev => { const n = [...prev]; n[index] = { ...n[index], registration_doc_path: data.path, registration_doc_filename: file.name }; return n })
                         } catch { setFieldErrors(p => ({ ...p, [`doc_${index}`]: 'Upload failed. Please try again.' })) }
                         finally { setDocUploading(p => ({ ...p, [index]: false })) }
                       }}
@@ -665,7 +668,7 @@ function VehicleFormCard({ vehicle, index, showRemove, fieldErrors, t, inputCls,
           className="w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-sm file:font-semibold file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100 disabled:opacity-50" />
         <p className="text-xs text-gray-500 mt-1">{t('upload_hint')}</p>
         {isUploadingDoc && <p className="text-xs text-blue-500 mt-1">Uploading…</p>}
-        {!isUploadingDoc && vehicle.registration_doc_url && <p className="text-xs text-green-600 mt-1">✓ {vehicle.registration_doc_filename}</p>}
+        {!isUploadingDoc && vehicle.registration_doc_path && <p className="text-xs text-green-600 mt-1">✓ {vehicle.registration_doc_filename}</p>}
         {fieldErrors[`doc_${index}`] && <p className="text-red-500 text-xs mt-1">{fieldErrors[`doc_${index}`]}</p>}
       </div>
     </div>
@@ -741,8 +744,18 @@ function ManageView({ t, unitId, confirmedEmail, verificationToken, unitData, un
   const [deleteVisitorTarget, setDeleteVisitorTarget] = useState<string | null>(null)
   const [deletingVisitor, setDeletingVisitor] = useState(false)
 
-  // Doc preview lightbox
+  // Doc preview lightbox. The registration-docs bucket is private, so opening a
+  // document means trading its path for a short-lived signed URL first.
   const [docPreviewUrl, setDocPreviewUrl] = useState<string | null>(null)
+  const [docOpening, setDocOpening] = useState<string | null>(null)
+
+  async function openDoc(vehicleId: string) {
+    setDocOpening(vehicleId)
+    const url = await fetchRegistrationDocUrl({ vehicle_id: vehicleId, unit_id: unitId, token: verificationToken })
+    setDocOpening(null)
+    if (url) setDocPreviewUrl(url)
+    else showToast(t('doc_unavailable'))
+  }
 
   // Add vehicle
   const [showAddVehicle, setShowAddVehicle] = useState(false)
@@ -1205,8 +1218,8 @@ function ManageView({ t, unitId, confirmedEmail, verificationToken, unitData, un
                           <span className="text-red-700 font-semibold">
                             ⚠️ {t('doc_last_renewed')} <span className="underline decoration-red-500">{new Date(v.created_at).toLocaleDateString()}</span> — Registration Expired
                           </span>
-                          {v.registration_doc_url && (
-                            <button onClick={() => setDocPreviewUrl(v.registration_doc_url!)} className="text-blue-600 hover:underline ml-2 shrink-0">View doc</button>
+                          {v.registration_doc_path && (
+                            <button onClick={() => openDoc(v.id)} disabled={docOpening === v.id} className="text-blue-600 hover:underline ml-2 shrink-0 disabled:opacity-50">{docOpening === v.id ? '…' : 'View doc'}</button>
                           )}
                         </div>
                         <p className="text-red-700 mb-2">Your vehicle registration document has expired. Please upload your latest registration to keep your record current.</p>
@@ -1227,8 +1240,8 @@ function ManageView({ t, unitId, confirmedEmail, verificationToken, unitData, un
                       <div className="bg-gray-50 rounded-lg p-3 text-xs text-gray-600">
                         <div className="flex items-center justify-between mb-2">
                           <span>{t('doc_last_renewed')} <strong>{new Date(v.created_at).toLocaleDateString()}</strong></span>
-                          {v.registration_doc_url && (
-                            <button onClick={() => setDocPreviewUrl(v.registration_doc_url!)} className="text-blue-600 hover:underline">View doc</button>
+                          {v.registration_doc_path && (
+                            <button onClick={() => openDoc(v.id)} disabled={docOpening === v.id} className="text-blue-600 hover:underline disabled:opacity-50">{docOpening === v.id ? '…' : 'View doc'}</button>
                           )}
                         </div>
                         <label className="inline-flex items-center gap-1.5 cursor-pointer text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 px-3 py-1.5 rounded-lg transition-colors">
