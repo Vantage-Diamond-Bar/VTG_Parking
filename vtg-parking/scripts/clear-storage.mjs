@@ -5,7 +5,8 @@
  *   node scripts/clear-storage.mjs --delete   # 真正删除
  *
  * 需要 .env.local 里的 NEXT_PUBLIC_SUPABASE_URL 和 SUPABASE_SERVICE_ROLE_KEY。
- * 两个桶都是 Public，删除前请确认没有需要留档的真实文件。
+ * registration-docs 已是 Private，violation-photos 维持 Public（见 CONTEXT.md）。
+ * 本脚本用 service_role 直连，两者都能列出和删除。删除前请确认没有需要留档的真实文件。
  */
 import fs from 'node:fs';
 import path from 'node:path';
@@ -26,6 +27,36 @@ const supabase = createClient(env.NEXT_PUBLIC_SUPABASE_URL, env.SUPABASE_SERVICE
 
 const DELETE = process.argv.includes('--delete');
 const BUCKETS = ['registration-docs', 'violation-photos'];
+
+// Fail fast with something actionable. Supabase disabled the legacy anon /
+// service_role keys on 2026-08-08, so a .env.local that predates that gets a
+// bare 401 from every call — easy to misread as a permissions problem.
+async function preflight() {
+  const res = await fetch(`${env.NEXT_PUBLIC_SUPABASE_URL}/storage/v1/bucket`, {
+    headers: {
+      apikey: env.SUPABASE_SERVICE_ROLE_KEY,
+      Authorization: `Bearer ${env.SUPABASE_SERVICE_ROLE_KEY}`,
+    },
+  });
+  if (res.ok) return;
+
+  const body = await res.text();
+  console.error(`\n无法访问 Storage（HTTP ${res.status}）。`);
+  if (body.includes('Legacy API keys are disabled')) {
+    console.error(
+      '\n原因：.env.local 里的是 legacy service_role key。Supabase 于 2026-08-08' +
+        '停用了旧密钥体系——数据 API(/rest/v1) 和认证 API 当时即刻生效，Storage 当时' +
+        '尚未强制；看到这条说明 Storage 也开始强制了。' +
+        '\n解决：到 Supabase → Settings → API Keys 取新版 secret key，' +
+        '更新 .env.local 的 SUPABASE_SERVICE_ROLE_KEY 后重跑。'
+    );
+  } else {
+    console.error(body.slice(0, 300));
+  }
+  process.exit(1);
+}
+
+await preflight();
 
 /** registration-docs 是 `${unit_id}/文件名`，violation-photos 是平铺的，所以要递归一层。 */
 async function listAll(bucket, prefix = '') {

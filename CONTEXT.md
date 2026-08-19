@@ -62,6 +62,14 @@ A system user with role `patrol`. Can look up vehicles by license plate or acces
 ## Violation Report（违章举报）
 A parking violation submitted by any community member or patrol officer. Captures location, violation type, optional photo, and optional license plate. Routed to configured notification email recipients.
 
+**Photo storage — `violation-photos` stays a public bucket, by decision (2026-08-19).** This is a deliberate, accepted trade-off, not an oversight, and it is the opposite of the call made for `registration-docs` (see [Registration Document](#registration-document行驶证文件)).
+
+Two things drove it:
+- `lib/email.ts` embeds each photo into the notification email as `<img src="{public url}">`. Making the bucket private breaks the images in every violation email already sitting in recipients' inboxes, and in every future one. Fixing that properly means sending photos as attachments, not a flag flip.
+- The sensitivity is far lower. These are photos of vehicles in communal areas, and the object key is `{timestamp}-{index}.jpg` — it carries no unit or resident identity, unlike `registration-docs` where the key is `{unit_id}/{plate}.{ext}` and the file is a DMV document with name and address on it.
+
+If the HOA ever requires these private, the work is: signed URLs for the admin UI (reuse the `registration-docs` pattern) **plus** switching the email from embedded `<img>` to real attachments. Do not "solve" it by replacing the photos with a link to the admin portal — that trades a one-glance email for a login every time.
+
 ## Registration Renewal（登记年度更新）
 Resident vehicles must renew their DMV registration document annually. The renewal timer is tracked via the `created_at` column on `resident_vehicles` — when a resident uploads a new document (`update_doc` action), `created_at` is intentionally overwritten with the current timestamp to reset the timer. The UI displays this field as "Doc Last Renewed."
 
