@@ -26,6 +26,59 @@ export function isPathOwnedByUnit(path: string, unit_id: string): boolean {
   return path.startsWith(`${unit_id}/`)
 }
 
+/**
+ * Removes registration documents that no vehicle row points at any more.
+ *
+ * Call this *after* the rows are gone. Deleting rows without deleting their
+ * documents leaves unreachable PII sitting in the bucket forever; deleting the
+ * file first risks a row that survives and now points at nothing.
+ *
+ * The reference check is not paranoia. Object paths are `{unit_id}/{plate}.ext`
+ * and `update_doc` upserts, so two rows genuinely can share one file: rename a
+ * vehicle's plate A→B, register another vehicle as plate A, and its upload
+ * lands on the first vehicle's original path. Deleting one row's document
+ * would then blank the other's.
+ *
+ * Best-effort by design — a storage failure must not turn a successful
+ * deletion into an error for the user. Worst case is the orphan we already had.
+ */
+export async function deleteRegistrationDocsIfUnreferenced(
+  paths: (string | null | undefined)[]
+): Promise<{ deleted: number; skipped: number }> {
+  const candidates = [...new Set(paths.filter((p): p is string => !!p))]
+  if (candidates.length === 0) return { deleted: 0, skipped: 0 }
+
+  try {
+    const { data: stillUsed, error } = await supabaseAdmin
+      .from('resident_vehicles')
+      .select('registration_doc_path')
+      .in('registration_doc_path', candidates)
+
+    if (error) {
+      console.error('[registration-docs] reference check failed, keeping files:', error.message)
+      return { deleted: 0, skipped: candidates.length }
+    }
+
+    const referenced = new Set((stillUsed ?? []).map((r) => r.registration_doc_path))
+    const removable = candidates.filter((p) => !referenced.has(p))
+    if (removable.length === 0) return { deleted: 0, skipped: candidates.length }
+
+    const { error: removeError } = await supabaseAdmin.storage
+      .from(REGISTRATION_DOCS_BUCKET)
+      .remove(removable)
+
+    if (removeError) {
+      console.error('[registration-docs] remove failed:', removeError.message)
+      return { deleted: 0, skipped: candidates.length }
+    }
+
+    return { deleted: removable.length, skipped: candidates.length - removable.length }
+  } catch (e) {
+    console.error('[registration-docs] cleanup threw:', e)
+    return { deleted: 0, skipped: candidates.length }
+  }
+}
+
 /** Mints a short-lived signed URL, or null if the object is gone. */
 export async function signRegistrationDoc(
   path: string,

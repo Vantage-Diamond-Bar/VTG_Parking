@@ -25,6 +25,26 @@ Three invariants hold this together — breaking any one reopens a hole:
 2. **A client-supplied path is validated against its unit.** `POST /api/residents` takes the path from the browser; `isPathOwnedByUnit` requires the `{unit_id}/` prefix. Without it a registrant could point their own vehicle row at another unit's document and read it through the signing endpoint legitimately.
 3. **The signing endpoint checks the vehicle's unit, not just the caller's.** A resident holding a valid token for their own unit must not be able to name someone else's `vehicle_id`.
 
+**Deleting a vehicle deletes its document.** Every path that removes a
+`resident_vehicles` row reads `registration_doc_path` first and then calls
+`deleteRegistrationDocsIfUnreferenced` — resident delete and withdraw, admin
+delete, and admin *unit* delete, which cascades and would otherwise strand a
+whole unit's documents without the app ever seeing the rows. `update_doc` does
+the same for the file it replaces when a new upload lands on a different
+extension. Cleanup runs **after** the row is gone and never throws: the worst
+case is the orphan we would have had anyway, whereas deleting the file first
+risks a surviving row pointing at nothing.
+
+The reference check before deleting is load-bearing, not defensive padding.
+Paths are `{unit_id}/{plate}.{ext}` and `update_doc` upserts, so two rows can
+share one file — rename a vehicle's plate A→B, register another vehicle as
+plate A, and its upload lands on the first vehicle's original path.
+
+Documents uploaded through the first-time registration form that is then
+abandoned (`temp_` prefix) cannot be caught this way; nothing ever references
+them. `scripts/clean-orphan-docs.mjs` sweeps those, and any orphan predating
+this behaviour.
+
 `oversized_applications.registration_doc_url` is frozen legacy and deliberately keeps the old name and public-URL contents. Nothing reads it.
 
 **Upload authorisation is conditional, by necessity.** `POST /api/residents/upload-doc` serves the first-time registration form, and a unit with no vehicles has no email on file to send an OTP to — that path cannot present a token. So the endpoint requires a verification token only when the unit already has vehicles. A unit with zero vehicles remains open to anonymous upload; that is inherent to public self-registration, not an oversight.

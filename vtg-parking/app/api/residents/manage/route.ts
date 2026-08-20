@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { supabaseAdmin } from '@/lib/supabase';
 import { normalizedPlate, RESIDENT_VEHICLE_LIMIT } from '@/lib/utils';
 import { decodeVerificationToken } from '@/lib/auth';
-import { REGISTRATION_DOCS_BUCKET } from '@/lib/registration-docs';
+import { REGISTRATION_DOCS_BUCKET, deleteRegistrationDocsIfUnreferenced } from '@/lib/registration-docs';
 
 export async function PATCH(req: NextRequest) {
   const body = await req.json();
@@ -105,10 +105,10 @@ export async function PATCH(req: NextRequest) {
       );
     }
 
-    // Fetch the vehicle's license_plate
+    // Fetch the vehicle's license_plate, plus the path being replaced
     const { data: vehicle, error: fetchError } = await supabaseAdmin
       .from('resident_vehicles')
-      .select('license_plate')
+      .select('license_plate, registration_doc_path')
       .eq('id', vehicle_id)
       .eq('unit_id', unit_id)
       .single();
@@ -142,6 +142,13 @@ export async function PATCH(req: NextRequest) {
 
     if (updateError) {
       return NextResponse.json({ error: 'Failed to update vehicle doc path' }, { status: 500 });
+    }
+
+    // The upload upserts, so re-uploading the same file type overwrites in
+    // place. A different extension writes to a new path and strands the old
+    // file — the row no longer points at it and nothing ever would again.
+    if (vehicle.registration_doc_path && vehicle.registration_doc_path !== filePath) {
+      await deleteRegistrationDocsIfUnreferenced([vehicle.registration_doc_path]);
     }
 
     return NextResponse.json({ success: true });
@@ -281,7 +288,7 @@ export async function POST(req: NextRequest) {
 
     const { data: vehicle, error: fetchError } = await supabaseAdmin
       .from('resident_vehicles')
-      .select('id, approval_status')
+      .select('id, approval_status, registration_doc_path')
       .eq('id', vehicle_id)
       .eq('unit_id', unit_id)
       .single();
@@ -296,6 +303,9 @@ export async function POST(req: NextRequest) {
       .eq('unit_id', unit_id);
 
     if (deleteError) return NextResponse.json({ error: 'Failed to withdraw application' }, { status: 500 });
+
+    // Row is gone; drop its document so the DMV scan does not linger in the bucket.
+    await deleteRegistrationDocsIfUnreferenced([vehicle.registration_doc_path]);
     return NextResponse.json({ success: true });
   }
 
@@ -309,7 +319,7 @@ export async function POST(req: NextRequest) {
     // Verify the vehicle belongs to this unit
     const { data: vehicle, error: fetchError } = await supabaseAdmin
       .from('resident_vehicles')
-      .select('id')
+      .select('id, registration_doc_path')
       .eq('id', vehicle_id)
       .eq('unit_id', unit_id)
       .single();
@@ -328,6 +338,7 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'Failed to delete vehicle' }, { status: 500 });
     }
 
+    await deleteRegistrationDocsIfUnreferenced([vehicle.registration_doc_path]);
     return NextResponse.json({ success: true });
   }
 
