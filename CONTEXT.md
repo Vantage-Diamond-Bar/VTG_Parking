@@ -1,5 +1,15 @@
 # VTG Parking Management System — Domain Glossary
 
+> **Scope: what the words mean and what rules govern them.** This is the
+> authoritative record of the community's rules and of the decisions behind them
+> — including the ones deliberately *not* taken, and why.
+>
+> How the code is laid out is a separate document:
+> [`vtg-parking/CONTEXT.md`](vtg-parking/CONTEXT.md). When the two disagree, this
+> file wins and that one is the one to correct.
+
+---
+
 ## Public Address（对外地址）
 Residents are given **`https://parking.vantagediamondbar.com`**. That is the community's own domain and the only address that belongs in emails, printed notices, or anything handed to a resident.
 
@@ -71,7 +81,9 @@ A request by a resident to exempt one of their **own registered vehicles** from 
 If the vehicle should be parked in the garage (1st or 2nd non-oversized vehicle), the request is rejected.
 
 ## Visitor Monthly Quota（访客月度额度）
-A per-unit cap of **10 visitor-nights per calendar month** (Pacific Time). Enforced atomically via the `book_visitor_registration` database function. A "night" is counted as one calendar date difference in Pacific Time (e.g., check-in May 20 → check-out May 21 = 1 night). All quota reads compute directly from `visitor_registrations` — no separate cache table exists (the legacy `visitor_monthly_quota` table was dropped; it was write-only and never read).
+A per-unit cap of **10 visitor-nights per calendar month** (Pacific Time). Enforced atomically via the `book_visitor_registration` database function. A "night" is counted as one calendar date difference in Pacific Time (e.g., check-in May 20 → check-out May 21 = 1 night). All quota reads compute directly from `visitor_registrations` — no separate cache table exists (the legacy `visitor_monthly_quota` cache table was written but never read, drifted
+out of sync with reality — 6 of its 14 rows disagreed with the registrations they
+claimed to summarise — and was dropped from production on 2026-08-20).
 
 ## Abuse Alert（滥用警示）
 An automatic flag raised when the same license plate is registered as a visitor for **2 or more different units** within the same calendar month. Surfaced to admins for review. Does not block the registration and carries no automated enforcement — purely informational at this stage.

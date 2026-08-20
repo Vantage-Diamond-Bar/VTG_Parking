@@ -1,7 +1,16 @@
-# Vantage Parking — Project Context
+# Vantage Parking — Engineering Orientation
 
-> **Read this file at the start of every new conversation.**
-> It describes the full current state of the system so you can continue development without re-reading the entire chat history.
+> **Scope: how the code is laid out.** Stack, routing, file structure, and the
+> conventions that are not obvious from reading a single file.
+>
+> **This file is not authoritative for business rules.** The community's rules —
+> quotas, eligibility, renewal cadence, what counts as overdue — live in
+> [`../CONTEXT.md`](../CONTEXT.md), the domain glossary. When the two disagree,
+> the glossary wins and this file is the one to fix.
+>
+> **Nor is it authoritative for the schema.** `supabase/schema.sql` is the real
+> definition and is kept current; a table list copied into prose here would only
+> rot.
 
 ---
 
@@ -123,21 +132,22 @@ Display pattern: `{countryCode && <span className="text-gray-500 mr-1">{countryC
 
 ---
 
-## 4. Database Tables (Supabase)
+## 4. Database Tables
 
-| Table | Purpose |
-|-------|---------|
-| `units` | All residential units. Columns: `id` (UUID), `address` (e.g. "123 Example St") |
-| `admin_users` | Admin/patrol accounts. Columns: `username`, `password_hash`, `role`, `active`, `last_login` |
-| `resident_vehicles` | Registered resident cars. Columns: `unit_id`, `owner_name`, `owner_phone`, `owner_phone_country_code`, `owner_email`, `opt_in_sms`, `opt_in_email`, `license_plate`, `plate_state`, `year`, `make`, `model`, `color` |
-| `visitor_registrations` | Visitor parking passes. Columns: `unit_id`, `visitor_name`, `visitor_phone`, `visitor_phone_country_code`, `license_plate`, `plate_state`, `make`, `model`, `color`, `start_datetime`, `end_datetime`, `access_code`, `created_at` |
-| `visitor_monthly_quota` | Tracks nights used per unit per month. Columns: `unit_id`, `year_month`, `nights_used` |
-| `abuse_alerts` | Visitor abuse flags. Columns: `license_plate`, `plate_state`, `year_month`, `unit_ids` (UUID[]), `registration_count`, `is_resolved`, `resolved_at`, `resolved_note` |
-| `violations` | Parking violations logged by patrol. Columns: `license_plate`, `plate_state`, `vehicle_type`, `make`, `model`, `color`, `location`, `violation_type`, `notes`, `photo_url`, `reported_by`, `created_at` |
-| `vacation_requests` | Extended-stay parking applications. Columns: `unit_id`, `plate`, `plate_state`, `make`, `model`, `color`, `phone`, `phone_country_code`, `start_date`, `end_date`, `notes`, `status` (`pending`/`approved`/`rejected`) |
-| `oversized_applications` | Large vehicle permit applications. Columns: similar structure to vacation, includes `vehicle_type` |
+`supabase/schema.sql` is the source of truth for every table and column, and is
+kept in step with production. Read it rather than a summary here.
 
-**Address sort helper** — always use `sortAddresses()` from `lib/utils.ts` when displaying unit lists (sorts by street name, then house number, then unit number).
+Only the things the schema cannot tell you:
+
+- **`resident_vehicles.created_at` is not a creation timestamp.** It is the
+  renewal clock, deliberately overwritten whenever a resident re-uploads their
+  document, and drives both the overdue rules and the reminder cadence.
+- **`registration_doc_path` holds an object path, never a URL** — the bucket is
+  private and URLs are signed at read time.
+- **`oversized_applications` is frozen legacy.** Its rows were merged into
+  `resident_vehicles`; nothing reads it.
+- **Address sorting** — always use `sortAddresses()` from `lib/utils.ts` when
+  displaying unit lists (street name, then house number, then unit number).
 
 ---
 
@@ -210,10 +220,15 @@ Wrapped by `app/admin/(protected)/layout.tsx` which verifies session server-side
 
 ### 7.1 Visitor Quota
 
+Rules live in the glossary; this is where they are implemented.
+
 - **Limit:** `VISITOR_QUOTA_LIMIT = 10` nights per unit per calendar month
-- **Calculation:** `countNights(start, end)` uses PDT calendar dates — an 18:00→10:00 stay = 1 night
-- **Cross-month stays:** Split into monthly segments, each checked against that month's limit
-- **Storage:** `visitor_monthly_quota` table tracks `nights_used` per `unit_id + year_month`
+- **Calculation:** `countNights(start, end)` uses PT calendar dates — an 18:00→10:00 stay = 1 night
+- **Cross-month stays:** split into monthly segments, each checked against its own month
+- **No cache table.** Every read computes from `visitor_registrations`. Enforcement
+  is atomic inside the `book_visitor_registration` stored procedure, which takes an
+  advisory lock per unit. A `visitor_monthly_quota` cache table once existed; it was
+  written but never read, drifted out of sync, and was dropped 2026-08-20.
 
 ### 7.2 Visitor Abuse Detection
 
@@ -269,7 +284,10 @@ The admin can mark alerts as resolved via the "Mark as Resolved" button, which c
 - `GET  /api/residents/unit-status?unit_id=` — check if unit has registered vehicles
 
 ### Visitors
-- `POST /api/visitors` — register visitor pass (public)
+- `POST /api/visitors` — register visitor pass. **Not public**: needs a signed
+  verification token (issued after email OTP) and passes the unit-eligibility gate
+- `POST /api/visitors/verify-host` — what the UI calls to decide what to show;
+  the same eligibility rule the write path enforces
 - `GET  /api/visitors` — list (admin)
 - `GET  /api/visitors/[id]` — get one
 - `DELETE /api/visitors/[id]` — delete (admin)
@@ -288,6 +306,15 @@ The admin can mark alerts as resolved via the "Mark as Resolved" button, which c
 - `GET/PATCH /api/admin/vacation/[id]` — get/update vacation request
 - `GET  /api/admin/oversized` — list oversized applications
 - `GET  /api/admin/quota-summary` — monthly quota summary
+
+### Documents
+- `POST /api/documents/signed-url` — trade a vehicle's stored document path for a
+  5-minute signed URL. Admins authenticate by session cookie, residents by
+  verification token; the bucket is private so this is the only way to read one
+
+### Cron
+- `GET  /api/cron/remind-registration` — daily renewal reminders. Requires
+  `CRON_SECRET` in the Authorization header; 503s if the variable is unset
 
 ### Other
 - `POST /api/violations` — submit violation (public/patrol)
@@ -326,73 +353,79 @@ PT_ZONE = 'America/Los_Angeles'
 
 ---
 
-## 10. Known Design Decisions & Constraints
+## 10. Design Decisions & Constraints
 
-1. **No RLS on Supabase** — all DB access goes through `supabaseAdmin` in API routes. The browser-side `supabase` client exists but is rarely used.
+1. **RLS is on for every table**, and the app does not rely on it: all access goes
+   through `supabaseAdmin` (service role), which bypasses RLS. The policies are the
+   backstop for anything that reaches the database with the publishable key
+   instead. The single deliberate exception is `units_public_read` — the address
+   dropdown on public forms needs it, which does mean unit numbers and addresses
+   are readable by anyone.
 
-2. **Session is not signed** — the `session` cookie is just base64-encoded JSON. Any user who can forge a cookie can impersonate any role. This is acceptable for an internal community app.
+2. **The session cookie is signed** — HMAC-SHA256 over the payload using
+   `SESSION_SECRET`, verified with `timingSafeEqual` (`lib/auth.ts`). The server
+   refuses to start if the secret is missing or under 32 characters. Forging a
+   role is not possible without the secret.
 
-3. **Visitor registration is unauthenticated** — `POST /api/visitors` has no auth check. The only safeguard is the access code mechanism (residents get a code for their guests). The abuse alert system is the backstop.
+3. **Visitor registration requires a verified host.** `POST /api/visitors` needs a
+   server-signed verification token (issued after email OTP) *and* passes the
+   unit-eligibility gate — no overdue registrations, at least one approved
+   vehicle. Enforced on the write path, not only in the UI. Abuse alerts are a
+   monitoring backstop, not the access control.
 
-4. **Violation reporting is unauthenticated** — `POST /api/violations` has no auth. Anyone with the URL can submit a violation report. Acceptable for community use.
+4. **Violation reporting is unauthenticated** — `POST /api/violations` has no auth
+   check. Anyone with the URL can submit a report. This is deliberate: residents
+   must be able to report without an account.
 
-5. **No real-time updates** — the dashboard polls on load only. Admins must refresh to see new data.
+5. **No real-time updates** — pages load data once; admins refresh to see changes.
 
-6. **Plate normalization** — `normalizedPlate()` uppercases and strips spaces. All plate comparisons use `.ilike()` (case-insensitive) in Supabase.
+6. **Plate normalization** — `normalizedPlate()` uppercases and strips spaces. All
+   plate comparisons use `.ilike()` in Supabase.
 
----
-
-## 11. Recent Changes (this session)
-
-### Visitor Registration — error messages
-- `app/visitor/page.tsx`: `handleSubmit` now handles error codes with specific i18n messages:
-  - `plate_conflict` (409) → `t('error_plate_conflict')` (was already done)
-  - `quota_exceeded` (429) → `t('error_quota_exceeded')` ← **new**
-  - other errors → `t('error_submission_failed')` ← **new**
-  - network catch → `t('error_network')` ← **new**
-- New keys added to all three locale files: `error_quota_exceeded`, `error_submission_failed`, `error_network` (under `visitor` namespace)
-
-### Visitor Registration — quota gate removed
-- Previously: form fields were hidden when `quotaExceeded === true`
-- Now: form is always visible after email verification; quota exceeded shows as a warning only; actual enforcement is server-side (API returns 429 → handled by error message above)
-
-### Visitor Search (admin)
-- `app/admin/(protected)/visitors/page.tsx`: search box now does **client-side** keyword filtering across address, plate, access code, make, model, color, visitor name
-- Previously it passed text as a UUID query param to the API (broken)
-- New: loads up to 500 records, filters in-browser; shows `N / Total results` count when keyword active
-
-### Timezone — full system fix (12 files)
-All timestamps now correctly display Pacific Time. See Section 3.1 for full rules.
-
-Files changed: `lib/utils.ts` (+`ptInputToISO`), `lib/email.ts` (5 email templates), `app/visitor/page.tsx`, `app/vacation/page.tsx`, and all 7 admin pages + patrol page.
+7. **Cron requires `CRON_SECRET` and fails closed.** `/api/cron/remind-registration`
+   returns 503 when the variable is unset rather than running unauthenticated.
 
 ---
 
-## 12. Pending / Future Work
+## 11. Change History
 
-These items were discussed but not yet implemented:
-
-- [x] **i18n zh.json mixed-language strings fixed** — 4 strings in `messages/zh.json` had English mixed in: `quota_remaining_label`, `no_vehicles_message`, `overdue_message`, `pending_oversized`. All corrected to pure Chinese.
-
-- [x] **Oversized application email notification** — `sendOversizedDecision()` added to `lib/email.ts`. Called from `app/api/admin/oversized/[id]/route.ts` after a successful PATCH (approve or reject). Sends to `owner_email` if present; fire-and-forget (no await, won't block the response).
-
-- [x] **Patrol plate lookup timezone verified** — API route (`app/api/patrol/lookup/route.ts`) returns raw UTC ISO strings for `valid_from`/`valid_until`. Patrol page (`app/patrol/page.tsx`) calls `formatPDT(..., { short: true })` on both fields. Chain is correct.
+Not maintained here — it went stale within days of being written. Use `git log`,
+which carries the reasoning in the commit messages.
 
 ---
 
-## 12. Credentials (Local Dev / Test)
+## 12. Open Items
+
+Kept short on purpose; anything that stays here for long belongs in an issue.
+
+- **Local development points at the production database.** `NEXT_PUBLIC_SUPABASE_URL`
+  in `.env.local` is the live project, so `npm run dev` writes real data and can
+  email real residents. A separate Supabase project for development is the fix.
+- **`upload-doc` is open on units that have no vehicles.** Unavoidable for
+  first-time registration — such a unit has no email on file to OTP against — but
+  it does mean an unauthenticated upload path exists for new units.
+- **Abandoned-upload orphans.** Documents uploaded through the registration form
+  that is then never submitted (`temp_` prefix) are referenced by nothing, so the
+  delete-time cleanup cannot see them. `scripts/clean-orphan-docs.mjs` sweeps them.
+- **Migrations are applied by hand.** There is no record of which migration ran
+  against production, and drift has happened in both directions — a column that
+  existed only in production, and two migrations that were written but never run.
+
+---
+
+## 13. Credentials (Local Dev / Test)
 
 > Credentials are **not** stored in this repository. Get local/test login
 > details from the team's shared password manager, or read them from your own
 > local `.env` / the `admin_users` table in your own Supabase project.
 
-**Test data created during development:**
-- Plate `ABUSETEST` (CA) — registered for 3 test units, has an unresolved abuse alert
-- Plate `ABTEST99` (CA) — older test plate, abuse alert has been resolved
+**No test data remains.** The pre-launch purge on 2026-08-20 emptied every
+transactional table and both storage buckets. `units`, `admin_users` and
+`notification_emails` were kept — they hold real data.
 
 ---
 
-## 13. File Structure Quick Reference
+## 14. File Structure Quick Reference
 
 ```
 vtg-parking/
