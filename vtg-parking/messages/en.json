@@ -46,6 +46,7 @@
     "upload_doc": "Upload Vehicle Registration Document",
     "upload_hint": "JPG, PNG, or PDF · Max 5MB",
     "add_vehicle": "Add Another Vehicle",
+    "add_vehicle_confirm": "Submit This Vehicle",
     "submit": "Submit Registration",
     "submitting": "Submitting...",
     "success_title": "Registration Submitted!",

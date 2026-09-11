@@ -46,6 +46,7 @@
     "upload_doc": "차량 등록증 업로드",
     "upload_hint": "JPG, PNG 또는 PDF · 최대 5MB",
     "add_vehicle": "차량 추가 등록",
+    "add_vehicle_confirm": "이 차량 제출",
     "submit": "등록 제출",
     "submitting": "제출 중...",
     "success_title": "등록이 완료되었습니다!",

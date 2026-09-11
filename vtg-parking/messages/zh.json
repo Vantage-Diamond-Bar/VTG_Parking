@@ -46,6 +46,7 @@
     "upload_doc": "上传车辆登记证明",
     "upload_hint": "支持 JPG、PNG 或 PDF · 最大 5MB",
     "add_vehicle": "添加另一辆车",
+    "add_vehicle_confirm": "提交这辆车",
     "submit": "提交登记",
     "submitting": "提交中...",
     "success_title": "登记已提交！",

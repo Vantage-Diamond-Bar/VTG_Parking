@@ -1358,7 +1358,7 @@ function ManageView({ t, unitId, confirmedEmail, verificationToken, unitData, un
                 />
                 <div className="flex gap-3 mt-4">
                   <button onClick={handleAddVehicle} disabled={addingVehicle}
-                    className="bg-blue-600 text-white text-sm px-5 py-2 rounded-lg hover:bg-blue-700 disabled:opacity-50">{addingVehicle ? '...' : t('add_vehicle')}</button>
+                    className="bg-blue-600 text-white text-sm px-5 py-2 rounded-lg hover:bg-blue-700 disabled:opacity-50">{addingVehicle ? t('submitting') : t('add_vehicle_confirm')}</button>
                   <button onClick={() => { setShowAddVehicle(false); setAddVehicle(emptyVehicle()) }}
                     className="text-sm border border-gray-300 px-4 py-2 rounded-lg hover:bg-gray-50">{t('cancel_edit')}</button>
                 </div>
