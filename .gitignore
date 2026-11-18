@@ -1,3 +1,6 @@
 # Claude Code local settings (auto-generated, machine-specific)
 .claude/
 *.log
+
+# Local-only marketing drafts (not part of the app)
+/marketing/
