@@ -303,9 +303,16 @@ export default function AdminViolationsPage() {
                     ) : <span className="text-gray-500">—</span>}
                   </td>
                   <td className="px-4 py-3">
-                    <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${STATUS_COLORS[v.status] ?? 'bg-gray-100 text-gray-600'}`}>
-                      {v.status}
-                    </span>
+                    <div className="flex flex-col items-start gap-1">
+                      <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${STATUS_COLORS[v.status] ?? 'bg-gray-100 text-gray-600'}`}>
+                        {v.status}
+                      </span>
+                      {v.call_hearing && (
+                        <span className="text-xs px-2 py-0.5 rounded-full font-medium bg-purple-100 text-purple-700 whitespace-nowrap">
+                          {t('vio_hearing_badge')}
+                        </span>
+                      )}
+                    </div>
                   </td>
                   <td className="px-4 py-3">
                     <button

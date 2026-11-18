@@ -1,7 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { supabaseAdmin } from '@/lib/supabase'
 import { requireAdmin } from '@/lib/auth'
-import { sendViolationHearing } from '@/lib/email'
 import { normalizedPlate } from '@/lib/utils'
 
 export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
@@ -69,20 +68,9 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
 
   if (error) return NextResponse.json({ error: error.message }, { status: 500 })
 
-  // Send hearing email after save if requested
-  if (call_hearing) {
-    try {
-      await sendViolationHearing({
-        violation_id: id,
-        location: data.final_location ?? data.location,
-        violation_type: data.final_violation_type ?? data.violation_type,
-        license_plate: data.final_license_plate ?? data.license_plate,
-        unit_address: data.unit_address,
-        submitted_at: data.submitted_at,
-        admin_notes: data.admin_notes,
-      })
-    } catch {}
-  }
-
+  // `call_hearing` is recorded on the row but sends no mail. It used to notify
+  // every active address in `notification_emails`, which re-sent on every save
+  // of an already-flagged report; management now picks hearings up from the
+  // admin list instead.
   return NextResponse.json({ success: true, data })
 }
